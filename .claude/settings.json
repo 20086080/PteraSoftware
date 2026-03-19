@@ -1,16 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(cat *)",
-      "Bash(git diff *)",
-      "Bash(git grep *)",
-      "Bash(git log *)",
-      "Bash(git ls-files *)",
-      "Bash(git show *)",
-      "Bash(git status)",
-      "Bash(ls *)",
-      "Read"
-    ],
     "deny": [
       "Bash(7z *)",
       "Bash(7za *)",
@@ -110,6 +99,17 @@
       "Bash(git commit *)",
       "Bash(python *)",
       "Bash(python3 *)"
+    ],
+    "allow": [
+      "Bash(cat *)",
+      "Bash(git diff *)",
+      "Bash(git grep *)",
+      "Bash(git log *)",
+      "Bash(git ls-files *)",
+      "Bash(git show *)",
+      "Bash(git status)",
+      "Bash(ls *)",
+      "Read"
     ]
   },
   "defaultMode": "plan"
