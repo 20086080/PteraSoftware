@@ -1,5 +1,8 @@
 {
-  "defaultMode": "plan",
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "alwaysThinkingEnabled": true,
+  "defaultMode": "default",
+  "enableAllProjectMcpServers": false,
   "permissions": {
     "deny": [
       "Bash(7z *)",
@@ -193,7 +196,16 @@
       "Bash(yum *)",
       "Bash(yum)",
       "Bash(zip *)",
-      "Bash(zip)"
+      "Bash(zip)",
+      "Read(//**/*.key)",
+      "Read(//**/*.pem)",
+      "Read(//**/*credentials*)",
+      "Read(//**/*secret*)",
+      "Read(//**/.env)",
+      "Read(//**/.env.*)",
+      "Read(~/.config/gh/**)",
+      "Read(~/.git-credentials)",
+      "Read(~/.pypirc)"
     ],
     "ask": [
       "Bash(.venv/Scripts/pip *)",
@@ -293,8 +305,22 @@
       "Bash(git status *)",
       "Bash(git status)",
       "Bash(ls *)",
-      "Bash(ls)",
-      "Read"
+      "Bash(ls)"
     ]
+  },
+  "sandbox": {
+    "enabled": true,
+    "autoAllowBashIfSandboxed": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": [],
+    "network": {
+      "allowedDomains": [
+        "github.com",
+        "api.github.com",
+        "*.githubusercontent.com",
+        "pypi.org",
+        "*.pythonhosted.org"
+      ]
+    }
   }
 }
