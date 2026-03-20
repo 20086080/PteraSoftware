@@ -9,12 +9,14 @@ import numpy.testing as npt
 import pterasoftware as ps
 
 # noinspection PyProtectedMember
+from pterasoftware import _panel
 from pterasoftware._vortices import _line_vortex
 from tests.unit.fixtures import (
     geometry_fixtures,
     horseshoe_vortex_fixtures,
     line_vortex_fixtures,
     operating_point_fixtures,
+    panel_fixtures,
     ring_vortex_fixtures,
 )
 
@@ -543,4 +545,322 @@ class TestWingCrossSectionSlots(unittest.TestCase):
     def test_deepcopy_no_dict(self):
         """Test that a deep copied WingCrossSection has no __dict__."""
         copied = copy.deepcopy(self.wing_cross_section)
+        self.assertFalse(hasattr(copied, "__dict__"))
+
+
+class TestPanelSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on Panel."""
+
+    def setUp(self):
+        """Set up test fixtures for Panel slots tests."""
+        self.panel = panel_fixtures.make_basic_panel_fixture()
+        self.fully_configured_panel = (
+            panel_fixtures.make_fully_configured_panel_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on Panel."""
+        self.assertTrue(hasattr(_panel.Panel, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that Panel instances have no __dict__."""
+        self.assertFalse(hasattr(self.panel, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.panel.nonexistent_attribute = 42
+
+    def test_property_access_immutable(self):
+        """Test that immutable properties are accessible."""
+        self.assertEqual(self.panel.Frpp_G_Cg.shape, (3,))
+        self.assertEqual(self.panel.Flpp_G_Cg.shape, (3,))
+        self.assertEqual(self.panel.Blpp_G_Cg.shape, (3,))
+        self.assertEqual(self.panel.Brpp_G_Cg.shape, (3,))
+        self.assertIsInstance(self.panel.is_leading_edge, bool)
+        self.assertIsInstance(self.panel.is_trailing_edge, bool)
+
+    def test_property_access_cached(self):
+        """Test that cached computed properties are accessible."""
+        self.assertEqual(self.panel.rightLeg_G.shape, (3,))
+        self.assertEqual(self.panel.frontLeg_G.shape, (3,))
+        self.assertEqual(self.panel.leftLeg_G.shape, (3,))
+        self.assertEqual(self.panel.backLeg_G.shape, (3,))
+        self.assertEqual(self.panel.Frbvp_G_Cg.shape, (3,))
+        self.assertEqual(self.panel.Flbvp_G_Cg.shape, (3,))
+        self.assertEqual(self.panel.Cpp_G_Cg.shape, (3,))
+        self.assertEqual(self.panel.unitNormal_G.shape, (3,))
+        self.assertIsInstance(self.panel.area, float)
+        self.assertIsInstance(self.panel.aspect_ratio, float)
+
+    def test_property_access_set_once_unset(self):
+        """Test that set once properties return None when not yet set."""
+        self.assertIsNone(self.panel.Frpp_GP1_CgP1)
+        self.assertIsNone(self.panel.is_right_edge)
+        self.assertIsNone(self.panel.is_left_edge)
+        self.assertIsNone(self.panel.local_chordwise_position)
+        self.assertIsNone(self.panel.local_spanwise_position)
+
+    def test_property_access_fully_configured(self):
+        """Test that all properties are accessible on a fully configured Panel."""
+        self.assertIsNotNone(self.fully_configured_panel.Frpp_GP1_CgP1)
+        self.assertIsNotNone(self.fully_configured_panel.is_right_edge)
+        self.assertIsNotNone(self.fully_configured_panel.is_left_edge)
+        self.assertIsNotNone(self.fully_configured_panel.local_chordwise_position)
+        self.assertIsNotNone(self.fully_configured_panel.local_spanwise_position)
+
+    def test_mutable_attributes(self):
+        """Test that mutable attributes are accessible and default to None."""
+        self.assertIsNone(self.panel.ring_vortex)
+        self.assertIsNone(self.panel.horseshoe_vortex)
+        self.assertIsNone(self.panel.forces_GP1)
+        self.assertIsNone(self.panel.moments_GP1_CgP1)
+        self.assertIsNone(self.panel.forces_W)
+        self.assertIsNone(self.panel.moments_W_CgP1)
+
+    def test_deepcopy_method(self):
+        """Test that __deepcopy__ produces a correct independent copy."""
+        # Access cached properties before copying.
+        _ = self.panel.rightLeg_G
+        _ = self.panel.Cpp_G_Cg
+        _ = self.panel.area
+
+        copied = copy.deepcopy(self.panel)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.panel)
+
+        # Verify immutable property values match.
+        npt.assert_array_equal(copied.Frpp_G_Cg, self.panel.Frpp_G_Cg)
+        npt.assert_array_equal(copied.Flpp_G_Cg, self.panel.Flpp_G_Cg)
+        npt.assert_array_equal(copied.Blpp_G_Cg, self.panel.Blpp_G_Cg)
+        npt.assert_array_equal(copied.Brpp_G_Cg, self.panel.Brpp_G_Cg)
+        self.assertEqual(copied.is_leading_edge, self.panel.is_leading_edge)
+        self.assertEqual(copied.is_trailing_edge, self.panel.is_trailing_edge)
+
+        # Verify cached property values match.
+        npt.assert_array_equal(copied.rightLeg_G, self.panel.rightLeg_G)
+        npt.assert_array_equal(copied.Cpp_G_Cg, self.panel.Cpp_G_Cg)
+        self.assertEqual(copied.area, self.panel.area)
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.Frpp_G_Cg, self.panel.Frpp_G_Cg)
+        self.assertIsNot(copied.rightLeg_G, self.panel.rightLeg_G)
+
+        # Verify solver state is reset.
+        self.assertIsNone(copied.ring_vortex)
+        self.assertIsNone(copied.horseshoe_vortex)
+        self.assertIsNone(copied.forces_GP1)
+
+    def test_deepcopy_no_dict(self):
+        """Test that a deep copied Panel has no __dict__."""
+        copied = copy.deepcopy(self.panel)
+        self.assertFalse(hasattr(copied, "__dict__"))
+
+
+class TestWingSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on Wing."""
+
+    def setUp(self):
+        """Set up test fixtures for Wing slots tests."""
+        # Use a Wing from an Airplane so it has been meshed (symmetry_type set).
+        airplane = geometry_fixtures.make_first_airplane_fixture()
+        self.wing = airplane.wings[0]
+        # Also keep an unmeshed Wing for testing pre-mesh state.
+        self.unmeshed_wing = geometry_fixtures.make_type_1_wing_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on Wing."""
+        self.assertTrue(hasattr(ps.geometry.wing.Wing, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that Wing instances have no __dict__."""
+        self.assertFalse(hasattr(self.wing, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.wing.nonexistent_attribute = 42
+
+    def test_property_access_immutable(self):
+        """Test that immutable properties are accessible."""
+        self.assertIsInstance(self.wing.wing_cross_sections, tuple)
+        self.assertIsInstance(self.wing.name, str)
+        self.assertEqual(self.wing.Ler_Gs_Cgs.shape, (3,))
+        self.assertEqual(self.wing.angles_Gs_to_Wn_ixyz.shape, (3,))
+        self.assertIsInstance(self.wing.num_chordwise_panels, int)
+        self.assertIsInstance(self.wing.chordwise_spacing, str)
+
+    def test_property_access_mutable_symmetry(self):
+        """Test that mutable symmetry attributes are accessible."""
+        self.assertIsInstance(self.wing.symmetric, bool)
+        self.assertIsInstance(self.wing.mirror_only, bool)
+
+    def test_property_access_set_once_unset(self):
+        """Test that set once properties return None when not yet meshed."""
+        self.assertIsNone(self.unmeshed_wing.symmetry_type)
+        self.assertIsNone(self.unmeshed_wing.num_spanwise_panels)
+        self.assertIsNone(self.unmeshed_wing.num_panels)
+        self.assertIsNone(self.unmeshed_wing.panels)
+
+    def test_property_access_cached(self):
+        """Test that cached transformation properties are accessible."""
+        self.assertEqual(self.wing.T_pas_G_Cg_to_Wn_Ler.shape, (4, 4))
+        self.assertEqual(self.wing.T_pas_Wn_Ler_to_G_Cg.shape, (4, 4))
+        self.assertEqual(self.wing.WnX_G.shape, (3,))
+        self.assertEqual(self.wing.WnY_G.shape, (3,))
+        self.assertEqual(self.wing.WnZ_G.shape, (3,))
+        self.assertIsInstance(self.wing.children_T_pas_Wn_Ler_to_Wcs_Lp, list)
+        self.assertIsInstance(self.wing.children_T_pas_Wcs_Lp_to_Wn_Ler, list)
+        self.assertIsInstance(self.wing.children_T_pas_G_Cg_to_Wcs_Lp, list)
+        self.assertIsInstance(self.wing.children_T_pas_Wcs_Lp_to_G_Cg, list)
+
+    def test_deepcopy_method(self):
+        """Test that __deepcopy__ produces a correct independent copy."""
+        # Access cached properties before copying.
+        original_T = self.wing.T_pas_G_Cg_to_Wn_Ler
+        original_WnX = self.wing.WnX_G
+        _ = self.wing.children_T_pas_Wn_Ler_to_Wcs_Lp
+        self.assertIsNotNone(original_T)
+        self.assertIsNotNone(original_WnX)
+
+        copied = copy.deepcopy(self.wing)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.wing)
+
+        # Verify immutable property values match.
+        self.assertEqual(copied.name, self.wing.name)
+        npt.assert_array_equal(copied.Ler_Gs_Cgs, self.wing.Ler_Gs_Cgs)
+        npt.assert_array_equal(
+            copied.angles_Gs_to_Wn_ixyz, self.wing.angles_Gs_to_Wn_ixyz
+        )
+        self.assertEqual(copied.num_chordwise_panels, self.wing.num_chordwise_panels)
+        self.assertEqual(copied.chordwise_spacing, self.wing.chordwise_spacing)
+
+        # Verify cached property values match.
+        npt.assert_array_equal(
+            copied.T_pas_G_Cg_to_Wn_Ler, self.wing.T_pas_G_Cg_to_Wn_Ler
+        )
+        npt.assert_array_equal(copied.WnX_G, self.wing.WnX_G)
+
+        # Verify WingCrossSections are independent.
+        self.assertIsNot(
+            copied.wing_cross_sections[0], self.wing.wing_cross_sections[0]
+        )
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.Ler_Gs_Cgs, self.wing.Ler_Gs_Cgs)
+        self.assertIsNot(copied.T_pas_G_Cg_to_Wn_Ler, self.wing.T_pas_G_Cg_to_Wn_Ler)
+
+    def test_deepcopy_no_dict(self):
+        """Test that a deep copied Wing has no __dict__."""
+        copied = copy.deepcopy(self.wing)
+        self.assertFalse(hasattr(copied, "__dict__"))
+
+
+class TestAirplaneSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on Airplane."""
+
+    def setUp(self):
+        """Set up test fixtures for Airplane slots tests."""
+        self.airplane = geometry_fixtures.make_first_airplane_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on Airplane."""
+        self.assertTrue(hasattr(ps.geometry.airplane.Airplane, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that Airplane instances have no __dict__."""
+        self.assertFalse(hasattr(self.airplane, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.airplane.nonexistent_attribute = 42
+
+    def test_property_access_immutable(self):
+        """Test that immutable properties are accessible."""
+        self.assertIsInstance(self.airplane.wings, tuple)
+        self.assertEqual(self.airplane.name, "First Test Airplane")
+        npt.assert_array_equal(self.airplane.Cg_GP1_CgP1, np.array([0.0, 0.0, 0.0]))
+        self.assertEqual(self.airplane.weight, 1500.0)
+        self.assertIsInstance(self.airplane.s_ref, float)
+        self.assertIsInstance(self.airplane.c_ref, float)
+        self.assertIsInstance(self.airplane.b_ref, float)
+
+    def test_property_access_cached(self):
+        """Test that cached derived properties are accessible."""
+        self.assertIsInstance(self.airplane.num_panels, int)
+        self.assertEqual(self.airplane.T_pas_G_Cg_to_GP1_CgP1.shape, (4, 4))
+
+    def test_mutable_attributes(self):
+        """Test that mutable load attributes are accessible and default to None."""
+        self.assertIsNone(self.airplane.forces_W)
+        self.assertIsNone(self.airplane.forceCoefficients_W)
+        self.assertIsNone(self.airplane.moments_W_CgP1)
+        self.assertIsNone(self.airplane.momentCoefficients_W_CgP1)
+
+    def test_deepcopy_method(self):
+        """Test that __deepcopy__ produces a correct independent copy."""
+        # Access cached properties before copying.
+        _ = self.airplane.num_panels
+        _ = self.airplane.T_pas_G_Cg_to_GP1_CgP1
+
+        copied = copy.deepcopy(self.airplane)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.airplane)
+
+        # Verify immutable property values match.
+        self.assertEqual(copied.name, self.airplane.name)
+        npt.assert_array_equal(copied.Cg_GP1_CgP1, self.airplane.Cg_GP1_CgP1)
+        self.assertEqual(copied.weight, self.airplane.weight)
+        self.assertEqual(copied.s_ref, self.airplane.s_ref)
+        self.assertEqual(copied.c_ref, self.airplane.c_ref)
+        self.assertEqual(copied.b_ref, self.airplane.b_ref)
+
+        # Verify cached property values match.
+        self.assertEqual(copied.num_panels, self.airplane.num_panels)
+        npt.assert_array_equal(
+            copied.T_pas_G_Cg_to_GP1_CgP1,
+            self.airplane.T_pas_G_Cg_to_GP1_CgP1,
+        )
+
+        # Verify Wings are independent.
+        self.assertIsNot(copied.wings[0], self.airplane.wings[0])
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.Cg_GP1_CgP1, self.airplane.Cg_GP1_CgP1)
+        self.assertIsNot(
+            copied.T_pas_G_Cg_to_GP1_CgP1,
+            self.airplane.T_pas_G_Cg_to_GP1_CgP1,
+        )
+
+        # Verify solver state is reset.
+        self.assertIsNone(copied.forces_W)
+        self.assertIsNone(copied.forceCoefficients_W)
+        self.assertIsNone(copied.moments_W_CgP1)
+        self.assertIsNone(copied.momentCoefficients_W_CgP1)
+
+    def test_deep_copy_with_cg(self):
+        """Test that deep_copy_with_Cg_GP1_CgP1 works with __slots__."""
+        copied = self.airplane.deep_copy_with_Cg_GP1_CgP1([2.0, 1.0, 0.5])
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.airplane)
+
+        # Verify the new position.
+        npt.assert_array_equal(copied.Cg_GP1_CgP1, np.array([2.0, 1.0, 0.5]))
+
+        # Verify other immutable properties are preserved.
+        self.assertEqual(copied.name, self.airplane.name)
+        self.assertEqual(copied.weight, self.airplane.weight)
+
+        # Verify no __dict__.
+        self.assertFalse(hasattr(copied, "__dict__"))
+
+    def test_deepcopy_no_dict(self):
+        """Test that a deep copied Airplane has no __dict__."""
+        copied = copy.deepcopy(self.airplane)
         self.assertFalse(hasattr(copied, "__dict__"))
