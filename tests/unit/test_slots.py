@@ -12,8 +12,10 @@ import pterasoftware as ps
 from pterasoftware._vortices import _line_vortex
 from tests.unit.fixtures import (
     geometry_fixtures,
+    horseshoe_vortex_fixtures,
     line_vortex_fixtures,
     operating_point_fixtures,
+    ring_vortex_fixtures,
 )
 
 
@@ -286,3 +288,259 @@ class TestOperatingPointSlots(unittest.TestCase):
             copied.surfaceReflect_T_act_GP1_CgP1,
             self.surface_op.surfaceReflect_T_act_GP1_CgP1,
         )
+
+
+class TestRingVortexSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on RingVortex."""
+
+    def setUp(self):
+        """Set up test fixtures for RingVortex slots tests."""
+        self.ring_vortex = ring_vortex_fixtures.make_basic_ring_vortex_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on RingVortex."""
+        self.assertTrue(hasattr(ps._vortices.ring_vortex.RingVortex, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that RingVortex instances have no __dict__."""
+        self.assertFalse(hasattr(self.ring_vortex, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.ring_vortex.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties remain accessible after adding __slots__."""
+        # Immutable corner point properties.
+        npt.assert_array_equal(
+            self.ring_vortex.Frrvp_GP1_CgP1,
+            np.array([0.0, 0.5, 0.0]),
+        )
+        npt.assert_array_equal(
+            self.ring_vortex.Flrvp_GP1_CgP1,
+            np.array([0.0, -0.5, 0.0]),
+        )
+        npt.assert_array_equal(
+            self.ring_vortex.Blrvp_GP1_CgP1,
+            np.array([1.0, -0.5, 0.0]),
+        )
+        npt.assert_array_equal(
+            self.ring_vortex.Brrvp_GP1_CgP1,
+            np.array([1.0, 0.5, 0.0]),
+        )
+
+        # Mutable attributes.
+        self.assertEqual(self.ring_vortex.strength, 1.0)
+        self.assertEqual(self.ring_vortex.age, 0.0)
+
+        # Cached computed properties.
+        self.assertEqual(self.ring_vortex.Crvp_GP1_CgP1.shape, (3,))
+        self.assertIsInstance(self.ring_vortex.area, float)
+        self.assertIsInstance(self.ring_vortex.front_leg, _line_vortex.LineVortex)
+        self.assertIsInstance(self.ring_vortex.left_leg, _line_vortex.LineVortex)
+        self.assertIsInstance(self.ring_vortex.back_leg, _line_vortex.LineVortex)
+        self.assertIsInstance(self.ring_vortex.right_leg, _line_vortex.LineVortex)
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        # Access cached properties before copying.
+        _ = self.ring_vortex.Crvp_GP1_CgP1
+        _ = self.ring_vortex.front_leg
+        _ = self.ring_vortex.area
+
+        copied = copy.deepcopy(self.ring_vortex)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.ring_vortex)
+
+        # Verify property values match.
+        npt.assert_array_equal(copied.Frrvp_GP1_CgP1, self.ring_vortex.Frrvp_GP1_CgP1)
+        npt.assert_array_equal(copied.Flrvp_GP1_CgP1, self.ring_vortex.Flrvp_GP1_CgP1)
+        self.assertEqual(copied.strength, self.ring_vortex.strength)
+        self.assertEqual(copied.age, self.ring_vortex.age)
+        npt.assert_array_equal(copied.Crvp_GP1_CgP1, self.ring_vortex.Crvp_GP1_CgP1)
+        self.assertEqual(copied.area, self.ring_vortex.area)
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.Frrvp_GP1_CgP1, self.ring_vortex.Frrvp_GP1_CgP1)
+
+
+class TestHorseshoeVortexSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    HorseshoeVortex.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for HorseshoeVortex slots tests."""
+        self.horseshoe_vortex = (
+            horseshoe_vortex_fixtures.make_basic_horseshoe_vortex_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on HorseshoeVortex."""
+        self.assertTrue(
+            hasattr(ps._vortices.horseshoe_vortex.HorseshoeVortex, "__slots__")
+        )
+
+    def test_no_instance_dict(self):
+        """Test that HorseshoeVortex instances have no __dict__."""
+        self.assertFalse(hasattr(self.horseshoe_vortex, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.horseshoe_vortex.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties remain accessible after adding __slots__."""
+        # Immutable properties.
+        npt.assert_array_equal(
+            self.horseshoe_vortex.Frhvp_GP1_CgP1,
+            np.array([0.0, 0.5, 0.0]),
+        )
+        npt.assert_array_equal(
+            self.horseshoe_vortex.Flhvp_GP1_CgP1,
+            np.array([0.0, -0.5, 0.0]),
+        )
+        self.assertEqual(self.horseshoe_vortex.leftLegVector_GP1.shape, (3,))
+        self.assertEqual(self.horseshoe_vortex.left_right_leg_lengths, 20.0)
+
+        # Mutable attribute.
+        self.assertEqual(self.horseshoe_vortex.strength, 1.0)
+
+        # Cached computed properties.
+        self.assertEqual(self.horseshoe_vortex.Brhvp_GP1_CgP1.shape, (3,))
+        self.assertEqual(self.horseshoe_vortex.Blhvp_GP1_CgP1.shape, (3,))
+        self.assertIsInstance(self.horseshoe_vortex.right_leg, _line_vortex.LineVortex)
+        self.assertIsInstance(self.horseshoe_vortex.finite_leg, _line_vortex.LineVortex)
+        self.assertIsInstance(self.horseshoe_vortex.left_leg, _line_vortex.LineVortex)
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        # Access cached properties before copying.
+        _ = self.horseshoe_vortex.Brhvp_GP1_CgP1
+        _ = self.horseshoe_vortex.right_leg
+
+        copied = copy.deepcopy(self.horseshoe_vortex)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.horseshoe_vortex)
+
+        # Verify property values match.
+        npt.assert_array_equal(
+            copied.Frhvp_GP1_CgP1, self.horseshoe_vortex.Frhvp_GP1_CgP1
+        )
+        npt.assert_array_equal(
+            copied.Flhvp_GP1_CgP1, self.horseshoe_vortex.Flhvp_GP1_CgP1
+        )
+        self.assertEqual(copied.strength, self.horseshoe_vortex.strength)
+        npt.assert_array_equal(
+            copied.Brhvp_GP1_CgP1, self.horseshoe_vortex.Brhvp_GP1_CgP1
+        )
+        npt.assert_array_equal(
+            copied.Blhvp_GP1_CgP1, self.horseshoe_vortex.Blhvp_GP1_CgP1
+        )
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.Frhvp_GP1_CgP1, self.horseshoe_vortex.Frhvp_GP1_CgP1)
+
+
+class TestWingCrossSectionSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    WingCrossSection.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for WingCrossSection slots tests."""
+        self.wing_cross_section = (
+            geometry_fixtures.make_basic_wing_cross_section_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on WingCrossSection."""
+        self.assertTrue(
+            hasattr(ps.geometry.wing_cross_section.WingCrossSection, "__slots__")
+        )
+
+    def test_no_instance_dict(self):
+        """Test that WingCrossSection instances have no __dict__."""
+        self.assertFalse(hasattr(self.wing_cross_section, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.wing_cross_section.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties remain accessible after adding __slots__."""
+        # Immutable properties.
+        self.assertIsInstance(
+            self.wing_cross_section.airfoil, ps.geometry.airfoil.Airfoil
+        )
+        self.assertEqual(self.wing_cross_section.num_spanwise_panels, 8)
+        self.assertEqual(self.wing_cross_section.chord, 1.5)
+        npt.assert_array_equal(
+            self.wing_cross_section.Lp_Wcsp_Lpp,
+            np.array([0.2, 0.5, 0.1]),
+        )
+        npt.assert_array_equal(
+            self.wing_cross_section.angles_Wcsp_to_Wcs_ixyz,
+            np.array([5.0, -2.0, 3.0]),
+        )
+        self.assertEqual(self.wing_cross_section.control_surface_hinge_point, 0.75)
+        self.assertEqual(self.wing_cross_section.control_surface_deflection, 5.0)
+        self.assertEqual(self.wing_cross_section.spanwise_spacing, "cosine")
+
+        # Mutable attribute.
+        self.assertEqual(
+            self.wing_cross_section.control_surface_symmetry_type, "symmetric"
+        )
+
+        # Set once attributes (not yet set by a parent Wing).
+        self.assertFalse(self.wing_cross_section.validated)
+        self.assertIsNone(self.wing_cross_section.symmetry_type)
+
+        # Cached transformation properties return None when not validated.
+        self.assertIsNone(self.wing_cross_section.T_pas_Wcsp_Lpp_to_Wcs_Lp)
+        self.assertIsNone(self.wing_cross_section.T_pas_Wcs_Lp_to_Wcsp_Lpp)
+
+    def test_deepcopy_method(self):
+        """Test that __deepcopy__ produces a correct independent copy."""
+        copied = copy.deepcopy(self.wing_cross_section)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.wing_cross_section)
+
+        # Verify property values match.
+        self.assertEqual(copied.chord, self.wing_cross_section.chord)
+        self.assertEqual(
+            copied.num_spanwise_panels, self.wing_cross_section.num_spanwise_panels
+        )
+        npt.assert_array_equal(copied.Lp_Wcsp_Lpp, self.wing_cross_section.Lp_Wcsp_Lpp)
+        npt.assert_array_equal(
+            copied.angles_Wcsp_to_Wcs_ixyz,
+            self.wing_cross_section.angles_Wcsp_to_Wcs_ixyz,
+        )
+        self.assertEqual(
+            copied.control_surface_symmetry_type,
+            self.wing_cross_section.control_surface_symmetry_type,
+        )
+        self.assertEqual(
+            copied.spanwise_spacing, self.wing_cross_section.spanwise_spacing
+        )
+
+        # Verify the Airfoil is a separate instance.
+        self.assertIsNot(copied.airfoil, self.wing_cross_section.airfoil)
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.Lp_Wcsp_Lpp, self.wing_cross_section.Lp_Wcsp_Lpp)
+        self.assertIsNot(
+            copied.angles_Wcsp_to_Wcs_ixyz,
+            self.wing_cross_section.angles_Wcsp_to_Wcs_ixyz,
+        )
+
+    def test_deepcopy_no_dict(self):
+        """Test that a deep copied WingCrossSection has no __dict__."""
+        copied = copy.deepcopy(self.wing_cross_section)
+        self.assertFalse(hasattr(copied, "__dict__"))
