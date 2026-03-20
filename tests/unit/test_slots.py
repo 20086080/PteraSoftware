@@ -22,6 +22,7 @@ from tests.unit.fixtures import (
     panel_fixtures,
     problem_fixtures,
     ring_vortex_fixtures,
+    solver_fixtures,
     wing_cross_section_movement_fixtures,
     wing_movement_fixtures,
 )
@@ -1452,4 +1453,234 @@ class TestMovementSlots(unittest.TestCase):
         self.assertIsNot(
             copied.operating_point_movement,
             self.static_movement.operating_point_movement,
+        )
+
+
+class TestSteadyHorseshoeSolverSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    SteadyHorseshoeVortexLatticeMethodSolver.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for SteadyHorseshoeVortexLatticeMethodSolver slots
+        tests.
+        """
+        self.solver = solver_fixtures.make_steady_horseshoe_solver_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on
+        SteadyHorseshoeVortexLatticeMethodSolver.
+        """
+        self.assertTrue(
+            hasattr(
+                ps.steady_horseshoe_vortex_lattice_method.SteadyHorseshoeVortexLatticeMethodSolver,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that SteadyHorseshoeVortexLatticeMethodSolver instances have no
+        __dict__.
+        """
+        self.assertFalse(hasattr(self.solver, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.solver.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all attributes remain accessible after adding __slots__."""
+        self.assertIsInstance(self.solver.airplanes, tuple)
+        self.assertGreaterEqual(len(self.solver.airplanes), 1)
+        self.assertIsInstance(
+            self.solver.operating_point,
+            ps.operating_point.OperatingPoint,
+        )
+        self.assertIsInstance(self.solver.reynolds_numbers, tuple)
+        self.assertIsInstance(self.solver.num_airplanes, int)
+        self.assertIsInstance(self.solver.num_panels, int)
+        self.assertIsInstance(self.solver.vInf_GP1__E, np.ndarray)
+        self.assertIsInstance(self.solver.stackFreestreamWingInfluences__E, np.ndarray)
+        self.assertIsInstance(self.solver.stackUnitNormals_GP1, np.ndarray)
+        self.assertIsInstance(self.solver.panels, np.ndarray)
+        self.assertIsInstance(self.solver.stackSeedPoints_GP1_CgP1, np.ndarray)
+        self.assertIsInstance(self.solver.gridStreamlinePoints_GP1_CgP1, np.ndarray)
+        self.assertFalse(self.solver.ran)
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        copied = copy.deepcopy(self.solver)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.solver)
+
+        # Verify attribute values match.
+        self.assertEqual(copied.num_panels, self.solver.num_panels)
+        self.assertEqual(copied.num_airplanes, self.solver.num_airplanes)
+        self.assertEqual(copied.ran, self.solver.ran)
+        npt.assert_array_equal(copied.vInf_GP1__E, self.solver.vInf_GP1__E)
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.vInf_GP1__E, self.solver.vInf_GP1__E)
+
+
+class TestSteadyRingSolverSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    SteadyRingVortexLatticeMethodSolver.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for SteadyRingVortexLatticeMethodSolver slots tests."""
+        self.solver = solver_fixtures.make_steady_ring_solver_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on SteadyRingVortexLatticeMethodSolver."""
+        self.assertTrue(
+            hasattr(
+                ps.steady_ring_vortex_lattice_method.SteadyRingVortexLatticeMethodSolver,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that SteadyRingVortexLatticeMethodSolver instances have no __dict__."""
+        self.assertFalse(hasattr(self.solver, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.solver.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all attributes remain accessible after adding __slots__."""
+        self.assertIsInstance(self.solver.airplanes, tuple)
+        self.assertGreaterEqual(len(self.solver.airplanes), 1)
+        self.assertIsInstance(
+            self.solver.operating_point,
+            ps.operating_point.OperatingPoint,
+        )
+        self.assertIsInstance(self.solver.reynolds_numbers, tuple)
+        self.assertIsInstance(self.solver.num_airplanes, int)
+        self.assertIsInstance(self.solver.num_panels, int)
+        self.assertIsInstance(self.solver.vInf_GP1__E, np.ndarray)
+        self.assertIsInstance(self.solver.stackFreestreamWingInfluences__E, np.ndarray)
+        self.assertIsInstance(self.solver.stackUnitNormals_GP1, np.ndarray)
+        self.assertIsInstance(self.solver.panels, np.ndarray)
+        self.assertIsInstance(self.solver.panel_areas, np.ndarray)
+        self.assertIsInstance(self.solver.stackCpp_GP1_CgP1, np.ndarray)
+        self.assertIsInstance(self.solver.stackBrbrvp_GP1_CgP1, np.ndarray)
+        self.assertIsInstance(self.solver.stackFrbrvp_GP1_CgP1, np.ndarray)
+        self.assertIsInstance(self.solver.stackFlbrvp_GP1_CgP1, np.ndarray)
+        self.assertIsInstance(self.solver.stackBlbrvp_GP1_CgP1, np.ndarray)
+        self.assertIsInstance(self.solver.panel_is_trailing_edge, np.ndarray)
+        self.assertIsInstance(self.solver.panel_is_leading_edge, np.ndarray)
+        self.assertIsInstance(self.solver.panel_is_left_edge, np.ndarray)
+        self.assertIsInstance(self.solver.panel_is_right_edge, np.ndarray)
+        self.assertIsInstance(self.solver.stackSeedPoints_GP1_CgP1, np.ndarray)
+        self.assertIsInstance(self.solver.gridStreamlinePoints_GP1_CgP1, np.ndarray)
+        self.assertFalse(self.solver.ran)
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        copied = copy.deepcopy(self.solver)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.solver)
+
+        # Verify attribute values match.
+        self.assertEqual(copied.num_panels, self.solver.num_panels)
+        self.assertEqual(copied.num_airplanes, self.solver.num_airplanes)
+        self.assertEqual(copied.ran, self.solver.ran)
+        npt.assert_array_equal(copied.vInf_GP1__E, self.solver.vInf_GP1__E)
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.vInf_GP1__E, self.solver.vInf_GP1__E)
+
+
+class TestUnsteadyRingSolverSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    UnsteadyRingVortexLatticeMethodSolver.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for UnsteadyRingVortexLatticeMethodSolver slots
+        tests.
+        """
+        self.solver = solver_fixtures.make_unsteady_ring_solver_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on
+        UnsteadyRingVortexLatticeMethodSolver.
+        """
+        self.assertTrue(
+            hasattr(
+                ps.unsteady_ring_vortex_lattice_method.UnsteadyRingVortexLatticeMethodSolver,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that UnsteadyRingVortexLatticeMethodSolver instances have no
+        __dict__.
+        """
+        self.assertFalse(hasattr(self.solver, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.solver.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all attributes remain accessible after adding __slots__."""
+        self.assertIsInstance(
+            self.solver.unsteady_problem,
+            ps.problems.UnsteadyProblem,
+        )
+        self.assertIsInstance(self.solver.num_steps, int)
+        self.assertIsInstance(self.solver.delta_time, float)
+        self.assertIsInstance(self.solver.first_results_step, int)
+        self.assertIsInstance(self.solver.num_airplanes, int)
+        self.assertIsInstance(self.solver.num_panels, int)
+        self.assertIsInstance(self.solver.steady_problems, tuple)
+        self.assertEqual(len(self.solver.steady_problems), self.solver.num_steps)
+        self.assertIsInstance(
+            self.solver.current_operating_point,
+            ps.operating_point.OperatingPoint,
+        )
+        self.assertIsInstance(self.solver.panels, np.ndarray)
+        self.assertIsInstance(self.solver.stackUnitNormals_GP1, np.ndarray)
+        self.assertIsInstance(self.solver.panel_areas, np.ndarray)
+        self.assertIsInstance(self.solver.stackCpp_GP1_CgP1, np.ndarray)
+        self.assertIsInstance(self.solver.panel_is_trailing_edge, np.ndarray)
+        self.assertIsInstance(self.solver.panel_is_leading_edge, np.ndarray)
+        self.assertIsInstance(self.solver.panel_is_left_edge, np.ndarray)
+        self.assertIsInstance(self.solver.panel_is_right_edge, np.ndarray)
+        self.assertIsInstance(self.solver.list_num_wake_vortices, list)
+        self.assertIsInstance(self.solver.listStackBrwrvp_GP1_CgP1, list)
+        self.assertIsInstance(self.solver.listStackFrwrvp_GP1_CgP1, list)
+        self.assertIsInstance(self.solver.listStackFlwrvp_GP1_CgP1, list)
+        self.assertIsInstance(self.solver.listStackBlwrvp_GP1_CgP1, list)
+        self.assertIsInstance(self.solver.stackSeedPoints_GP1_CgP1, np.ndarray)
+        self.assertIsInstance(self.solver.gridStreamlinePoints_GP1_CgP1, np.ndarray)
+        self.assertFalse(self.solver.ran)
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        copied = copy.deepcopy(self.solver)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.solver)
+
+        # Verify attribute values match.
+        self.assertEqual(copied.num_panels, self.solver.num_panels)
+        self.assertEqual(copied.num_airplanes, self.solver.num_airplanes)
+        self.assertEqual(copied.num_steps, self.solver.num_steps)
+        self.assertEqual(copied.delta_time, self.solver.delta_time)
+        self.assertEqual(copied.ran, self.solver.ran)
+
+        # Verify objects are independent.
+        self.assertIsNot(copied.unsteady_problem, self.solver.unsteady_problem)
+        self.assertIsNot(
+            copied.current_operating_point, self.solver.current_operating_point
         )
