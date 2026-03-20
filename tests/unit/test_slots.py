@@ -12,12 +12,18 @@ import pterasoftware as ps
 from pterasoftware import _panel
 from pterasoftware._vortices import _line_vortex
 from tests.unit.fixtures import (
+    airplane_movement_fixtures,
     geometry_fixtures,
     horseshoe_vortex_fixtures,
     line_vortex_fixtures,
+    movement_fixtures,
     operating_point_fixtures,
+    operating_point_movement_fixtures,
     panel_fixtures,
+    problem_fixtures,
     ring_vortex_fixtures,
+    wing_cross_section_movement_fixtures,
+    wing_movement_fixtures,
 )
 
 
@@ -864,3 +870,586 @@ class TestAirplaneSlots(unittest.TestCase):
         """Test that a deep copied Airplane has no __dict__."""
         copied = copy.deepcopy(self.airplane)
         self.assertFalse(hasattr(copied, "__dict__"))
+
+
+class TestSteadyProblemSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on SteadyProblem."""
+
+    def setUp(self):
+        """Set up test fixtures for SteadyProblem slots tests."""
+        self.steady_problem = problem_fixtures.make_basic_steady_problem_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on SteadyProblem."""
+        self.assertTrue(hasattr(ps.problems.SteadyProblem, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that SteadyProblem instances have no __dict__."""
+        self.assertFalse(hasattr(self.steady_problem, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.steady_problem.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties remain accessible after adding __slots__."""
+        # Immutable properties.
+        self.assertIsInstance(self.steady_problem.airplanes, tuple)
+        self.assertGreaterEqual(len(self.steady_problem.airplanes), 1)
+        self.assertIsInstance(
+            self.steady_problem.operating_point,
+            ps.operating_point.OperatingPoint,
+        )
+
+        # Cached computed property.
+        self.assertIsInstance(self.steady_problem.reynolds_numbers, tuple)
+        self.assertEqual(
+            len(self.steady_problem.reynolds_numbers),
+            len(self.steady_problem.airplanes),
+        )
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        # Access cached property before copying.
+        _ = self.steady_problem.reynolds_numbers
+
+        copied = copy.deepcopy(self.steady_problem)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.steady_problem)
+
+        # Verify property values match.
+        self.assertEqual(len(copied.airplanes), len(self.steady_problem.airplanes))
+        self.assertEqual(copied.reynolds_numbers, self.steady_problem.reynolds_numbers)
+
+        # Verify Airplanes are independent.
+        self.assertIsNot(copied.airplanes[0], self.steady_problem.airplanes[0])
+
+        # Verify OperatingPoint is independent.
+        self.assertIsNot(copied.operating_point, self.steady_problem.operating_point)
+
+
+class TestUnsteadyProblemSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    UnsteadyProblem.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for UnsteadyProblem slots tests."""
+        self.unsteady_problem = problem_fixtures.make_basic_unsteady_problem_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on UnsteadyProblem."""
+        self.assertTrue(hasattr(ps.problems.UnsteadyProblem, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that UnsteadyProblem instances have no __dict__."""
+        self.assertFalse(hasattr(self.unsteady_problem, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.unsteady_problem.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties remain accessible after adding __slots__."""
+        # Immutable properties.
+        self.assertIsInstance(
+            self.unsteady_problem.movement, ps.movements.movement.Movement
+        )
+        self.assertIsInstance(self.unsteady_problem.only_final_results, bool)
+        self.assertIsInstance(self.unsteady_problem.num_steps, int)
+        self.assertIsInstance(self.unsteady_problem.delta_time, float)
+        self.assertIsInstance(self.unsteady_problem.first_averaging_step, int)
+        self.assertIsInstance(self.unsteady_problem.first_results_step, int)
+        self.assertIsInstance(self.unsteady_problem.steady_problems, tuple)
+        self.assertEqual(
+            len(self.unsteady_problem.steady_problems),
+            self.unsteady_problem.num_steps,
+        )
+
+        # Mutable list attributes (initialized empty).
+        self.assertIsInstance(self.unsteady_problem.finalForces_W, list)
+        self.assertIsInstance(self.unsteady_problem.finalForceCoefficients_W, list)
+        self.assertIsInstance(self.unsteady_problem.finalMoments_W_CgP1, list)
+        self.assertIsInstance(
+            self.unsteady_problem.finalMomentCoefficients_W_CgP1, list
+        )
+        self.assertIsInstance(self.unsteady_problem.finalMeanForces_W, list)
+        self.assertIsInstance(self.unsteady_problem.finalMeanForceCoefficients_W, list)
+        self.assertIsInstance(self.unsteady_problem.finalMeanMoments_W_CgP1, list)
+        self.assertIsInstance(
+            self.unsteady_problem.finalMeanMomentCoefficients_W_CgP1, list
+        )
+        self.assertIsInstance(self.unsteady_problem.finalRmsForces_W, list)
+        self.assertIsInstance(self.unsteady_problem.finalRmsForceCoefficients_W, list)
+        self.assertIsInstance(self.unsteady_problem.finalRmsMoments_W_CgP1, list)
+        self.assertIsInstance(
+            self.unsteady_problem.finalRmsMomentCoefficients_W_CgP1, list
+        )
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        copied = copy.deepcopy(self.unsteady_problem)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.unsteady_problem)
+
+        # Verify property values match.
+        self.assertEqual(copied.num_steps, self.unsteady_problem.num_steps)
+        self.assertEqual(copied.delta_time, self.unsteady_problem.delta_time)
+        self.assertEqual(
+            copied.only_final_results,
+            self.unsteady_problem.only_final_results,
+        )
+        self.assertEqual(
+            len(copied.steady_problems),
+            len(self.unsteady_problem.steady_problems),
+        )
+
+        # Verify Movement is independent.
+        self.assertIsNot(copied.movement, self.unsteady_problem.movement)
+
+
+class TestOperatingPointMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    OperatingPointMovement.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for OperatingPointMovement slots tests."""
+        self.static_opm = (
+            operating_point_movement_fixtures.make_static_operating_point_movement_fixture()
+        )
+        self.sine_opm = (
+            operating_point_movement_fixtures.make_sine_spacing_operating_point_movement_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on OperatingPointMovement."""
+        self.assertTrue(
+            hasattr(
+                ps.movements.operating_point_movement.OperatingPointMovement,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that OperatingPointMovement instances have no __dict__."""
+        self.assertFalse(hasattr(self.static_opm, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.static_opm.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties remain accessible after adding __slots__."""
+        # Immutable properties on sine fixture.
+        self.assertIsInstance(
+            self.sine_opm.base_operating_point,
+            ps.operating_point.OperatingPoint,
+        )
+        self.assertEqual(self.sine_opm.ampVCg__E, 10.0)
+        self.assertEqual(self.sine_opm.periodVCg__E, 1.0)
+        self.assertEqual(self.sine_opm.spacingVCg__E, "sine")
+        self.assertEqual(self.sine_opm.phaseVCg__E, 0.0)
+
+        # Cached computed property.
+        self.assertEqual(self.sine_opm.max_period, 1.0)
+
+        # Static fixture has zero max_period.
+        self.assertEqual(self.static_opm.max_period, 0.0)
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        # Access cached property before copying.
+        _ = self.sine_opm.max_period
+
+        copied = copy.deepcopy(self.sine_opm)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.sine_opm)
+
+        # Verify property values match.
+        self.assertEqual(copied.ampVCg__E, self.sine_opm.ampVCg__E)
+        self.assertEqual(copied.periodVCg__E, self.sine_opm.periodVCg__E)
+        self.assertEqual(copied.spacingVCg__E, self.sine_opm.spacingVCg__E)
+        self.assertEqual(copied.phaseVCg__E, self.sine_opm.phaseVCg__E)
+        self.assertEqual(copied.max_period, self.sine_opm.max_period)
+
+        # Verify base OperatingPoint is independent.
+        self.assertIsNot(
+            copied.base_operating_point, self.sine_opm.base_operating_point
+        )
+
+
+class TestWingCrossSectionMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    WingCrossSectionMovement.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for WingCrossSectionMovement slots tests."""
+        self.wcsm = (
+            wing_cross_section_movement_fixtures.make_basic_wing_cross_section_movement_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on WingCrossSectionMovement."""
+        self.assertTrue(
+            hasattr(
+                ps.movements.wing_cross_section_movement.WingCrossSectionMovement,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that WingCrossSectionMovement instances have no __dict__."""
+        self.assertFalse(hasattr(self.wcsm, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.wcsm.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties remain accessible after adding __slots__."""
+        # Immutable properties.
+        self.assertIsInstance(
+            self.wcsm.base_wing_cross_section,
+            ps.geometry.wing_cross_section.WingCrossSection,
+        )
+        self.assertEqual(self.wcsm.ampLp_Wcsp_Lpp.shape, (3,))
+        self.assertEqual(self.wcsm.periodLp_Wcsp_Lpp.shape, (3,))
+        self.assertIsInstance(self.wcsm.spacingLp_Wcsp_Lpp, tuple)
+        self.assertEqual(self.wcsm.phaseLp_Wcsp_Lpp.shape, (3,))
+        self.assertEqual(self.wcsm.ampAngles_Wcsp_to_Wcs_ixyz.shape, (3,))
+        self.assertEqual(self.wcsm.periodAngles_Wcsp_to_Wcs_ixyz.shape, (3,))
+        self.assertIsInstance(self.wcsm.spacingAngles_Wcsp_to_Wcs_ixyz, tuple)
+        self.assertEqual(self.wcsm.phaseAngles_Wcsp_to_Wcs_ixyz.shape, (3,))
+
+        # Cached computed properties.
+        self.assertIsInstance(self.wcsm.all_periods, tuple)
+        self.assertIsInstance(self.wcsm.max_period, float)
+
+    def test_deepcopy_method(self):
+        """Test that __deepcopy__ produces a correct independent copy."""
+        # Access cached properties before copying.
+        _ = self.wcsm.all_periods
+        _ = self.wcsm.max_period
+
+        copied = copy.deepcopy(self.wcsm)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.wcsm)
+
+        # Verify property values match.
+        npt.assert_array_equal(copied.ampLp_Wcsp_Lpp, self.wcsm.ampLp_Wcsp_Lpp)
+        npt.assert_array_equal(copied.periodLp_Wcsp_Lpp, self.wcsm.periodLp_Wcsp_Lpp)
+        npt.assert_array_equal(copied.phaseLp_Wcsp_Lpp, self.wcsm.phaseLp_Wcsp_Lpp)
+        npt.assert_array_equal(
+            copied.ampAngles_Wcsp_to_Wcs_ixyz,
+            self.wcsm.ampAngles_Wcsp_to_Wcs_ixyz,
+        )
+        npt.assert_array_equal(
+            copied.periodAngles_Wcsp_to_Wcs_ixyz,
+            self.wcsm.periodAngles_Wcsp_to_Wcs_ixyz,
+        )
+        npt.assert_array_equal(
+            copied.phaseAngles_Wcsp_to_Wcs_ixyz,
+            self.wcsm.phaseAngles_Wcsp_to_Wcs_ixyz,
+        )
+        self.assertEqual(copied.spacingLp_Wcsp_Lpp, self.wcsm.spacingLp_Wcsp_Lpp)
+        self.assertEqual(
+            copied.spacingAngles_Wcsp_to_Wcs_ixyz,
+            self.wcsm.spacingAngles_Wcsp_to_Wcs_ixyz,
+        )
+
+        # Verify base WingCrossSection is independent.
+        self.assertIsNot(
+            copied.base_wing_cross_section, self.wcsm.base_wing_cross_section
+        )
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.ampLp_Wcsp_Lpp, self.wcsm.ampLp_Wcsp_Lpp)
+        self.assertIsNot(
+            copied.ampAngles_Wcsp_to_Wcs_ixyz,
+            self.wcsm.ampAngles_Wcsp_to_Wcs_ixyz,
+        )
+
+    def test_deepcopy_no_dict(self):
+        """Test that a deep copied WingCrossSectionMovement has no __dict__."""
+        copied = copy.deepcopy(self.wcsm)
+        self.assertFalse(hasattr(copied, "__dict__"))
+
+
+class TestWingMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    WingMovement.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for WingMovement slots tests."""
+        self.wing_movement = wing_movement_fixtures.make_basic_wing_movement_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on WingMovement."""
+        self.assertTrue(hasattr(ps.movements.wing_movement.WingMovement, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that WingMovement instances have no __dict__."""
+        self.assertFalse(hasattr(self.wing_movement, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.wing_movement.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties remain accessible after adding __slots__."""
+        # Immutable properties.
+        self.assertIsInstance(self.wing_movement.base_wing, ps.geometry.wing.Wing)
+        self.assertIsInstance(self.wing_movement.wing_cross_section_movements, tuple)
+        self.assertEqual(self.wing_movement.ampLer_Gs_Cgs.shape, (3,))
+        self.assertEqual(self.wing_movement.periodLer_Gs_Cgs.shape, (3,))
+        self.assertIsInstance(self.wing_movement.spacingLer_Gs_Cgs, tuple)
+        self.assertEqual(self.wing_movement.phaseLer_Gs_Cgs.shape, (3,))
+        self.assertEqual(self.wing_movement.ampAngles_Gs_to_Wn_ixyz.shape, (3,))
+        self.assertEqual(self.wing_movement.periodAngles_Gs_to_Wn_ixyz.shape, (3,))
+        self.assertIsInstance(self.wing_movement.spacingAngles_Gs_to_Wn_ixyz, tuple)
+        self.assertEqual(self.wing_movement.phaseAngles_Gs_to_Wn_ixyz.shape, (3,))
+        self.assertEqual(self.wing_movement.rotationPointOffset_Gs_Ler.shape, (3,))
+
+        # Cached computed properties.
+        self.assertIsInstance(self.wing_movement.all_periods, tuple)
+        self.assertIsInstance(self.wing_movement.max_period, float)
+
+    def test_deepcopy_method(self):
+        """Test that __deepcopy__ produces a correct independent copy."""
+        # Access cached properties before copying.
+        _ = self.wing_movement.all_periods
+        _ = self.wing_movement.max_period
+
+        copied = copy.deepcopy(self.wing_movement)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.wing_movement)
+
+        # Verify property values match.
+        npt.assert_array_equal(copied.ampLer_Gs_Cgs, self.wing_movement.ampLer_Gs_Cgs)
+        npt.assert_array_equal(
+            copied.periodLer_Gs_Cgs, self.wing_movement.periodLer_Gs_Cgs
+        )
+        npt.assert_array_equal(
+            copied.phaseLer_Gs_Cgs, self.wing_movement.phaseLer_Gs_Cgs
+        )
+        npt.assert_array_equal(
+            copied.ampAngles_Gs_to_Wn_ixyz,
+            self.wing_movement.ampAngles_Gs_to_Wn_ixyz,
+        )
+        npt.assert_array_equal(
+            copied.periodAngles_Gs_to_Wn_ixyz,
+            self.wing_movement.periodAngles_Gs_to_Wn_ixyz,
+        )
+        npt.assert_array_equal(
+            copied.phaseAngles_Gs_to_Wn_ixyz,
+            self.wing_movement.phaseAngles_Gs_to_Wn_ixyz,
+        )
+        npt.assert_array_equal(
+            copied.rotationPointOffset_Gs_Ler,
+            self.wing_movement.rotationPointOffset_Gs_Ler,
+        )
+
+        # Verify base Wing is independent.
+        self.assertIsNot(copied.base_wing, self.wing_movement.base_wing)
+
+        # Verify WingCrossSectionMovements are independent.
+        self.assertIsNot(
+            copied.wing_cross_section_movements[0],
+            self.wing_movement.wing_cross_section_movements[0],
+        )
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.ampLer_Gs_Cgs, self.wing_movement.ampLer_Gs_Cgs)
+
+    def test_deepcopy_no_dict(self):
+        """Test that a deep copied WingMovement has no __dict__."""
+        copied = copy.deepcopy(self.wing_movement)
+        self.assertFalse(hasattr(copied, "__dict__"))
+
+
+class TestAirplaneMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    AirplaneMovement.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for AirplaneMovement slots tests."""
+        self.airplane_movement = (
+            airplane_movement_fixtures.make_basic_airplane_movement_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on AirplaneMovement."""
+        self.assertTrue(
+            hasattr(ps.movements.airplane_movement.AirplaneMovement, "__slots__")
+        )
+
+    def test_no_instance_dict(self):
+        """Test that AirplaneMovement instances have no __dict__."""
+        self.assertFalse(hasattr(self.airplane_movement, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.airplane_movement.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties remain accessible after adding __slots__."""
+        # Immutable properties.
+        self.assertIsInstance(
+            self.airplane_movement.base_airplane,
+            ps.geometry.airplane.Airplane,
+        )
+        self.assertIsInstance(self.airplane_movement.wing_movements, tuple)
+        self.assertEqual(self.airplane_movement.ampCg_GP1_CgP1.shape, (3,))
+        self.assertEqual(self.airplane_movement.periodCg_GP1_CgP1.shape, (3,))
+        self.assertIsInstance(self.airplane_movement.spacingCg_GP1_CgP1, tuple)
+        self.assertEqual(self.airplane_movement.phaseCg_GP1_CgP1.shape, (3,))
+
+        # Cached computed properties.
+        self.assertIsInstance(self.airplane_movement.all_periods, tuple)
+        self.assertIsInstance(self.airplane_movement.max_period, float)
+
+    def test_deepcopy_method(self):
+        """Test that __deepcopy__ produces a correct independent copy."""
+        # Access cached properties before copying.
+        _ = self.airplane_movement.all_periods
+        _ = self.airplane_movement.max_period
+
+        copied = copy.deepcopy(self.airplane_movement)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.airplane_movement)
+
+        # Verify property values match.
+        npt.assert_array_equal(
+            copied.ampCg_GP1_CgP1, self.airplane_movement.ampCg_GP1_CgP1
+        )
+        npt.assert_array_equal(
+            copied.periodCg_GP1_CgP1,
+            self.airplane_movement.periodCg_GP1_CgP1,
+        )
+        npt.assert_array_equal(
+            copied.phaseCg_GP1_CgP1, self.airplane_movement.phaseCg_GP1_CgP1
+        )
+        self.assertEqual(
+            copied.spacingCg_GP1_CgP1,
+            self.airplane_movement.spacingCg_GP1_CgP1,
+        )
+
+        # Verify base Airplane is independent.
+        self.assertIsNot(copied.base_airplane, self.airplane_movement.base_airplane)
+
+        # Verify WingMovements are independent.
+        self.assertIsNot(
+            copied.wing_movements[0],
+            self.airplane_movement.wing_movements[0],
+        )
+
+        # Verify arrays are independent.
+        self.assertIsNot(copied.ampCg_GP1_CgP1, self.airplane_movement.ampCg_GP1_CgP1)
+
+    def test_deepcopy_no_dict(self):
+        """Test that a deep copied AirplaneMovement has no __dict__."""
+        copied = copy.deepcopy(self.airplane_movement)
+        self.assertFalse(hasattr(copied, "__dict__"))
+
+
+class TestMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on Movement."""
+
+    def setUp(self):
+        """Set up test fixtures for Movement slots tests."""
+        self.static_movement = movement_fixtures.make_static_movement_fixture()
+        self.cyclic_movement = movement_fixtures.make_cyclic_movement_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on Movement."""
+        self.assertTrue(hasattr(ps.movements.movement.Movement, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that Movement instances have no __dict__."""
+        self.assertFalse(hasattr(self.static_movement, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.static_movement.nonexistent_attribute = 42
+
+    def test_property_access_static(self):
+        """Test that all properties are accessible on a static Movement."""
+        # Immutable properties.
+        self.assertIsInstance(self.static_movement.airplane_movements, tuple)
+        self.assertIsInstance(
+            self.static_movement.operating_point_movement,
+            ps.movements.operating_point_movement.OperatingPointMovement,
+        )
+        self.assertIsInstance(self.static_movement.delta_time, float)
+        self.assertIsInstance(self.static_movement.num_steps, int)
+        self.assertIsInstance(self.static_movement.airplanes, tuple)
+        self.assertIsInstance(self.static_movement.operating_points, tuple)
+        self.assertEqual(
+            len(self.static_movement.operating_points),
+            self.static_movement.num_steps,
+        )
+
+        # Cached computed properties.
+        self.assertTrue(self.static_movement.static)
+        self.assertEqual(self.static_movement.max_period, 0.0)
+        self.assertEqual(self.static_movement.lcm_period, 0.0)
+
+    def test_property_access_cyclic(self):
+        """Test that all properties are accessible on a cyclic Movement."""
+        self.assertFalse(self.cyclic_movement.static)
+        self.assertGreater(self.cyclic_movement.max_period, 0.0)
+        self.assertGreater(self.cyclic_movement.min_period, 0.0)
+        self.assertGreater(self.cyclic_movement.lcm_period, 0.0)
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        # Access cached properties before copying.
+        _ = self.static_movement.static
+        _ = self.static_movement.max_period
+        _ = self.static_movement.lcm_period
+
+        copied = copy.deepcopy(self.static_movement)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.static_movement)
+
+        # Verify property values match.
+        self.assertEqual(copied.delta_time, self.static_movement.delta_time)
+        self.assertEqual(copied.num_steps, self.static_movement.num_steps)
+        self.assertEqual(copied.static, self.static_movement.static)
+        self.assertEqual(copied.max_period, self.static_movement.max_period)
+        self.assertEqual(copied.lcm_period, self.static_movement.lcm_period)
+        self.assertEqual(len(copied.airplanes), len(self.static_movement.airplanes))
+        self.assertEqual(
+            len(copied.operating_points),
+            len(self.static_movement.operating_points),
+        )
+
+        # Verify AirplaneMovements are independent.
+        self.assertIsNot(
+            copied.airplane_movements[0],
+            self.static_movement.airplane_movements[0],
+        )
+
+        # Verify OperatingPointMovement is independent.
+        self.assertIsNot(
+            copied.operating_point_movement,
+            self.static_movement.operating_point_movement,
+        )
