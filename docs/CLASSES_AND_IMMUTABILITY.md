@@ -1,6 +1,6 @@
 # Classes and Immutability
 
-This document describe the consistent pattern of immutability and lazy caching across the following core data and geometry classes in the Ptera Software codebase:
+This document describes the consistent pattern of immutability and lazy caching across the following core data and geometry classes in the Ptera Software codebase:
 
 - `UnsteadyProblem`
 - `Movement`
