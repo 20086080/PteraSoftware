@@ -19,7 +19,7 @@ OperatingPoint                         48            280
 SteadyProblem                          48            104
 UnsteadyProblem                        48            296
 OperatingPointMovement                 48            280
-WingCrossSectionMvmt                   48            232
+WingCrossSectionMovement               48            232
 WingMovement                           48            272
 AirplaneMovement                       48            280
 Movement                               48            288
