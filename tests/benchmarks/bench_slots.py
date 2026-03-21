@@ -468,7 +468,7 @@ def bench_per_instance_memory() -> None:
         else:
             dict_size_str = f"{'N/A':>15}"
 
-        print(f"{name:<28} {instance_size:>15,}{dict_size_str}")
+        print(f"{name:<28} {instance_size:>15,} {dict_size_str}")
 
     print()
 
