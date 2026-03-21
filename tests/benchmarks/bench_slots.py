@@ -19,7 +19,6 @@ import numpy as np
 import pterasoftware as ps
 
 # noinspection PyProtectedMember
-# noinspection PyProtectedMember
 from pterasoftware import _panel, _vortices
 
 # noinspection PyProtectedMember
