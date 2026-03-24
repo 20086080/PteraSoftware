@@ -14,6 +14,9 @@ import numpy as np
 
 from . import _logging
 
+# noinspection PyProtectedMember
+from ._panel import Panel
+
 # This module is inherently coupled to the internals of every class in the package
 # (it reads __slots__, knows class structure, and imports all classes into its
 # registry), so importing from a sibling private module is acceptable here.
@@ -24,6 +27,7 @@ from ._vortices._line_vortex import LineVortex
 from ._vortices.horseshoe_vortex import HorseshoeVortex
 from ._vortices.ring_vortex import RingVortex
 from .geometry.airfoil import Airfoil
+from .geometry.wing_cross_section import WingCrossSection
 
 # noinspection PyProtectedMember
 from .movements._functions import oscillating_linspaces, oscillating_sinspaces
@@ -53,6 +57,8 @@ _CLASS_REGISTRY: dict[str, type] = {
     "HorseshoeVortex": HorseshoeVortex,
     "Airfoil": Airfoil,
     "OperatingPoint": OperatingPoint,
+    "WingCrossSection": WingCrossSection,
+    "Panel": Panel,
 }
 
 

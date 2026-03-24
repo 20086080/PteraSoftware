@@ -9,6 +9,9 @@ import numpy as np
 import numpy.testing as npt
 
 # noinspection PyProtectedMember
+from pterasoftware._panel import Panel
+
+# noinspection PyProtectedMember
 from pterasoftware._serialization import (
     _FORMAT_VERSION,
     _deserialize_value,
@@ -26,6 +29,7 @@ from pterasoftware._vortices._line_vortex import LineVortex
 from pterasoftware._vortices.horseshoe_vortex import HorseshoeVortex
 from pterasoftware._vortices.ring_vortex import RingVortex
 from pterasoftware.geometry.airfoil import Airfoil
+from pterasoftware.geometry.wing_cross_section import WingCrossSection
 
 # noinspection PyProtectedMember
 from pterasoftware.movements._functions import (
@@ -1365,3 +1369,113 @@ class TestOperatingPointRoundTrip(unittest.TestCase):
         self.assertIsNone(object.__getattribute__(result, "_qInf__E"))
         self.assertIsNone(object.__getattribute__(result, "_T_pas_GP1_CgP1_to_W_CgP1"))
         self.assertIsNone(object.__getattribute__(result, "_vInf_GP1__E"))
+
+
+class TestWingCrossSectionRoundTrip(unittest.TestCase):
+    """This class contains methods for testing WingCrossSection serialization round
+    trips.
+    """
+
+    def test_round_trip(self):
+        """Tests that a WingCrossSection survives a full round trip.
+
+        :return: None
+        """
+        wing_cross_section = WingCrossSection(
+            airfoil=Airfoil(name="NACA0012"),
+            num_spanwise_panels=8,
+            chord=1.0,
+        )
+        result = _deserialize_value(_serialize_value(wing_cross_section))
+        assert isinstance(result, WingCrossSection)
+        self.assertEqual(result.airfoil.name, "NACA0012")
+        self.assertEqual(result.num_spanwise_panels, 8)
+        self.assertEqual(result.chord, 1.0)
+
+    def test_tip_wing_cross_section(self):
+        """Tests that a tip WingCrossSection (num_spanwise_panels=None) survives round
+        trip.
+
+        :return: None
+        """
+        wing_cross_section = WingCrossSection(
+            airfoil=Airfoil(name="NACA0012"),
+            num_spanwise_panels=None,
+        )
+        result = _deserialize_value(_serialize_value(wing_cross_section))
+        assert isinstance(result, WingCrossSection)
+        self.assertIsNone(result.num_spanwise_panels)
+
+    def test_nested_airfoil(self):
+        """Tests that the nested Airfoil object survives round trip.
+
+        :return: None
+        """
+        airfoil = Airfoil(name="NACA2412")
+        wing_cross_section = WingCrossSection(
+            airfoil=airfoil,
+            num_spanwise_panels=8,
+        )
+        result = _deserialize_value(_serialize_value(wing_cross_section))
+        assert isinstance(result, WingCrossSection)
+        npt.assert_array_equal(result.airfoil.outline_A_lp, airfoil.outline_A_lp)
+
+
+class TestPanelRoundTrip(unittest.TestCase):
+    """This class contains methods for testing Panel serialization round trips."""
+
+    def test_round_trip(self):
+        """Tests that a Panel survives a full round trip.
+
+        :return: None
+        """
+        panel = Panel(
+            Frpp_G_Cg=np.array([1.0, 0.0, 0.0]),
+            Flpp_G_Cg=np.array([1.0, 1.0, 0.0]),
+            Blpp_G_Cg=np.array([0.0, 1.0, 0.0]),
+            Brpp_G_Cg=np.array([0.0, 0.0, 0.0]),
+            is_leading_edge=True,
+            is_trailing_edge=False,
+        )
+        result = _deserialize_value(_serialize_value(panel))
+        assert isinstance(result, Panel)
+        npt.assert_array_equal(result.Frpp_G_Cg, np.array([1.0, 0.0, 0.0]))
+        npt.assert_array_equal(result.Flpp_G_Cg, np.array([1.0, 1.0, 0.0]))
+        self.assertTrue(result.is_leading_edge)
+        self.assertFalse(result.is_trailing_edge)
+
+    def test_none_mutable_attrs(self):
+        """Tests that None mutable attributes remain None after round trip.
+
+        :return: None
+        """
+        panel = Panel(
+            Frpp_G_Cg=np.array([1.0, 0.0, 0.0]),
+            Flpp_G_Cg=np.array([1.0, 1.0, 0.0]),
+            Blpp_G_Cg=np.array([0.0, 1.0, 0.0]),
+            Brpp_G_Cg=np.array([0.0, 0.0, 0.0]),
+            is_leading_edge=True,
+            is_trailing_edge=False,
+        )
+        result = _deserialize_value(_serialize_value(panel))
+        assert isinstance(result, Panel)
+        self.assertIsNone(result.ring_vortex)
+        self.assertIsNone(result.horseshoe_vortex)
+        self.assertIsNone(result.forces_GP1)
+
+    def test_writeable_flags(self):
+        """Tests that deserialized Panel arrays preserve their writeable flags.
+
+        :return: None
+        """
+        panel = Panel(
+            Frpp_G_Cg=np.array([1.0, 0.0, 0.0]),
+            Flpp_G_Cg=np.array([1.0, 1.0, 0.0]),
+            Blpp_G_Cg=np.array([0.0, 1.0, 0.0]),
+            Brpp_G_Cg=np.array([0.0, 0.0, 0.0]),
+            is_leading_edge=True,
+            is_trailing_edge=False,
+        )
+        result = _deserialize_value(_serialize_value(panel))
+        assert isinstance(result, Panel)
+        self.assertFalse(result.Frpp_G_Cg.flags.writeable)
