@@ -23,9 +23,11 @@ from ._vortices._line_vortex import LineVortex
 # noinspection PyProtectedMember
 from ._vortices.horseshoe_vortex import HorseshoeVortex
 from ._vortices.ring_vortex import RingVortex
+from .geometry.airfoil import Airfoil
 
 # noinspection PyProtectedMember
 from .movements._functions import oscillating_linspaces, oscillating_sinspaces
+from .operating_point import OperatingPoint
 
 _logger = _logging.get_logger("_serialization")
 
@@ -49,6 +51,8 @@ _CLASS_REGISTRY: dict[str, type] = {
     "LineVortex": LineVortex,
     "RingVortex": RingVortex,
     "HorseshoeVortex": HorseshoeVortex,
+    "Airfoil": Airfoil,
+    "OperatingPoint": OperatingPoint,
 }
 
 

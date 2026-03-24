@@ -25,12 +25,14 @@ from pterasoftware._serialization import (
 from pterasoftware._vortices._line_vortex import LineVortex
 from pterasoftware._vortices.horseshoe_vortex import HorseshoeVortex
 from pterasoftware._vortices.ring_vortex import RingVortex
+from pterasoftware.geometry.airfoil import Airfoil
 
 # noinspection PyProtectedMember
 from pterasoftware.movements._functions import (
     oscillating_linspaces,
     oscillating_sinspaces,
 )
+from pterasoftware.operating_point import OperatingPoint
 
 
 class TestNdarrayRoundTrip(unittest.TestCase):
@@ -1249,3 +1251,117 @@ class TestHorseshoeVortexRoundTrip(unittest.TestCase):
         self.assertIsNone(object.__getattribute__(result, "_left_leg"))
         self.assertIsNone(object.__getattribute__(result, "_Brhvp_GP1_CgP1"))
         self.assertIsNone(object.__getattribute__(result, "_Blhvp_GP1_CgP1"))
+
+
+class TestAirfoilRoundTrip(unittest.TestCase):
+    """This class contains methods for testing Airfoil serialization round trips."""
+
+    def test_round_trip(self):
+        """Tests that an Airfoil survives a full round trip.
+
+        :return: None
+        """
+        airfoil = Airfoil(name="NACA0012")
+        result = _deserialize_value(_serialize_value(airfoil))
+        assert isinstance(result, Airfoil)
+        self.assertEqual(result.name, "NACA0012")
+        npt.assert_array_equal(result.outline_A_lp, airfoil.outline_A_lp)
+        self.assertEqual(result.resample, airfoil.resample)
+        self.assertEqual(result.n_points_per_side, airfoil.n_points_per_side)
+
+    def test_mcl_round_trip(self):
+        """Tests that the mean camber line array survives round trip.
+
+        :return: None
+        """
+        airfoil = Airfoil(name="NACA2412")
+        result = _deserialize_value(_serialize_value(airfoil))
+        assert isinstance(result, Airfoil)
+        assert result.mcl_A_lp is not None
+        assert airfoil.mcl_A_lp is not None
+        npt.assert_array_equal(result.mcl_A_lp, airfoil.mcl_A_lp)
+
+    def test_writeable_flags(self):
+        """Tests that deserialized Airfoil arrays preserve their writeable flags.
+
+        :return: None
+        """
+        airfoil = Airfoil(name="NACA0012")
+        result = _deserialize_value(_serialize_value(airfoil))
+        assert isinstance(result, Airfoil)
+        self.assertFalse(result.outline_A_lp.flags.writeable)
+
+    def test_save_load_round_trip(self):
+        """Tests that an Airfoil survives a save/load round trip.
+
+        :return: None
+        """
+        airfoil = Airfoil(name="NACA0012")
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "airfoil.json"
+            save(path, airfoil)
+            result = load(path)
+        assert isinstance(result, Airfoil)
+        self.assertEqual(result.name, "NACA0012")
+        npt.assert_array_equal(result.outline_A_lp, airfoil.outline_A_lp)
+
+
+class TestOperatingPointRoundTrip(unittest.TestCase):
+    """This class contains methods for testing OperatingPoint serialization round
+    trips.
+    """
+
+    def test_round_trip(self):
+        """Tests that an OperatingPoint survives a full round trip.
+
+        :return: None
+        """
+        op = OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0, beta=0.0)
+        result = _deserialize_value(_serialize_value(op))
+        assert isinstance(result, OperatingPoint)
+        self.assertEqual(result.rho, 1.225)
+        self.assertEqual(result.vCg__E, 10.0)
+        self.assertEqual(result.alpha, 5.0)
+        self.assertEqual(result.beta, 0.0)
+
+    def test_with_surface_effect(self):
+        """Tests that an OperatingPoint with surface effect parameters survives round
+        trip.
+
+        :return: None
+        """
+        op = OperatingPoint(
+            surfaceNormal_E=(0.0, 0.0, 1.0),
+            surfacePoint_E_Eo=(0.0, 0.0, -1.0),
+        )
+        result = _deserialize_value(_serialize_value(op))
+        assert isinstance(result, OperatingPoint)
+        assert result.surfaceNormal_E is not None
+        assert op.surfaceNormal_E is not None
+        npt.assert_array_equal(result.surfaceNormal_E, op.surfaceNormal_E)
+        assert result.surfacePoint_E_Eo is not None
+        assert op.surfacePoint_E_Eo is not None
+        npt.assert_array_equal(result.surfacePoint_E_Eo, op.surfacePoint_E_Eo)
+
+    def test_none_surface_params(self):
+        """Tests that None surface parameters remain None after round trip.
+
+        :return: None
+        """
+        op = OperatingPoint()
+        result = _deserialize_value(_serialize_value(op))
+        assert isinstance(result, OperatingPoint)
+        self.assertIsNone(result.surfaceNormal_E)
+        self.assertIsNone(result.surfacePoint_E_Eo)
+
+    def test_none_caches_round_trip(self):
+        """Tests that uncomputed caches remain None after round trip.
+
+        :return: None
+        """
+        op = OperatingPoint()
+        result = _deserialize_value(_serialize_value(op))
+        assert isinstance(result, OperatingPoint)
+        self.assertIsNone(object.__getattribute__(result, "_qInf__E"))
+        self.assertIsNone(object.__getattribute__(result, "_T_pas_GP1_CgP1_to_W_CgP1"))
+        self.assertIsNone(object.__getattribute__(result, "_vInf_GP1__E"))
