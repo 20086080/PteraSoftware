@@ -3,6 +3,12 @@
 from __future__ import annotations
 
 import base64
+import gzip
+import json
+import subprocess
+from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 import numpy as np
 
@@ -26,10 +32,183 @@ _CALLABLE_NAME_TO_FUNC = {
 }
 _CALLABLE_FUNC_TO_NAME = {v: k for k, v in _CALLABLE_NAME_TO_FUNC.items()}
 
+# Increments only when the serialization structure changes (slots added/removed/
+# renamed, class registry changed, encoding strategy changed).
+_FORMAT_VERSION = 1
+
+# Maximum decompressed size in bytes when reading gzip files. Prevents gzip bombs
+# from exhausting memory.
+_MAX_DECOMPRESSED_SIZE = 1_073_741_824  # 1 GB
+
 # Maps class names to their types for deserialization dispatch.
 _CLASS_REGISTRY: dict[str, type] = {
     "LineVortex": LineVortex,
 }
+
+
+def save(path: str | Path, obj: object) -> None:
+    """Saves a Ptera Software object to a JSON file.
+
+    If the path ends with ".json.gz", the output is gzip compressed automatically.
+
+    :param path: The file path to save to. Should end with ".json" or ".json.gz".
+    :param obj: The Ptera Software object to save.
+    :return: None
+    """
+    path = Path(path)
+    if not path.name.endswith(".json") and not path.name.endswith(".json.gz"):
+        raise ValueError(
+            f"Path must end with '.json' or '.json.gz', got '{path.name}'."
+        )
+    _logger.info("Saving %s to %s.", type(obj).__name__, path)
+
+    data = _object_to_dict(obj)
+
+    # Add the metadata header fields to the serialized dict.
+    provenance = _get_provenance()
+    header = {"_format_version": _FORMAT_VERSION, **provenance}
+    data = {**header, **data}
+
+    json_bytes = json.dumps(data).encode("utf-8")
+
+    if path.name.endswith(".json.gz"):
+        with gzip.open(path, "wb") as f:
+            f.write(json_bytes)
+    else:
+        with open(path, "wb") as f:
+            f.write(json_bytes)
+
+    file_size = path.stat().st_size
+    _logger.info("Saved %s to %s (%d bytes).", type(obj).__name__, path, file_size)
+
+
+def load(path: str | Path) -> object:
+    """Loads a Ptera Software object from a JSON file.
+
+    If the path ends with ".json.gz", the input is gzip decompressed automatically.
+
+    :param path: The file path to load from.
+    :return: The deserialized Ptera Software object.
+    """
+    path = Path(path)
+    if not path.name.endswith(".json") and not path.name.endswith(".json.gz"):
+        raise ValueError(
+            f"Path must end with '.json' or '.json.gz', got '{path.name}'."
+        )
+    _logger.info("Loading from %s.", path)
+
+    if path.name.endswith(".json.gz"):
+        with gzip.open(path, "rb") as f:
+            raw = f.read(_MAX_DECOMPRESSED_SIZE + 1)
+            if len(raw) > _MAX_DECOMPRESSED_SIZE:
+                raise ValueError(
+                    f"Decompressed file exceeds the maximum allowed size of "
+                    f"{_MAX_DECOMPRESSED_SIZE} bytes."
+                )
+    else:
+        with open(path, "rb") as f:
+            raw = f.read()
+
+    data = json.loads(raw)
+
+    # Check format version compatibility.
+    file_version = data.get("_format_version")
+    if file_version != _FORMAT_VERSION:
+        raise ValueError(
+            f"Format version mismatch: file has version {file_version}, but the "
+            f"current code expects version {_FORMAT_VERSION}."
+        )
+
+    # Log provenance warnings.
+    _log_load_warnings(data)
+
+    obj = _object_from_dict(data)
+    _logger.info("Loaded %s from %s.", type(obj).__name__, path)
+    return obj
+
+
+def _get_provenance() -> dict:
+    """Returns a dict of provenance metadata for the serialized file.
+
+    The provenance fields are informational only and are never checked at load time. The
+    git derived fields (_commit and _dirty) are best effort and are set to None if the
+    code is running outside a git repository.
+
+    :return: A dict with provenance metadata.
+    """
+    try:
+        pkg_version = version("PteraSoftware")
+    except PackageNotFoundError:
+        pkg_version = None
+
+    commit = None
+    dirty = None
+    try:
+        commit = (
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+            )
+            .decode("ascii")
+            .strip()
+        )
+        status = (
+            subprocess.check_output(
+                ["git", "status", "--porcelain"], stderr=subprocess.DEVNULL
+            )
+            .decode("ascii")
+            .strip()
+        )
+        dirty = len(status) > 0
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        _logger.warning("Git is not available. Provenance fields will be null.")
+
+    return {
+        "_pterasoftware_version": pkg_version,
+        "_commit": commit,
+        "_dirty": dirty,
+        "_saved_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _log_load_warnings(data: dict) -> None:
+    """Logs warnings about provenance metadata during deserialization.
+
+    :param data: The top level dict loaded from the JSON file.
+    :return: None
+    """
+    if data.get("_dirty"):
+        _logger.warning(
+            "The file was saved with uncommitted changes (_dirty=true). The _commit "
+            "hash may not fully represent the code state at save time."
+        )
+
+    file_commit = data.get("_commit")
+    if file_commit is not None:
+        try:
+            current_commit = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"], stderr=subprocess.DEVNULL
+                )
+                .decode("ascii")
+                .strip()
+            )
+            if file_commit != current_commit:
+                _logger.warning(
+                    "The file was saved at commit %s, but the current HEAD is %s.",
+                    file_commit[:12],
+                    current_commit[:12],
+                )
+            current_status = (
+                subprocess.check_output(
+                    ["git", "status", "--porcelain"], stderr=subprocess.DEVNULL
+                )
+                .decode("ascii")
+                .strip()
+            )
+            if len(current_status) > 0:
+                _logger.warning("The current working tree has uncommitted changes.")
+        except (FileNotFoundError, subprocess.CalledProcessError):
+            pass
 
 
 def _object_to_dict(obj: object, *, _skip_slots: frozenset[str] = frozenset()) -> dict:

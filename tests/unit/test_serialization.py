@@ -1,18 +1,24 @@
 """This module contains classes to test functions in the serialization module."""
 
+import tempfile
 import unittest
+from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 import numpy.testing as npt
 
 # noinspection PyProtectedMember
 from pterasoftware._serialization import (
+    _FORMAT_VERSION,
     _deserialize_value,
     _ndarray_from_dict,
     _ndarray_to_dict,
     _object_from_dict,
     _object_to_dict,
     _serialize_value,
+    load,
+    save,
 )
 
 # noinspection PyProtectedMember
@@ -941,3 +947,159 @@ class TestObjectFromDict(unittest.TestCase):
         """
         with self.assertRaises(TypeError):
             _object_from_dict({"_type": "UnknownClass"})
+
+
+class TestSaveLoad(unittest.TestCase):
+    """This class contains methods for testing save and load."""
+
+    def test_json_round_trip(self):
+        """Tests that save and load produce a correct round trip via JSON.
+
+        :return: None
+        """
+        start = np.array([1.0, 2.0, 3.0])
+        end = np.array([4.0, 5.0, 6.0])
+        lv = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "test.json"
+            save(path, lv)
+            result = load(path)
+        assert isinstance(result, LineVortex)
+        npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
+        npt.assert_array_equal(result.Elvp_GP1_CgP1, end)
+        self.assertEqual(result.strength, 5.0)
+
+    def test_gzip_round_trip(self):
+        """Tests that save and load produce a correct round trip via gzip JSON.
+
+        :return: None
+        """
+        start = np.array([1.0, 2.0, 3.0])
+        end = np.array([4.0, 5.0, 6.0])
+        lv = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "test.json.gz"
+            save(path, lv)
+            result = load(path)
+        assert isinstance(result, LineVortex)
+        npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
+        npt.assert_array_equal(result.Elvp_GP1_CgP1, end)
+        self.assertEqual(result.strength, 5.0)
+
+    def test_file_contains_format_version(self):
+        """Tests that the saved file contains the format version.
+
+        :return: None
+        """
+        import json
+
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "test.json"
+            save(path, lv)
+            with open(path) as f:
+                data = json.load(f)
+        self.assertEqual(data["_format_version"], _FORMAT_VERSION)
+
+    def test_file_contains_provenance(self):
+        """Tests that the saved file contains provenance metadata.
+
+        :return: None
+        """
+        import json
+
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "test.json"
+            save(path, lv)
+            with open(path) as f:
+                data = json.load(f)
+        self.assertIn("_saved_at", data)
+        self.assertIn("_pterasoftware_version", data)
+        self.assertIn("_commit", data)
+        self.assertIn("_dirty", data)
+
+    def test_format_version_mismatch_raises(self):
+        """Tests that loading a file with a mismatched format version raises.
+
+        :return: None
+        """
+        import json
+
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "test.json"
+            save(path, lv)
+            with open(path) as f:
+                data = json.load(f)
+            data["_format_version"] = 9999
+            with open(path, "w") as f:
+                json.dump(data, f)
+            with self.assertRaises(ValueError):
+                load(path)
+
+    def test_save_accepts_string_path(self):
+        """Tests that save accepts a string path in addition to a Path object.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = str(Path(tmp) / "test.json")
+            save(path, lv)
+            result = load(path)
+        assert isinstance(result, LineVortex)
+
+    def test_save_invalid_extension_raises(self):
+        """Tests that save raises a ValueError for an unsupported file extension.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        with self.assertRaises(ValueError):
+            save("test.txt", lv)
+
+    def test_load_invalid_extension_raises(self):
+        """Tests that load raises a ValueError for an unsupported file extension.
+
+        :return: None
+        """
+        with self.assertRaises(ValueError):
+            load("test.dat")
+
+    def test_gzip_bomb_protection(self):
+        """Tests that loading a gzip file that exceeds the size limit raises.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "test.json.gz"
+            save(path, lv)
+            with patch("pterasoftware._serialization._MAX_DECOMPRESSED_SIZE", 10):
+                with self.assertRaises(ValueError):
+                    load(path)
