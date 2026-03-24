@@ -12,6 +12,9 @@ from . import _logging
 # (it reads __slots__, knows class structure, and imports all classes into its
 # registry), so importing from a sibling private module is acceptable here.
 # noinspection PyProtectedMember
+from ._vortices._line_vortex import LineVortex
+
+# noinspection PyProtectedMember
 from .movements._functions import oscillating_linspaces, oscillating_sinspaces
 
 _logger = _logging.get_logger("_serialization")
@@ -22,6 +25,37 @@ _CALLABLE_NAME_TO_FUNC = {
     "uniform": oscillating_linspaces,
 }
 _CALLABLE_FUNC_TO_NAME = {v: k for k, v in _CALLABLE_NAME_TO_FUNC.items()}
+
+# Maps class names to their types for deserialization dispatch.
+_CLASS_REGISTRY: dict[str, type] = {
+    "LineVortex": LineVortex,
+}
+
+
+def _object_to_dict(obj: object, *, _skip_slots: frozenset[str] = frozenset()) -> dict:
+    """Generically serializes a Ptera Software object to a dict.
+
+    Iterates over the class's __slots__ to discover all attributes, including cache
+    slots. JSON keys are the slot names themselves (e.g., "_rho", "_name", "forces_W").
+    Slots listed in _skip_slots are serialized as null (used by the shared reference
+    optimization for UnsteadyProblem and solver classes).
+
+    :param obj: The Ptera Software object to serialize.
+    :param _skip_slots: A frozenset of slot names to serialize as null.
+    :return: A dict with "_type" set to the class name and one key per slot.
+    """
+    cls = type(obj)
+    class_name = cls.__name__
+    if class_name not in _CLASS_REGISTRY:
+        raise TypeError(f"_object_to_dict does not handle {class_name}.")
+
+    result: dict = {"_type": class_name}
+    for slot_name in getattr(cls, "__slots__"):
+        if slot_name in _skip_slots:
+            result[slot_name] = None
+        else:
+            result[slot_name] = _serialize_value(getattr(obj, slot_name))
+    return result
 
 
 def _ndarray_to_dict(arr: np.ndarray) -> dict:
@@ -130,6 +164,9 @@ def _serialize_value(value: object) -> object:
             "_type": "list",
             "items": [_serialize_value(item) for item in value],
         }
+
+    if type(value).__name__ in _CLASS_REGISTRY:
+        return _object_to_dict(value)
 
     if callable(value):
         name = _CALLABLE_FUNC_TO_NAME.get(value)

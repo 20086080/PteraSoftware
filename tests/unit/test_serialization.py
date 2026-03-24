@@ -10,8 +10,12 @@ from pterasoftware._serialization import (
     _deserialize_value,
     _ndarray_from_dict,
     _ndarray_to_dict,
+    _object_to_dict,
     _serialize_value,
 )
+
+# noinspection PyProtectedMember
+from pterasoftware._vortices._line_vortex import LineVortex
 
 # noinspection PyProtectedMember
 from pterasoftware.movements._functions import (
@@ -698,3 +702,135 @@ class TestValueRoundTrip(unittest.TestCase):
             _deserialize_value(_serialize_value(oscillating_linspaces)),
             oscillating_linspaces,
         )
+
+
+class TestObjectToDict(unittest.TestCase):
+    """This class contains methods for testing _object_to_dict."""
+
+    def test_line_vortex_type_tag(self):
+        """Tests that a LineVortex serializes with the correct _type tag.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        d = _object_to_dict(lv)
+        self.assertEqual(d["_type"], "LineVortex")
+
+    def test_line_vortex_slot_keys(self):
+        """Tests that all LineVortex __slots__ appear as keys in the serialized dict.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        d = _object_to_dict(lv)
+        for slot_name in LineVortex.__slots__:
+            self.assertIn(slot_name, d)
+
+    def test_line_vortex_strength(self):
+        """Tests that a LineVortex's strength is serialized correctly.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=5.0,
+        )
+        d = _object_to_dict(lv)
+        self.assertEqual(d["strength"], {"_type": "float", "value": 5.0})
+
+    def test_line_vortex_arrays(self):
+        """Tests that a LineVortex's endpoint arrays are serialized as ndarray dicts.
+
+        :return: None
+        """
+        start = np.array([1.0, 2.0, 3.0])
+        end = np.array([4.0, 5.0, 6.0])
+        lv = LineVortex(
+            Slvp_GP1_CgP1=start,
+            Elvp_GP1_CgP1=end,
+            strength=1.0,
+        )
+        d = _object_to_dict(lv)
+        assert isinstance(d["_Slvp_GP1_CgP1"], dict)
+        self.assertEqual(d["_Slvp_GP1_CgP1"]["_type"], "ndarray")
+        assert isinstance(d["_Elvp_GP1_CgP1"], dict)
+        self.assertEqual(d["_Elvp_GP1_CgP1"]["_type"], "ndarray")
+
+    def test_line_vortex_none_caches(self):
+        """Tests that uncomputed cache slots serialize as None.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        d = _object_to_dict(lv)
+        self.assertIsNone(d["_vector_GP1"])
+        self.assertIsNone(d["_Clvp_GP1_CgP1"])
+
+    def test_line_vortex_populated_caches(self):
+        """Tests that computed cache slots serialize as ndarray dicts.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        # Trigger cache population by accessing the properties.
+        _ = lv.vector_GP1
+        _ = lv.Clvp_GP1_CgP1
+        d = _object_to_dict(lv)
+        assert isinstance(d["_vector_GP1"], dict)
+        self.assertEqual(d["_vector_GP1"]["_type"], "ndarray")
+        assert isinstance(d["_Clvp_GP1_CgP1"], dict)
+        self.assertEqual(d["_Clvp_GP1_CgP1"]["_type"], "ndarray")
+
+    def test_line_vortex_via_serialize_value(self):
+        """Tests that _serialize_value dispatches LineVortex to _object_to_dict.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        result = _serialize_value(lv)
+        assert isinstance(result, dict)
+        self.assertEqual(result["_type"], "LineVortex")
+
+    def test_skip_slots(self):
+        """Tests that slots in _skip_slots are serialized as None.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        d = _object_to_dict(lv, _skip_slots=frozenset({"strength"}))
+        self.assertIsNone(d["strength"])
+        assert isinstance(d["_Slvp_GP1_CgP1"], dict)
+        self.assertEqual(d["_Slvp_GP1_CgP1"]["_type"], "ndarray")
+
+    def test_unregistered_class_raises(self):
+        """Tests that an unregistered class raises a TypeError.
+
+        :return: None
+        """
+        with self.assertRaises(TypeError):
+            _object_to_dict("not a Ptera Software object")
