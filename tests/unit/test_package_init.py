@@ -98,6 +98,26 @@ class TestLazyCallableImports(unittest.TestCase):
         self.assertTrue(callable(func))
         self.assertEqual(func.__name__, "set_up_logging")
 
+    def test_lazy_callable_import_save(self):
+        """Accessing save should trigger lazy callable import.
+
+        :return: None
+        """
+        func = ps.save
+        self.assertIsNotNone(func)
+        self.assertTrue(callable(func))
+        self.assertEqual(func.__name__, "save")
+
+    def test_lazy_callable_import_load(self):
+        """Accessing load should trigger lazy callable import.
+
+        :return: None
+        """
+        func = ps.load
+        self.assertIsNotNone(func)
+        self.assertTrue(callable(func))
+        self.assertEqual(func.__name__, "load")
+
     def test_lazy_callable_caching(self):
         """Lazy callables should be cached in globals after first access.
 
@@ -124,6 +144,26 @@ class TestLazyCallableImports(unittest.TestCase):
         direct_func = _logging.set_up_logging
 
         self.assertIs(lazy_func, direct_func)
+
+    def test_lazy_callable_save_is_correct_function(self):
+        """The lazy imported save should be the actual function from _serialization.
+
+        :return: None
+        """
+        # noinspection PyProtectedMember
+        from pterasoftware import _serialization
+
+        self.assertIs(ps.save, _serialization.save)
+
+    def test_lazy_callable_load_is_correct_function(self):
+        """The lazy imported load should be the actual function from _serialization.
+
+        :return: None
+        """
+        # noinspection PyProtectedMember
+        from pterasoftware import _serialization
+
+        self.assertIs(ps.load, _serialization.load)
 
 
 class TestEagerImports(unittest.TestCase):
@@ -187,6 +227,8 @@ class TestDirFunction(unittest.TestCase):
         """
         package_dir = dir(ps)
 
+        self.assertIn("load", package_dir)
+        self.assertIn("save", package_dir)
         self.assertIn("set_up_logging", package_dir)
 
     def test_dir_includes_eager_imports(self):
