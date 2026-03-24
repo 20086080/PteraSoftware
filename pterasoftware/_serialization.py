@@ -56,7 +56,7 @@ _CALLABLE_NAME_TO_FUNC = {
     "sine": oscillating_sinspaces,
     "uniform": oscillating_linspaces,
 }
-_CALLABLE_FUNC_TO_NAME = {v: k for k, v in _CALLABLE_NAME_TO_FUNC.items()}
+_CALLABLE_FUNC_TO_NAME = {func: name for name, func in _CALLABLE_NAME_TO_FUNC.items()}
 
 # Increments only when the serialization structure changes (slots added/removed/
 # renamed, class registry changed, encoding strategy changed).
@@ -289,6 +289,8 @@ def _object_to_dict(
     if class_name not in _CLASS_REGISTRY:
         raise TypeError(f"_object_to_dict does not handle {class_name}.")
 
+    _logger.debug("Serializing %s.", class_name)
+
     # Solver skip slots always apply because the aliases are always redundant
     # with solver._steady_problem or solver.unsteady_problem.
     if isinstance(
@@ -331,6 +333,8 @@ def _object_from_dict(data: dict[str, Any]) -> object:
     cls = _CLASS_REGISTRY.get(type_tag)
     if cls is None:
         raise TypeError(f"Unknown class in _object_from_dict: '{type_tag}'.")
+
+    _logger.debug("Deserializing %s.", type_tag)
 
     obj: object = object.__new__(cls)
     for slot_name in getattr(cls, "__slots__"):
@@ -386,8 +390,11 @@ def _reconstruct_shared_references(obj: object) -> None:
         # Reconstruct Movement._airplanes as a tuple[tuple[Airplane, ...], ...].
         # Outer index = airplane movement, inner index = time step.
         airplanes = tuple(
-            tuple(steady_problems[step].airplanes[am_idx] for step in range(num_steps))
-            for am_idx in range(num_airplane_movements)
+            tuple(
+                steady_problems[step].airplanes[airplane_movement_index]
+                for step in range(num_steps)
+            )
+            for airplane_movement_index in range(num_airplane_movements)
         )
         object.__setattr__(movement, "_airplanes", airplanes)
 
@@ -463,7 +470,7 @@ def _ndarray_to_dict(arr: np.ndarray) -> dict[str, Any]:
     }
 
 
-def _ndarray_from_dict(d: dict[str, Any]) -> np.ndarray:
+def _ndarray_from_dict(array_dict: dict[str, Any]) -> np.ndarray:
     """Reconstructs a NumPy ndarray from a dict produced by _ndarray_to_dict.
 
     Dispatches on dtype: base64 decode for numeric and bool dtypes, element by element
@@ -471,21 +478,25 @@ def _ndarray_from_dict(d: dict[str, Any]) -> np.ndarray:
     reconstruction, restores the writeable flag from the dict's "writeable" field. If
     the field is absent, the array defaults to writeable.
 
-    :param d: The dict produced by _ndarray_to_dict.
+    :param array_dict: The dict produced by _ndarray_to_dict.
     :return: The reconstructed ndarray.
     """
-    shape = d["shape"]
-    writeable = d.get("writeable", True)
+    shape = array_dict["shape"]
+    writeable = array_dict.get("writeable", True)
 
-    if d["dtype"] == "object":
-        items = [_deserialize_value(item) for item in d["items"]]
+    if array_dict["dtype"] == "object":
+        items = [_deserialize_value(item) for item in array_dict["items"]]
         arr = np.empty(len(items), dtype=object)
         for i, item in enumerate(items):
             arr[i] = item
         arr = arr.reshape(shape)
     else:
-        raw = base64.b64decode(d["data"])
-        arr = np.frombuffer(raw, dtype=np.dtype(d["dtype"])).reshape(shape).copy()
+        raw = base64.b64decode(array_dict["data"])
+        arr = (
+            np.frombuffer(raw, dtype=np.dtype(array_dict["dtype"]))
+            .reshape(shape)
+            .copy()
+        )
 
     if not writeable:
         arr.flags.writeable = False

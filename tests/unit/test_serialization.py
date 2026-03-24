@@ -165,9 +165,9 @@ class TestNdarrayRoundTrip(unittest.TestCase):
         :return: None
         """
         arr = np.array([1.0, 2.0], dtype=np.float64)
-        d = _ndarray_to_dict(arr)
-        del d["writeable"]
-        result = _ndarray_from_dict(d)
+        serialized_dict = _ndarray_to_dict(arr)
+        del serialized_dict["writeable"]
+        result = _ndarray_from_dict(serialized_dict)
         self.assertTrue(result.flags.writeable)
 
     def test_dtype_object_with_none(self):
@@ -231,13 +231,13 @@ class TestNdarrayToDict(unittest.TestCase):
         :return: None
         """
         arr = np.array([1.0], dtype=np.float64)
-        d = _ndarray_to_dict(arr)
-        self.assertEqual(d["_type"], "ndarray")
-        self.assertEqual(d["dtype"], "float64")
-        self.assertEqual(d["shape"], [1])
-        self.assertIn("data", d)
-        self.assertIn("writeable", d)
-        self.assertNotIn("items", d)
+        serialized_dict = _ndarray_to_dict(arr)
+        self.assertEqual(serialized_dict["_type"], "ndarray")
+        self.assertEqual(serialized_dict["dtype"], "float64")
+        self.assertEqual(serialized_dict["shape"], [1])
+        self.assertIn("data", serialized_dict)
+        self.assertIn("writeable", serialized_dict)
+        self.assertNotIn("items", serialized_dict)
 
     def test_object_dict_keys(self):
         """Tests that a dtype=object array produces a dict with the expected keys.
@@ -246,13 +246,13 @@ class TestNdarrayToDict(unittest.TestCase):
         """
         arr = np.empty(1, dtype=object)
         arr[0] = None
-        d = _ndarray_to_dict(arr)
-        self.assertEqual(d["_type"], "ndarray")
-        self.assertEqual(d["dtype"], "object")
-        self.assertEqual(d["shape"], [1])
-        self.assertIn("items", d)
-        self.assertIn("writeable", d)
-        self.assertNotIn("data", d)
+        serialized_dict = _ndarray_to_dict(arr)
+        self.assertEqual(serialized_dict["_type"], "ndarray")
+        self.assertEqual(serialized_dict["dtype"], "object")
+        self.assertEqual(serialized_dict["shape"], [1])
+        self.assertIn("items", serialized_dict)
+        self.assertIn("writeable", serialized_dict)
+        self.assertNotIn("data", serialized_dict)
 
     def test_base64_data_is_string(self):
         """Tests that the base64 encoded data is a string.
@@ -260,8 +260,8 @@ class TestNdarrayToDict(unittest.TestCase):
         :return: None
         """
         arr = np.array([1.0, 2.0], dtype=np.float64)
-        d = _ndarray_to_dict(arr)
-        self.assertIsInstance(d["data"], str)
+        serialized_dict = _ndarray_to_dict(arr)
+        self.assertIsInstance(serialized_dict["data"], str)
 
 
 class TestSerializeValue(unittest.TestCase):
@@ -522,8 +522,8 @@ class TestDeserializeValue(unittest.TestCase):
         :return: None
         """
         arr = np.array([1.0, 2.0], dtype=np.float64)
-        d = _ndarray_to_dict(arr)
-        result = _deserialize_value(d)
+        serialized_dict = _ndarray_to_dict(arr)
+        result = _deserialize_value(serialized_dict)
         npt.assert_array_equal(result, arr)
 
     def test_tuple(self):
@@ -750,40 +750,40 @@ class TestObjectToDict(unittest.TestCase):
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
-        d = _object_to_dict(lv)
-        self.assertEqual(d["_type"], "LineVortex")
+        serialized_dict = _object_to_dict(line_vortex)
+        self.assertEqual(serialized_dict["_type"], "LineVortex")
 
     def test_line_vortex_slot_keys(self):
         """Tests that all LineVortex __slots__ appear as keys in the serialized dict.
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
-        d = _object_to_dict(lv)
+        serialized_dict = _object_to_dict(line_vortex)
         for slot_name in LineVortex.__slots__:
-            self.assertIn(slot_name, d)
+            self.assertIn(slot_name, serialized_dict)
 
     def test_line_vortex_strength(self):
         """Tests that a LineVortex's strength is serialized correctly.
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=5.0,
         )
-        d = _object_to_dict(lv)
-        self.assertEqual(d["strength"], {"_type": "float", "value": 5.0})
+        serialized_dict = _object_to_dict(line_vortex)
+        self.assertEqual(serialized_dict["strength"], {"_type": "float", "value": 5.0})
 
     def test_line_vortex_arrays(self):
         """Tests that a LineVortex's endpoint arrays are serialized as ndarray dicts.
@@ -792,61 +792,61 @@ class TestObjectToDict(unittest.TestCase):
         """
         start = np.array([1.0, 2.0, 3.0])
         end = np.array([4.0, 5.0, 6.0])
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=start,
             Elvp_GP1_CgP1=end,
             strength=1.0,
         )
-        d = _object_to_dict(lv)
-        assert isinstance(d["_Slvp_GP1_CgP1"], dict)
-        self.assertEqual(d["_Slvp_GP1_CgP1"]["_type"], "ndarray")
-        assert isinstance(d["_Elvp_GP1_CgP1"], dict)
-        self.assertEqual(d["_Elvp_GP1_CgP1"]["_type"], "ndarray")
+        serialized_dict = _object_to_dict(line_vortex)
+        assert isinstance(serialized_dict["_Slvp_GP1_CgP1"], dict)
+        self.assertEqual(serialized_dict["_Slvp_GP1_CgP1"]["_type"], "ndarray")
+        assert isinstance(serialized_dict["_Elvp_GP1_CgP1"], dict)
+        self.assertEqual(serialized_dict["_Elvp_GP1_CgP1"]["_type"], "ndarray")
 
     def test_line_vortex_none_caches(self):
         """Tests that uncomputed cache slots serialize as None.
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
-        d = _object_to_dict(lv)
-        self.assertIsNone(d["_vector_GP1"])
-        self.assertIsNone(d["_Clvp_GP1_CgP1"])
+        serialized_dict = _object_to_dict(line_vortex)
+        self.assertIsNone(serialized_dict["_vector_GP1"])
+        self.assertIsNone(serialized_dict["_Clvp_GP1_CgP1"])
 
     def test_line_vortex_populated_caches(self):
         """Tests that computed cache slots serialize as ndarray dicts.
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
         # Trigger cache population by accessing the properties.
-        _ = lv.vector_GP1
-        _ = lv.Clvp_GP1_CgP1
-        d = _object_to_dict(lv)
-        assert isinstance(d["_vector_GP1"], dict)
-        self.assertEqual(d["_vector_GP1"]["_type"], "ndarray")
-        assert isinstance(d["_Clvp_GP1_CgP1"], dict)
-        self.assertEqual(d["_Clvp_GP1_CgP1"]["_type"], "ndarray")
+        _ = line_vortex.vector_GP1
+        _ = line_vortex.Clvp_GP1_CgP1
+        serialized_dict = _object_to_dict(line_vortex)
+        assert isinstance(serialized_dict["_vector_GP1"], dict)
+        self.assertEqual(serialized_dict["_vector_GP1"]["_type"], "ndarray")
+        assert isinstance(serialized_dict["_Clvp_GP1_CgP1"], dict)
+        self.assertEqual(serialized_dict["_Clvp_GP1_CgP1"]["_type"], "ndarray")
 
     def test_line_vortex_via_serialize_value(self):
         """Tests that _serialize_value dispatches LineVortex to _object_to_dict.
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
-        result = _serialize_value(lv)
+        result = _serialize_value(line_vortex)
         assert isinstance(result, dict)
         self.assertEqual(result["_type"], "LineVortex")
 
@@ -855,15 +855,17 @@ class TestObjectToDict(unittest.TestCase):
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
-        d = _object_to_dict(lv, _skip_slots=frozenset({"strength"}))
-        self.assertIsNone(d["strength"])
-        assert isinstance(d["_Slvp_GP1_CgP1"], dict)
-        self.assertEqual(d["_Slvp_GP1_CgP1"]["_type"], "ndarray")
+        serialized_dict = _object_to_dict(
+            line_vortex, _skip_slots=frozenset({"strength"})
+        )
+        self.assertIsNone(serialized_dict["strength"])
+        assert isinstance(serialized_dict["_Slvp_GP1_CgP1"], dict)
+        self.assertEqual(serialized_dict["_Slvp_GP1_CgP1"]["_type"], "ndarray")
 
     def test_unregistered_class_raises(self):
         """Tests that an unregistered class raises a TypeError.
@@ -884,9 +886,9 @@ class TestObjectFromDict(unittest.TestCase):
         """
         start = np.array([1.0, 2.0, 3.0])
         end = np.array([4.0, 5.0, 6.0])
-        lv = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
-        d = _object_to_dict(lv)
-        result = _object_from_dict(d)
+        line_vortex = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
+        serialized_dict = _object_to_dict(line_vortex)
+        result = _object_from_dict(serialized_dict)
         assert isinstance(result, LineVortex)
         npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
         npt.assert_array_equal(result.Elvp_GP1_CgP1, end)
@@ -897,12 +899,12 @@ class TestObjectFromDict(unittest.TestCase):
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
-        result = _object_from_dict(_object_to_dict(lv))
+        result = _object_from_dict(_object_to_dict(line_vortex))
         assert isinstance(result, LineVortex)
         self.assertFalse(result.Slvp_GP1_CgP1.flags.writeable)
         self.assertFalse(result.Elvp_GP1_CgP1.flags.writeable)
@@ -912,12 +914,12 @@ class TestObjectFromDict(unittest.TestCase):
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
-        result = _object_from_dict(_object_to_dict(lv))
+        result = _object_from_dict(_object_to_dict(line_vortex))
         assert isinstance(result, LineVortex)
         # Access private cache slots directly to verify they are None.
         self.assertIsNone(object.__getattribute__(result, "_vector_GP1"))
@@ -928,15 +930,15 @@ class TestObjectFromDict(unittest.TestCase):
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
         # Trigger cache population.
-        expected_vector = lv.vector_GP1.copy()
-        expected_center = lv.Clvp_GP1_CgP1.copy()
-        result = _object_from_dict(_object_to_dict(lv))
+        expected_vector = line_vortex.vector_GP1.copy()
+        expected_center = line_vortex.Clvp_GP1_CgP1.copy()
+        result = _object_from_dict(_object_to_dict(line_vortex))
         assert isinstance(result, LineVortex)
         npt.assert_array_equal(result.vector_GP1, expected_vector)
         npt.assert_array_equal(result.Clvp_GP1_CgP1, expected_center)
@@ -947,13 +949,13 @@ class TestObjectFromDict(unittest.TestCase):
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
-        d = _object_to_dict(lv)
-        result = _deserialize_value(d)
+        serialized_dict = _object_to_dict(line_vortex)
+        result = _deserialize_value(serialized_dict)
         assert isinstance(result, LineVortex)
         self.assertEqual(result.strength, 1.0)
 
@@ -964,8 +966,8 @@ class TestObjectFromDict(unittest.TestCase):
         """
         start = np.array([1.0, 2.0, 3.0])
         end = np.array([4.0, 5.0, 6.0])
-        lv = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=7.5)
-        result = _deserialize_value(_serialize_value(lv))
+        line_vortex = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=7.5)
+        result = _deserialize_value(_serialize_value(line_vortex))
         assert isinstance(result, LineVortex)
         npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
         npt.assert_array_equal(result.Elvp_GP1_CgP1, end)
@@ -990,10 +992,10 @@ class TestSaveLoad(unittest.TestCase):
         """
         start = np.array([1.0, 2.0, 3.0])
         end = np.array([4.0, 5.0, 6.0])
-        lv = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
+        line_vortex = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
-            save(path, lv)
+            save(path, line_vortex)
             result = load(path)
         assert isinstance(result, LineVortex)
         npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
@@ -1007,10 +1009,10 @@ class TestSaveLoad(unittest.TestCase):
         """
         start = np.array([1.0, 2.0, 3.0])
         end = np.array([4.0, 5.0, 6.0])
-        lv = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
+        line_vortex = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json.gz"
-            save(path, lv)
+            save(path, line_vortex)
             result = load(path)
         assert isinstance(result, LineVortex)
         npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
@@ -1024,14 +1026,14 @@ class TestSaveLoad(unittest.TestCase):
         """
         import json
 
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
-            save(path, lv)
+            save(path, line_vortex)
             with open(path) as f:
                 data = json.load(f)
         self.assertEqual(data["_format_version"], _FORMAT_VERSION)
@@ -1043,14 +1045,14 @@ class TestSaveLoad(unittest.TestCase):
         """
         import json
 
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
-            save(path, lv)
+            save(path, line_vortex)
             with open(path) as f:
                 data = json.load(f)
         self.assertIn("_saved_at", data)
@@ -1065,14 +1067,14 @@ class TestSaveLoad(unittest.TestCase):
         """
         import json
 
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
-            save(path, lv)
+            save(path, line_vortex)
             with open(path) as f:
                 data = json.load(f)
             data["_format_version"] = 9999
@@ -1086,14 +1088,14 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
         with tempfile.TemporaryDirectory() as tmp:
             path = str(Path(tmp) / "test.json")
-            save(path, lv)
+            save(path, line_vortex)
             result = load(path)
         assert isinstance(result, LineVortex)
 
@@ -1102,13 +1104,13 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
         with self.assertRaises(ValueError):
-            save("test.txt", lv)
+            save("test.txt", line_vortex)
 
     def test_load_invalid_extension_raises(self):
         """Tests that load raises a ValueError for an unsupported file extension.
@@ -1123,14 +1125,14 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        lv = LineVortex(
+        line_vortex = LineVortex(
             Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             strength=1.0,
         )
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json.gz"
-            save(path, lv)
+            save(path, line_vortex)
             with patch("pterasoftware._serialization._MAX_DECOMPRESSED_SIZE", 10):
                 with self.assertRaises(ValueError):
                     load(path)
@@ -1144,24 +1146,24 @@ class TestRingVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        fr = np.array([1.0, 0.0, 0.0])
-        fl = np.array([1.0, 1.0, 0.0])
-        bl = np.array([0.0, 1.0, 0.0])
-        br = np.array([0.0, 0.0, 0.0])
-        rv = RingVortex(
-            Frrvp_GP1_CgP1=fr,
-            Flrvp_GP1_CgP1=fl,
-            Blrvp_GP1_CgP1=bl,
-            Brrvp_GP1_CgP1=br,
+        front_right = np.array([1.0, 0.0, 0.0])
+        front_left = np.array([1.0, 1.0, 0.0])
+        back_left = np.array([0.0, 1.0, 0.0])
+        back_right = np.array([0.0, 0.0, 0.0])
+        ring_vortex = RingVortex(
+            Frrvp_GP1_CgP1=front_right,
+            Flrvp_GP1_CgP1=front_left,
+            Blrvp_GP1_CgP1=back_left,
+            Brrvp_GP1_CgP1=back_right,
             strength=3.0,
         )
-        rv.age = 0.5
-        result = _deserialize_value(_serialize_value(rv))
+        ring_vortex.age = 0.5
+        result = _deserialize_value(_serialize_value(ring_vortex))
         assert isinstance(result, RingVortex)
-        npt.assert_array_equal(result.Frrvp_GP1_CgP1, fr)
-        npt.assert_array_equal(result.Flrvp_GP1_CgP1, fl)
-        npt.assert_array_equal(result.Blrvp_GP1_CgP1, bl)
-        npt.assert_array_equal(result.Brrvp_GP1_CgP1, br)
+        npt.assert_array_equal(result.Frrvp_GP1_CgP1, front_right)
+        npt.assert_array_equal(result.Flrvp_GP1_CgP1, front_left)
+        npt.assert_array_equal(result.Blrvp_GP1_CgP1, back_left)
+        npt.assert_array_equal(result.Brrvp_GP1_CgP1, back_right)
         self.assertEqual(result.strength, 3.0)
         self.assertEqual(result.age, 0.5)
 
@@ -1170,7 +1172,7 @@ class TestRingVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        rv = RingVortex(
+        ring_vortex = RingVortex(
             Frrvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             Flrvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
             Blrvp_GP1_CgP1=np.array([0.0, 1.0, 0.0]),
@@ -1178,15 +1180,15 @@ class TestRingVortexRoundTrip(unittest.TestCase):
             strength=1.0,
         )
         # Trigger cache population.
-        _ = rv.front_leg
-        _ = rv.left_leg
-        _ = rv.back_leg
-        _ = rv.right_leg
-        result = _deserialize_value(_serialize_value(rv))
+        _ = ring_vortex.front_leg
+        _ = ring_vortex.left_leg
+        _ = ring_vortex.back_leg
+        _ = ring_vortex.right_leg
+        result = _deserialize_value(_serialize_value(ring_vortex))
         assert isinstance(result, RingVortex)
         assert isinstance(result.front_leg, LineVortex)
         npt.assert_array_equal(
-            result.front_leg.Slvp_GP1_CgP1, rv.front_leg.Slvp_GP1_CgP1
+            result.front_leg.Slvp_GP1_CgP1, ring_vortex.front_leg.Slvp_GP1_CgP1
         )
 
     def test_none_caches_round_trip(self):
@@ -1194,14 +1196,14 @@ class TestRingVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        rv = RingVortex(
+        ring_vortex = RingVortex(
             Frrvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             Flrvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
             Blrvp_GP1_CgP1=np.array([0.0, 1.0, 0.0]),
             Brrvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
             strength=1.0,
         )
-        result = _deserialize_value(_serialize_value(rv))
+        result = _deserialize_value(_serialize_value(ring_vortex))
         assert isinstance(result, RingVortex)
         self.assertIsNone(object.__getattribute__(result, "_front_leg"))
         self.assertIsNone(object.__getattribute__(result, "_Crvp_GP1_CgP1"))
@@ -1218,21 +1220,23 @@ class TestHorseshoeVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        fr = np.array([1.0, 0.0, 0.0])
-        fl = np.array([1.0, 1.0, 0.0])
-        vec = np.array([-1.0, 0.0, 0.0])
-        hv = HorseshoeVortex(
-            Frhvp_GP1_CgP1=fr,
-            Flhvp_GP1_CgP1=fl,
-            leftLegVector_GP1=vec,
+        front_right = np.array([1.0, 0.0, 0.0])
+        front_left = np.array([1.0, 1.0, 0.0])
+        left_leg_vector = np.array([-1.0, 0.0, 0.0])
+        horseshoe_vortex = HorseshoeVortex(
+            Frhvp_GP1_CgP1=front_right,
+            Flhvp_GP1_CgP1=front_left,
+            leftLegVector_GP1=left_leg_vector,
             left_right_leg_lengths=20.0,
             strength=4.0,
         )
-        result = _deserialize_value(_serialize_value(hv))
+        result = _deserialize_value(_serialize_value(horseshoe_vortex))
         assert isinstance(result, HorseshoeVortex)
-        npt.assert_array_equal(result.Frhvp_GP1_CgP1, fr)
-        npt.assert_array_equal(result.Flhvp_GP1_CgP1, fl)
-        npt.assert_allclose(result.leftLegVector_GP1, vec / np.linalg.norm(vec))
+        npt.assert_array_equal(result.Frhvp_GP1_CgP1, front_right)
+        npt.assert_array_equal(result.Flhvp_GP1_CgP1, front_left)
+        npt.assert_allclose(
+            result.leftLegVector_GP1, left_leg_vector / np.linalg.norm(left_leg_vector)
+        )
         self.assertEqual(result.left_right_leg_lengths, 20.0)
         self.assertEqual(result.strength, 4.0)
 
@@ -1241,7 +1245,7 @@ class TestHorseshoeVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        hv = HorseshoeVortex(
+        horseshoe_vortex = HorseshoeVortex(
             Frhvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             Flhvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
             leftLegVector_GP1=np.array([-1.0, 0.0, 0.0]),
@@ -1249,14 +1253,14 @@ class TestHorseshoeVortexRoundTrip(unittest.TestCase):
             strength=1.0,
         )
         # Trigger cache population.
-        _ = hv.right_leg
-        _ = hv.finite_leg
-        _ = hv.left_leg
-        result = _deserialize_value(_serialize_value(hv))
+        _ = horseshoe_vortex.right_leg
+        _ = horseshoe_vortex.finite_leg
+        _ = horseshoe_vortex.left_leg
+        result = _deserialize_value(_serialize_value(horseshoe_vortex))
         assert isinstance(result, HorseshoeVortex)
         assert isinstance(result.finite_leg, LineVortex)
         npt.assert_array_equal(
-            result.finite_leg.Slvp_GP1_CgP1, hv.finite_leg.Slvp_GP1_CgP1
+            result.finite_leg.Slvp_GP1_CgP1, horseshoe_vortex.finite_leg.Slvp_GP1_CgP1
         )
 
     def test_none_caches_round_trip(self):
@@ -1264,14 +1268,14 @@ class TestHorseshoeVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        hv = HorseshoeVortex(
+        horseshoe_vortex = HorseshoeVortex(
             Frhvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
             Flhvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
             leftLegVector_GP1=np.array([-1.0, 0.0, 0.0]),
             left_right_leg_lengths=20.0,
             strength=1.0,
         )
-        result = _deserialize_value(_serialize_value(hv))
+        result = _deserialize_value(_serialize_value(horseshoe_vortex))
         assert isinstance(result, HorseshoeVortex)
         self.assertIsNone(object.__getattribute__(result, "_right_leg"))
         self.assertIsNone(object.__getattribute__(result, "_finite_leg"))
@@ -1343,8 +1347,8 @@ class TestOperatingPointRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        op = OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0, beta=0.0)
-        result = _deserialize_value(_serialize_value(op))
+        operating_point = OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0, beta=0.0)
+        result = _deserialize_value(_serialize_value(operating_point))
         assert isinstance(result, OperatingPoint)
         self.assertEqual(result.rho, 1.225)
         self.assertEqual(result.vCg__E, 10.0)
@@ -1357,26 +1361,28 @@ class TestOperatingPointRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        op = OperatingPoint(
+        operating_point = OperatingPoint(
             surfaceNormal_E=(0.0, 0.0, 1.0),
             surfacePoint_E_Eo=(0.0, 0.0, -1.0),
         )
-        result = _deserialize_value(_serialize_value(op))
+        result = _deserialize_value(_serialize_value(operating_point))
         assert isinstance(result, OperatingPoint)
         assert result.surfaceNormal_E is not None
-        assert op.surfaceNormal_E is not None
-        npt.assert_array_equal(result.surfaceNormal_E, op.surfaceNormal_E)
+        assert operating_point.surfaceNormal_E is not None
+        npt.assert_array_equal(result.surfaceNormal_E, operating_point.surfaceNormal_E)
         assert result.surfacePoint_E_Eo is not None
-        assert op.surfacePoint_E_Eo is not None
-        npt.assert_array_equal(result.surfacePoint_E_Eo, op.surfacePoint_E_Eo)
+        assert operating_point.surfacePoint_E_Eo is not None
+        npt.assert_array_equal(
+            result.surfacePoint_E_Eo, operating_point.surfacePoint_E_Eo
+        )
 
     def test_none_surface_params(self):
         """Tests that None surface parameters remain None after round trip.
 
         :return: None
         """
-        op = OperatingPoint()
-        result = _deserialize_value(_serialize_value(op))
+        operating_point = OperatingPoint()
+        result = _deserialize_value(_serialize_value(operating_point))
         assert isinstance(result, OperatingPoint)
         self.assertIsNone(result.surfaceNormal_E)
         self.assertIsNone(result.surfacePoint_E_Eo)
@@ -1386,8 +1392,8 @@ class TestOperatingPointRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        op = OperatingPoint()
-        result = _deserialize_value(_serialize_value(op))
+        operating_point = OperatingPoint()
+        result = _deserialize_value(_serialize_value(operating_point))
         assert isinstance(result, OperatingPoint)
         self.assertIsNone(object.__getattribute__(result, "_qInf__E"))
         self.assertIsNone(object.__getattribute__(result, "_T_pas_GP1_CgP1_to_W_CgP1"))
@@ -1527,8 +1533,8 @@ def _make_meshed_airplane() -> Airplane:
         chordwise_spacing="uniform",
     )
     airplane = Airplane(wings=[wing])
-    op = OperatingPoint()
-    SteadyProblem(airplanes=[airplane], operating_point=op)
+    operating_point = OperatingPoint()
+    SteadyProblem(airplanes=[airplane], operating_point=operating_point)
     return airplane
 
 
@@ -1555,8 +1561,8 @@ def _make_steady_problem() -> SteadyProblem:
         chordwise_spacing="uniform",
     )
     airplane = Airplane(wings=[wing])
-    op = OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0)
-    return SteadyProblem(airplanes=[airplane], operating_point=op)
+    operating_point = OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0)
+    return SteadyProblem(airplanes=[airplane], operating_point=operating_point)
 
 
 def _make_two_airplane_wing() -> Wing:
@@ -1593,8 +1599,10 @@ def _make_formation_steady_problem() -> SteadyProblem:
         wings=[_make_two_airplane_wing()],
         Cg_GP1_CgP1=(0.0, 10.0, 0.0),
     )
-    op = OperatingPoint()
-    return SteadyProblem(airplanes=[airplane1, airplane2], operating_point=op)
+    operating_point = OperatingPoint()
+    return SteadyProblem(
+        airplanes=[airplane1, airplane2], operating_point=operating_point
+    )
 
 
 class TestWingRoundTrip(unittest.TestCase):
@@ -1960,10 +1968,10 @@ class TestMovementClassesRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        op_movement = OperatingPointMovement(
+        operating_point_movement = OperatingPointMovement(
             base_operating_point=OperatingPoint(),
         )
-        result = _deserialize_value(_serialize_value(op_movement))
+        result = _deserialize_value(_serialize_value(operating_point_movement))
         assert isinstance(result, OperatingPointMovement)
         self.assertEqual(result.base_operating_point.vCg__E, 10.0)
 
@@ -1972,14 +1980,14 @@ class TestMovementClassesRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        wcs_movement = WingCrossSectionMovement(
+        wing_cross_section_movement = WingCrossSectionMovement(
             base_wing_cross_section=WingCrossSection(
                 airfoil=Airfoil(name="NACA0012"),
                 num_spanwise_panels=4,
                 chord=1.0,
             ),
         )
-        result = _deserialize_value(_serialize_value(wcs_movement))
+        result = _deserialize_value(_serialize_value(wing_cross_section_movement))
         assert isinstance(result, WingCrossSectionMovement)
         self.assertEqual(result.base_wing_cross_section.chord, 1.0)
 
@@ -1989,13 +1997,13 @@ class TestMovementClassesRoundTrip(unittest.TestCase):
         :return: None
         """
         problem = _make_unsteady_problem()
-        wm = problem.movement.airplane_movements[0].wing_movements[0]
-        result = _deserialize_value(_serialize_value(wm))
+        wing_movement = problem.movement.airplane_movements[0].wing_movements[0]
+        result = _deserialize_value(_serialize_value(wing_movement))
         assert isinstance(result, WingMovement)
-        self.assertEqual(result.base_wing.name, wm.base_wing.name)
+        self.assertEqual(result.base_wing.name, wing_movement.base_wing.name)
         self.assertEqual(
             len(result.wing_cross_section_movements),
-            len(wm.wing_cross_section_movements),
+            len(wing_movement.wing_cross_section_movements),
         )
 
     def test_airplane_movement(self):
@@ -2004,10 +2012,12 @@ class TestMovementClassesRoundTrip(unittest.TestCase):
         :return: None
         """
         problem = _make_unsteady_problem()
-        am = problem.movement.airplane_movements[0]
-        result = _deserialize_value(_serialize_value(am))
+        airplane_movement = problem.movement.airplane_movements[0]
+        result = _deserialize_value(_serialize_value(airplane_movement))
         assert isinstance(result, AirplaneMovement)
-        self.assertEqual(result.base_airplane.name, am.base_airplane.name)
+        self.assertEqual(
+            result.base_airplane.name, airplane_movement.base_airplane.name
+        )
 
     def test_bare_movement(self):
         """Tests that a bare Movement (not inside UnsteadyProblem) serializes all
@@ -2049,10 +2059,12 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
         result = _deserialize_value(_serialize_value(problem))
         assert isinstance(result, UnsteadyProblem)
         for step in range(result.num_steps):
-            for am_idx in range(len(result.movement.airplane_movements)):
+            for airplane_movement_index in range(
+                len(result.movement.airplane_movements)
+            ):
                 self.assertIs(
-                    result.movement.airplanes[am_idx][step],
-                    result.steady_problems[step].airplanes[am_idx],
+                    result.movement.airplanes[airplane_movement_index][step],
+                    result.steady_problems[step].airplanes[airplane_movement_index],
                 )
 
     def test_movement_operating_points_identity(self):
@@ -2109,8 +2121,8 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
         wing_movement1 = WingMovement(
             base_wing=Wing(
                 wing_cross_sections=[
-                    wcsm.base_wing_cross_section
-                    for wcsm in wing_cross_section_movements
+                    wing_cross_section_movement.base_wing_cross_section
+                    for wing_cross_section_movement in wing_cross_section_movements
                 ],
                 num_chordwise_panels=2,
                 chordwise_spacing="uniform",
@@ -2142,8 +2154,8 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
         wing_movement2 = WingMovement(
             base_wing=Wing(
                 wing_cross_sections=[
-                    wcsm.base_wing_cross_section
-                    for wcsm in wing_cross_section_movements2
+                    wing_cross_section_movement.base_wing_cross_section
+                    for wing_cross_section_movement in wing_cross_section_movements2
                 ],
                 num_chordwise_panels=2,
                 chordwise_spacing="uniform",
@@ -2172,10 +2184,10 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
 
         # Verify DAG identity for both airplanes across all time steps.
         for step in range(result.num_steps):
-            for am_idx in range(2):
+            for airplane_movement_index in range(2):
                 self.assertIs(
-                    result.movement.airplanes[am_idx][step],
-                    result.steady_problems[step].airplanes[am_idx],
+                    result.movement.airplanes[airplane_movement_index][step],
+                    result.steady_problems[step].airplanes[airplane_movement_index],
                 )
             self.assertIs(
                 result.movement.operating_points[step],
@@ -2225,12 +2237,16 @@ class TestUnsteadySolverRoundTrip(unittest.TestCase):
         solver.run()
         result = _deserialize_value(_serialize_value(solver))
         assert isinstance(result, UnsteadyRingVortexLatticeMethodSolver)
-        up = result.unsteady_problem
-        for step in range(up.num_steps):
-            for am_idx in range(len(up.movement.airplane_movements)):
+        unsteady_problem = result.unsteady_problem
+        for step in range(unsteady_problem.num_steps):
+            for airplane_movement_index in range(
+                len(unsteady_problem.movement.airplane_movements)
+            ):
                 self.assertIs(
-                    up.movement.airplanes[am_idx][step],
-                    up.steady_problems[step].airplanes[am_idx],
+                    unsteady_problem.movement.airplanes[airplane_movement_index][step],
+                    unsteady_problem.steady_problems[step].airplanes[
+                        airplane_movement_index
+                    ],
                 )
 
     def test_pre_run_round_trip(self):
