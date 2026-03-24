@@ -23,6 +23,8 @@ from pterasoftware._serialization import (
 
 # noinspection PyProtectedMember
 from pterasoftware._vortices._line_vortex import LineVortex
+from pterasoftware._vortices.horseshoe_vortex import HorseshoeVortex
+from pterasoftware._vortices.ring_vortex import RingVortex
 
 # noinspection PyProtectedMember
 from pterasoftware.movements._functions import (
@@ -1103,3 +1105,147 @@ class TestSaveLoad(unittest.TestCase):
             with patch("pterasoftware._serialization._MAX_DECOMPRESSED_SIZE", 10):
                 with self.assertRaises(ValueError):
                     load(path)
+
+
+class TestRingVortexRoundTrip(unittest.TestCase):
+    """This class contains methods for testing RingVortex serialization round trips."""
+
+    def test_round_trip(self):
+        """Tests that a RingVortex survives a full round trip.
+
+        :return: None
+        """
+        fr = np.array([1.0, 0.0, 0.0])
+        fl = np.array([1.0, 1.0, 0.0])
+        bl = np.array([0.0, 1.0, 0.0])
+        br = np.array([0.0, 0.0, 0.0])
+        rv = RingVortex(
+            Frrvp_GP1_CgP1=fr,
+            Flrvp_GP1_CgP1=fl,
+            Blrvp_GP1_CgP1=bl,
+            Brrvp_GP1_CgP1=br,
+            strength=3.0,
+        )
+        rv.age = 0.5
+        result = _deserialize_value(_serialize_value(rv))
+        assert isinstance(result, RingVortex)
+        npt.assert_array_equal(result.Frrvp_GP1_CgP1, fr)
+        npt.assert_array_equal(result.Flrvp_GP1_CgP1, fl)
+        npt.assert_array_equal(result.Blrvp_GP1_CgP1, bl)
+        npt.assert_array_equal(result.Brrvp_GP1_CgP1, br)
+        self.assertEqual(result.strength, 3.0)
+        self.assertEqual(result.age, 0.5)
+
+    def test_populated_leg_caches_round_trip(self):
+        """Tests that populated LineVortex leg caches survive round trip.
+
+        :return: None
+        """
+        rv = RingVortex(
+            Frrvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            Flrvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
+            Blrvp_GP1_CgP1=np.array([0.0, 1.0, 0.0]),
+            Brrvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        # Trigger cache population.
+        _ = rv.front_leg
+        _ = rv.left_leg
+        _ = rv.back_leg
+        _ = rv.right_leg
+        result = _deserialize_value(_serialize_value(rv))
+        assert isinstance(result, RingVortex)
+        assert isinstance(result.front_leg, LineVortex)
+        npt.assert_array_equal(
+            result.front_leg.Slvp_GP1_CgP1, rv.front_leg.Slvp_GP1_CgP1
+        )
+
+    def test_none_caches_round_trip(self):
+        """Tests that uncomputed caches remain None after round trip.
+
+        :return: None
+        """
+        rv = RingVortex(
+            Frrvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            Flrvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
+            Blrvp_GP1_CgP1=np.array([0.0, 1.0, 0.0]),
+            Brrvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        result = _deserialize_value(_serialize_value(rv))
+        assert isinstance(result, RingVortex)
+        self.assertIsNone(object.__getattribute__(result, "_front_leg"))
+        self.assertIsNone(object.__getattribute__(result, "_Crvp_GP1_CgP1"))
+        self.assertIsNone(object.__getattribute__(result, "_area"))
+
+
+class TestHorseshoeVortexRoundTrip(unittest.TestCase):
+    """This class contains methods for testing HorseshoeVortex serialization round
+    trips.
+    """
+
+    def test_round_trip(self):
+        """Tests that a HorseshoeVortex survives a full round trip.
+
+        :return: None
+        """
+        fr = np.array([1.0, 0.0, 0.0])
+        fl = np.array([1.0, 1.0, 0.0])
+        vec = np.array([-1.0, 0.0, 0.0])
+        hv = HorseshoeVortex(
+            Frhvp_GP1_CgP1=fr,
+            Flhvp_GP1_CgP1=fl,
+            leftLegVector_GP1=vec,
+            left_right_leg_lengths=20.0,
+            strength=4.0,
+        )
+        result = _deserialize_value(_serialize_value(hv))
+        assert isinstance(result, HorseshoeVortex)
+        npt.assert_array_equal(result.Frhvp_GP1_CgP1, fr)
+        npt.assert_array_equal(result.Flhvp_GP1_CgP1, fl)
+        npt.assert_allclose(result.leftLegVector_GP1, vec / np.linalg.norm(vec))
+        self.assertEqual(result.left_right_leg_lengths, 20.0)
+        self.assertEqual(result.strength, 4.0)
+
+    def test_populated_leg_caches_round_trip(self):
+        """Tests that populated LineVortex leg caches survive round trip.
+
+        :return: None
+        """
+        hv = HorseshoeVortex(
+            Frhvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            Flhvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
+            leftLegVector_GP1=np.array([-1.0, 0.0, 0.0]),
+            left_right_leg_lengths=20.0,
+            strength=1.0,
+        )
+        # Trigger cache population.
+        _ = hv.right_leg
+        _ = hv.finite_leg
+        _ = hv.left_leg
+        result = _deserialize_value(_serialize_value(hv))
+        assert isinstance(result, HorseshoeVortex)
+        assert isinstance(result.finite_leg, LineVortex)
+        npt.assert_array_equal(
+            result.finite_leg.Slvp_GP1_CgP1, hv.finite_leg.Slvp_GP1_CgP1
+        )
+
+    def test_none_caches_round_trip(self):
+        """Tests that uncomputed caches remain None after round trip.
+
+        :return: None
+        """
+        hv = HorseshoeVortex(
+            Frhvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            Flhvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
+            leftLegVector_GP1=np.array([-1.0, 0.0, 0.0]),
+            left_right_leg_lengths=20.0,
+            strength=1.0,
+        )
+        result = _deserialize_value(_serialize_value(hv))
+        assert isinstance(result, HorseshoeVortex)
+        self.assertIsNone(object.__getattribute__(result, "_right_leg"))
+        self.assertIsNone(object.__getattribute__(result, "_finite_leg"))
+        self.assertIsNone(object.__getattribute__(result, "_left_leg"))
+        self.assertIsNone(object.__getattribute__(result, "_Brhvp_GP1_CgP1"))
+        self.assertIsNone(object.__getattribute__(result, "_Blhvp_GP1_CgP1"))

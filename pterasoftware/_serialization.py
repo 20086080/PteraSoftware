@@ -21,6 +21,10 @@ from . import _logging
 from ._vortices._line_vortex import LineVortex
 
 # noinspection PyProtectedMember
+from ._vortices.horseshoe_vortex import HorseshoeVortex
+from ._vortices.ring_vortex import RingVortex
+
+# noinspection PyProtectedMember
 from .movements._functions import oscillating_linspaces, oscillating_sinspaces
 
 _logger = _logging.get_logger("_serialization")
@@ -43,6 +47,8 @@ _MAX_DECOMPRESSED_SIZE = 1_073_741_824  # 1 GB
 # Maps class names to their types for deserialization dispatch.
 _CLASS_REGISTRY: dict[str, type] = {
     "LineVortex": LineVortex,
+    "RingVortex": RingVortex,
+    "HorseshoeVortex": HorseshoeVortex,
 }
 
 
