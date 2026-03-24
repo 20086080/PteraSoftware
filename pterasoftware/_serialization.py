@@ -58,6 +58,45 @@ def _object_to_dict(obj: object, *, _skip_slots: frozenset[str] = frozenset()) -
     return result
 
 
+def _object_from_dict(data: dict) -> object:
+    """Generically deserializes a Ptera Software object from a dict.
+
+    Uses the "_type" tag to look up the class in the registry. Creates an empty instance
+    via object.__new__(cls), bypassing __init__ entirely. Then restores every serialized
+    attribute (including caches) via object.__setattr__(). After restoring all slots,
+    calls _reconstruct_shared_references() to rebuild any slots that were skipped during
+    serialization.
+
+    :param data: The dict produced by _object_to_dict.
+    :return: The reconstructed Ptera Software object.
+    """
+    type_tag = data["_type"]
+    cls = _CLASS_REGISTRY.get(type_tag)
+    if cls is None:
+        raise TypeError(f"Unknown class in _object_from_dict: '{type_tag}'.")
+
+    obj: object = object.__new__(cls)
+    for slot_name in getattr(cls, "__slots__"):
+        object.__setattr__(obj, slot_name, _deserialize_value(data[slot_name]))
+    _reconstruct_shared_references(obj)
+    return obj
+
+
+def _reconstruct_shared_references(obj: object) -> None:
+    """Rebuilds shared references that were skipped during serialization.
+
+    Called after _object_from_dict restores all serialized slots. Handles
+    UnsteadyProblem (Movement <-> SteadyProblem aliases), steady solvers (solver ->
+    SteadyProblem aliases), and the unsteady solver (solver -> UnsteadyProblem aliases).
+
+    :param obj: The deserialized Ptera Software object.
+    :return: None
+    """
+    # No shared references to reconstruct for simple classes like LineVortex,
+    # RingVortex, HorseshoeVortex, etc. Extended in later steps for
+    # UnsteadyProblem and solver classes.
+
+
 def _ndarray_to_dict(arr: np.ndarray) -> dict:
     """Converts a NumPy ndarray to a JSON serializable dict.
 
@@ -222,6 +261,8 @@ def _deserialize_value(data: object) -> object:
             if func is None:
                 raise ValueError(f"Unknown callable name: '{name}'.")
             return func
+        if type_tag in _CLASS_REGISTRY:
+            return _object_from_dict(data)
         raise TypeError(f"Unknown _type tag: '{type_tag}'.")
 
     if isinstance(data, (int, float)):

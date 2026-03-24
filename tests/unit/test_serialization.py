@@ -10,6 +10,7 @@ from pterasoftware._serialization import (
     _deserialize_value,
     _ndarray_from_dict,
     _ndarray_to_dict,
+    _object_from_dict,
     _object_to_dict,
     _serialize_value,
 )
@@ -834,3 +835,109 @@ class TestObjectToDict(unittest.TestCase):
         """
         with self.assertRaises(TypeError):
             _object_to_dict("not a Ptera Software object")
+
+
+class TestObjectFromDict(unittest.TestCase):
+    """This class contains methods for testing _object_from_dict."""
+
+    def test_line_vortex_round_trip(self):
+        """Tests that a LineVortex survives a full round trip.
+
+        :return: None
+        """
+        start = np.array([1.0, 2.0, 3.0])
+        end = np.array([4.0, 5.0, 6.0])
+        lv = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
+        d = _object_to_dict(lv)
+        result = _object_from_dict(d)
+        assert isinstance(result, LineVortex)
+        npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
+        npt.assert_array_equal(result.Elvp_GP1_CgP1, end)
+        self.assertEqual(result.strength, 5.0)
+
+    def test_line_vortex_array_writeable_flags(self):
+        """Tests that deserialized LineVortex arrays preserve their writeable flags.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        result = _object_from_dict(_object_to_dict(lv))
+        assert isinstance(result, LineVortex)
+        self.assertFalse(result.Slvp_GP1_CgP1.flags.writeable)
+        self.assertFalse(result.Elvp_GP1_CgP1.flags.writeable)
+
+    def test_line_vortex_none_caches_round_trip(self):
+        """Tests that uncomputed caches remain None after round trip.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        result = _object_from_dict(_object_to_dict(lv))
+        assert isinstance(result, LineVortex)
+        # Access private cache slots directly to verify they are None.
+        self.assertIsNone(object.__getattribute__(result, "_vector_GP1"))
+        self.assertIsNone(object.__getattribute__(result, "_Clvp_GP1_CgP1"))
+
+    def test_line_vortex_populated_caches_round_trip(self):
+        """Tests that populated caches survive round trip with correct values.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        # Trigger cache population.
+        expected_vector = lv.vector_GP1.copy()
+        expected_center = lv.Clvp_GP1_CgP1.copy()
+        result = _object_from_dict(_object_to_dict(lv))
+        assert isinstance(result, LineVortex)
+        npt.assert_array_equal(result.vector_GP1, expected_vector)
+        npt.assert_array_equal(result.Clvp_GP1_CgP1, expected_center)
+
+    def test_line_vortex_via_deserialize_value(self):
+        """Tests that _deserialize_value dispatches a LineVortex dict to
+        _object_from_dict.
+
+        :return: None
+        """
+        lv = LineVortex(
+            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
+            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
+            strength=1.0,
+        )
+        d = _object_to_dict(lv)
+        result = _deserialize_value(d)
+        assert isinstance(result, LineVortex)
+        self.assertEqual(result.strength, 1.0)
+
+    def test_line_vortex_full_round_trip_via_value_functions(self):
+        """Tests a full round trip through _serialize_value and _deserialize_value.
+
+        :return: None
+        """
+        start = np.array([1.0, 2.0, 3.0])
+        end = np.array([4.0, 5.0, 6.0])
+        lv = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=7.5)
+        result = _deserialize_value(_serialize_value(lv))
+        assert isinstance(result, LineVortex)
+        npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
+        npt.assert_array_equal(result.Elvp_GP1_CgP1, end)
+        self.assertEqual(result.strength, 7.5)
+
+    def test_unknown_class_raises(self):
+        """Tests that an unknown class name raises a TypeError.
+
+        :return: None
+        """
+        with self.assertRaises(TypeError):
+            _object_from_dict({"_type": "UnknownClass"})
