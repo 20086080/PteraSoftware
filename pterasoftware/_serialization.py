@@ -9,6 +9,7 @@ import subprocess
 from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -35,6 +36,10 @@ from .geometry.wing_cross_section import WingCrossSection
 from .movements._functions import oscillating_linspaces, oscillating_sinspaces
 from .operating_point import OperatingPoint
 from .problems import SteadyProblem
+from .steady_horseshoe_vortex_lattice_method import (
+    SteadyHorseshoeVortexLatticeMethodSolver,
+)
+from .steady_ring_vortex_lattice_method import SteadyRingVortexLatticeMethodSolver
 
 _logger = _logging.get_logger("_serialization")
 
@@ -65,7 +70,14 @@ _CLASS_REGISTRY: dict[str, type] = {
     "Wing": Wing,
     "Airplane": Airplane,
     "SteadyProblem": SteadyProblem,
+    "SteadyHorseshoeVortexLatticeMethodSolver": SteadyHorseshoeVortexLatticeMethodSolver,
+    "SteadyRingVortexLatticeMethodSolver": SteadyRingVortexLatticeMethodSolver,
 }
+
+# Slots on steady solvers that are aliases into the SteadyProblem graph.
+_STEADY_SOLVER_SKIP_SLOTS: frozenset[str] = frozenset(
+    {"airplanes", "operating_point", "reynolds_numbers", "vInf_GP1__E", "panels"}
+)
 
 
 def save(path: str | Path, obj: object) -> None:
@@ -149,7 +161,7 @@ def load(path: str | Path) -> object:
     return obj
 
 
-def _get_provenance() -> dict:
+def _get_provenance() -> dict[str, str | bool | None]:
     """Returns a dict of provenance metadata for the serialized file.
 
     The provenance fields are informational only and are never checked at load time. The
@@ -192,7 +204,7 @@ def _get_provenance() -> dict:
     }
 
 
-def _log_load_warnings(data: dict) -> None:
+def _log_load_warnings(data: dict[str, Any]) -> None:
     """Logs warnings about provenance metadata during deserialization.
 
     :param data: The top level dict loaded from the JSON file.
@@ -233,7 +245,9 @@ def _log_load_warnings(data: dict) -> None:
             pass
 
 
-def _object_to_dict(obj: object, *, _skip_slots: frozenset[str] = frozenset()) -> dict:
+def _object_to_dict(
+    obj: object, *, _skip_slots: frozenset[str] = frozenset()
+) -> dict[str, Any]:
     """Generically serializes a Ptera Software object to a dict.
 
     Iterates over the class's __slots__ to discover all attributes, including cache
@@ -250,7 +264,15 @@ def _object_to_dict(obj: object, *, _skip_slots: frozenset[str] = frozenset()) -
     if class_name not in _CLASS_REGISTRY:
         raise TypeError(f"_object_to_dict does not handle {class_name}.")
 
-    result: dict = {"_type": class_name}
+    # Solver skip slots always apply because the aliases are always redundant
+    # with solver._steady_problem.
+    if isinstance(
+        obj,
+        (SteadyHorseshoeVortexLatticeMethodSolver, SteadyRingVortexLatticeMethodSolver),
+    ):
+        _skip_slots = _skip_slots | _STEADY_SOLVER_SKIP_SLOTS
+
+    result: dict[str, Any] = {"_type": class_name}
     for slot_name in getattr(cls, "__slots__"):
         if slot_name in _skip_slots:
             result[slot_name] = None
@@ -259,7 +281,7 @@ def _object_to_dict(obj: object, *, _skip_slots: frozenset[str] = frozenset()) -
     return result
 
 
-def _object_from_dict(data: dict) -> object:
+def _object_from_dict(data: dict[str, Any]) -> object:
     """Generically deserializes a Ptera Software object from a dict.
 
     Uses the "_type" tag to look up the class in the registry. Creates an empty instance
@@ -293,12 +315,36 @@ def _reconstruct_shared_references(obj: object) -> None:
     :param obj: The deserialized Ptera Software object.
     :return: None
     """
-    # No shared references to reconstruct for simple classes like LineVortex,
-    # RingVortex, HorseshoeVortex, etc. Extended in later steps for
-    # UnsteadyProblem and solver classes.
+    if isinstance(
+        obj,
+        (SteadyHorseshoeVortexLatticeMethodSolver, SteadyRingVortexLatticeMethodSolver),
+    ):
+        # This module is inherently coupled to class internals (it reads
+        # __slots__ and writes private backing stores for all classes), so
+        # accessing a private attribute directly is acceptable here.
+        # noinspection PyProtectedMember
+        problem = obj._steady_problem
+        object.__setattr__(obj, "airplanes", problem.airplanes)
+        object.__setattr__(obj, "operating_point", problem.operating_point)
+        object.__setattr__(obj, "reynolds_numbers", problem.reynolds_numbers)
+        object.__setattr__(obj, "vInf_GP1__E", problem.operating_point.vInf_GP1__E)
+
+        if obj.ran:
+            # Reconstruct the flattened panels array (same order as
+            # _collapse_geometry).
+            panels_list: list[Panel] = []
+            for airplane in problem.airplanes:
+                for wing in airplane.wings:
+                    assert wing.panels is not None
+                    panels_list.extend(np.ravel(wing.panels))
+            object.__setattr__(obj, "panels", np.array(panels_list, dtype=object))
+        else:
+            # Pre run: panels is an uninitialized object array sized to
+            # num_panels.
+            object.__setattr__(obj, "panels", np.empty(obj.num_panels, dtype=object))
 
 
-def _ndarray_to_dict(arr: np.ndarray) -> dict:
+def _ndarray_to_dict(arr: np.ndarray) -> dict[str, Any]:
     """Converts a NumPy ndarray to a JSON serializable dict.
 
     For numeric and bool dtypes, the array data is encoded as a base64 string with dtype
@@ -328,7 +374,7 @@ def _ndarray_to_dict(arr: np.ndarray) -> dict:
     }
 
 
-def _ndarray_from_dict(d: dict) -> np.ndarray:
+def _ndarray_from_dict(d: dict[str, Any]) -> np.ndarray:
     """Reconstructs a NumPy ndarray from a dict produced by _ndarray_to_dict.
 
     Dispatches on dtype: base64 decode for numeric and bool dtypes, element by element

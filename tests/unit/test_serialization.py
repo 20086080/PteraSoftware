@@ -44,6 +44,12 @@ from pterasoftware.movements._functions import (
 )
 from pterasoftware.operating_point import OperatingPoint
 from pterasoftware.problems import SteadyProblem
+from pterasoftware.steady_horseshoe_vortex_lattice_method import (
+    SteadyHorseshoeVortexLatticeMethodSolver,
+)
+from pterasoftware.steady_ring_vortex_lattice_method import (
+    SteadyRingVortexLatticeMethodSolver,
+)
 
 
 class TestNdarrayRoundTrip(unittest.TestCase):
@@ -1693,3 +1699,130 @@ class TestSteadyProblemRoundTrip(unittest.TestCase):
         assert isinstance(result, SteadyProblem)
         self.assertEqual(len(result.airplanes), 1)
         assert isinstance(result.operating_point, OperatingPoint)
+
+
+class TestSteadyHorseshoeSolverRoundTrip(unittest.TestCase):
+    """This class contains methods for testing SteadyHorseshoeVortexLatticeMethodSolver
+    serialization round trips.
+    """
+
+    def test_solved_round_trip(self):
+        """Tests that a solved steady horseshoe solver survives a full round trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        solver = SteadyHorseshoeVortexLatticeMethodSolver(problem)
+        solver.run()
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, SteadyHorseshoeVortexLatticeMethodSolver)
+        self.assertTrue(result.ran)
+        assert result.airplanes[0].forces_W is not None
+        assert solver.airplanes[0].forces_W is not None
+        npt.assert_array_equal(
+            result.airplanes[0].forces_W, solver.airplanes[0].forces_W
+        )
+
+    def test_shared_reference_identity(self):
+        """Tests that the solver's shared references point into the SteadyProblem
+        graph after round trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        solver = SteadyHorseshoeVortexLatticeMethodSolver(problem)
+        solver.run()
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, SteadyHorseshoeVortexLatticeMethodSolver)
+        self.assertIs(result.airplanes, result._steady_problem.airplanes)
+        self.assertIs(result.operating_point, result._steady_problem.operating_point)
+
+    def test_pre_run_round_trip(self):
+        """Tests that a pre run solver survives round trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        solver = SteadyHorseshoeVortexLatticeMethodSolver(problem)
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, SteadyHorseshoeVortexLatticeMethodSolver)
+        self.assertFalse(result.ran)
+
+    def test_save_load_round_trip(self):
+        """Tests that a solved steady horseshoe solver survives a save/load round
+        trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        solver = SteadyHorseshoeVortexLatticeMethodSolver(problem)
+        solver.run()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "solver.json"
+            save(path, solver)
+            result = load(path)
+        assert isinstance(result, SteadyHorseshoeVortexLatticeMethodSolver)
+        self.assertTrue(result.ran)
+
+
+class TestSteadyRingSolverRoundTrip(unittest.TestCase):
+    """This class contains methods for testing SteadyRingVortexLatticeMethodSolver
+    serialization round trips.
+    """
+
+    def test_solved_round_trip(self):
+        """Tests that a solved steady ring solver survives a full round trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        solver = SteadyRingVortexLatticeMethodSolver(problem)
+        solver.run()
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, SteadyRingVortexLatticeMethodSolver)
+        self.assertTrue(result.ran)
+        assert result.airplanes[0].forces_W is not None
+        assert solver.airplanes[0].forces_W is not None
+        npt.assert_array_equal(
+            result.airplanes[0].forces_W, solver.airplanes[0].forces_W
+        )
+
+    def test_shared_reference_identity(self):
+        """Tests that the solver's shared references point into the SteadyProblem
+        graph after round trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        solver = SteadyRingVortexLatticeMethodSolver(problem)
+        solver.run()
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, SteadyRingVortexLatticeMethodSolver)
+        self.assertIs(result.airplanes, result._steady_problem.airplanes)
+        self.assertIs(result.operating_point, result._steady_problem.operating_point)
+
+    def test_pre_run_round_trip(self):
+        """Tests that a pre run solver survives round trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        solver = SteadyRingVortexLatticeMethodSolver(problem)
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, SteadyRingVortexLatticeMethodSolver)
+        self.assertFalse(result.ran)
+
+    def test_save_load_round_trip(self):
+        """Tests that a solved steady ring solver survives a save/load round trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        solver = SteadyRingVortexLatticeMethodSolver(problem)
+        solver.run()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "solver.json"
+            save(path, solver)
+            result = load(path)
+        assert isinstance(result, SteadyRingVortexLatticeMethodSolver)
+        self.assertTrue(result.ran)
