@@ -57,6 +57,9 @@ from pterasoftware.steady_horseshoe_vortex_lattice_method import (
 from pterasoftware.steady_ring_vortex_lattice_method import (
     SteadyRingVortexLatticeMethodSolver,
 )
+from pterasoftware.unsteady_ring_vortex_lattice_method import (
+    UnsteadyRingVortexLatticeMethodSolver,
+)
 
 
 class TestNdarrayRoundTrip(unittest.TestCase):
@@ -2178,3 +2181,80 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
                 result.movement.operating_points[step],
                 result.steady_problems[step].operating_point,
             )
+
+
+class TestUnsteadySolverRoundTrip(unittest.TestCase):
+    """This class contains methods for testing UnsteadyRingVortexLatticeMethodSolver
+    serialization round trips.
+    """
+
+    def test_solved_round_trip(self):
+        """Tests that a solved unsteady solver survives a full round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        solver = UnsteadyRingVortexLatticeMethodSolver(problem)
+        solver.run()
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, UnsteadyRingVortexLatticeMethodSolver)
+        self.assertTrue(result.ran)
+        self.assertEqual(result.num_steps, solver.num_steps)
+
+    def test_shared_reference_identity(self):
+        """Tests that the solver's shared references point into the UnsteadyProblem
+        graph after round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        solver = UnsteadyRingVortexLatticeMethodSolver(problem)
+        solver.run()
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, UnsteadyRingVortexLatticeMethodSolver)
+        self.assertIs(result.steady_problems, result.unsteady_problem.steady_problems)
+
+    def test_movement_dag_identity(self):
+        """Tests that the Movement <-> SteadyProblem DAG identity is preserved
+        through the unsteady solver round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        solver = UnsteadyRingVortexLatticeMethodSolver(problem)
+        solver.run()
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, UnsteadyRingVortexLatticeMethodSolver)
+        up = result.unsteady_problem
+        for step in range(up.num_steps):
+            for am_idx in range(len(up.movement.airplane_movements)):
+                self.assertIs(
+                    up.movement.airplanes[am_idx][step],
+                    up.steady_problems[step].airplanes[am_idx],
+                )
+
+    def test_pre_run_round_trip(self):
+        """Tests that a pre run unsteady solver survives round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        solver = UnsteadyRingVortexLatticeMethodSolver(problem)
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, UnsteadyRingVortexLatticeMethodSolver)
+        self.assertFalse(result.ran)
+
+    def test_save_load_round_trip(self):
+        """Tests that a solved unsteady solver survives a save/load round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        solver = UnsteadyRingVortexLatticeMethodSolver(problem)
+        solver.run()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "solver.json"
+            save(path, solver)
+            result = load(path)
+        assert isinstance(result, UnsteadyRingVortexLatticeMethodSolver)
+        self.assertTrue(result.ran)

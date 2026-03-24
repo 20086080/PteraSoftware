@@ -15,12 +15,12 @@ import numpy as np
 
 from . import _logging
 
-# noinspection PyProtectedMember
-from ._panel import Panel
-
 # This module is inherently coupled to the internals of every class in the package
 # (it reads __slots__, knows class structure, and imports all classes into its
 # registry), so importing from a sibling private module is acceptable here.
+# noinspection PyProtectedMember
+from ._panel import Panel
+
 # noinspection PyProtectedMember
 from ._vortices._line_vortex import LineVortex
 
@@ -45,6 +45,9 @@ from .steady_horseshoe_vortex_lattice_method import (
     SteadyHorseshoeVortexLatticeMethodSolver,
 )
 from .steady_ring_vortex_lattice_method import SteadyRingVortexLatticeMethodSolver
+from .unsteady_ring_vortex_lattice_method import (
+    UnsteadyRingVortexLatticeMethodSolver,
+)
 
 _logger = _logging.get_logger("_serialization")
 
@@ -83,11 +86,17 @@ _CLASS_REGISTRY: dict[str, type] = {
     "WingCrossSectionMovement": WingCrossSectionMovement,
     "OperatingPointMovement": OperatingPointMovement,
     "UnsteadyProblem": UnsteadyProblem,
+    "UnsteadyRingVortexLatticeMethodSolver": UnsteadyRingVortexLatticeMethodSolver,
 }
 
 # Slots on steady solvers that are aliases into the SteadyProblem graph.
 _STEADY_SOLVER_SKIP_SLOTS: frozenset[str] = frozenset(
     {"airplanes", "operating_point", "reynolds_numbers", "vInf_GP1__E", "panels"}
+)
+
+# Slots on the unsteady solver that are aliases into the UnsteadyProblem graph.
+_UNSTEADY_SOLVER_SKIP_SLOTS: frozenset[str] = frozenset(
+    {"steady_problems", "current_airplanes", "current_operating_point", "panels"}
 )
 
 # Slots on Movement that are redundant when serialized inside an UnsteadyProblem.
@@ -281,12 +290,14 @@ def _object_to_dict(
         raise TypeError(f"_object_to_dict does not handle {class_name}.")
 
     # Solver skip slots always apply because the aliases are always redundant
-    # with solver._steady_problem.
+    # with solver._steady_problem or solver.unsteady_problem.
     if isinstance(
         obj,
         (SteadyHorseshoeVortexLatticeMethodSolver, SteadyRingVortexLatticeMethodSolver),
     ):
         _skip_slots = _skip_slots | _STEADY_SOLVER_SKIP_SLOTS
+    elif isinstance(obj, UnsteadyRingVortexLatticeMethodSolver):
+        _skip_slots = _skip_slots | _UNSTEADY_SOLVER_SKIP_SLOTS
 
     result: dict[str, Any] = {"_type": class_name}
     is_unsteady_problem = isinstance(obj, UnsteadyProblem)
@@ -342,9 +353,9 @@ def _reconstruct_shared_references(obj: object) -> None:
         obj,
         (SteadyHorseshoeVortexLatticeMethodSolver, SteadyRingVortexLatticeMethodSolver),
     ):
-        # This module is inherently coupled to class internals (it reads
-        # __slots__ and writes private backing stores for all classes), so
-        # accessing a private attribute directly is acceptable here.
+        # This module is inherently coupled to class internals (it reads __slots__
+        # and writes private backing stores for all classes), so accessing a private
+        # attribute directly is acceptable here.
         # noinspection PyProtectedMember
         problem = obj._steady_problem
         object.__setattr__(obj, "airplanes", problem.airplanes)
@@ -386,6 +397,40 @@ def _reconstruct_shared_references(obj: object) -> None:
             steady_problems[step].operating_point for step in range(num_steps)
         )
         object.__setattr__(movement, "_operating_points", operating_points)
+
+    if isinstance(obj, UnsteadyRingVortexLatticeMethodSolver):
+        unsteady_problem = obj.unsteady_problem
+        object.__setattr__(obj, "steady_problems", unsteady_problem.steady_problems)
+
+        # This module is inherently coupled to class internals (it reads __slots__
+        # and writes private backing stores for all classes), so accessing a private
+        # attribute directly is acceptable here.
+        # noinspection PyProtectedMember
+        current_step = obj._current_step
+        current_steady_problem = unsteady_problem.steady_problems[current_step]
+        object.__setattr__(
+            obj, "current_operating_point", current_steady_problem.operating_point
+        )
+
+        if obj.ran:
+            object.__setattr__(
+                obj, "current_airplanes", current_steady_problem.airplanes
+            )
+
+            # Reconstruct flattened panels from current step's airplanes.
+            current_panels_list: list[Panel] = []
+            for airplane in current_steady_problem.airplanes:
+                for wing in airplane.wings:
+                    assert wing.panels is not None
+                    current_panels_list.extend(np.ravel(wing.panels))
+            object.__setattr__(
+                obj, "panels", np.array(current_panels_list, dtype=object)
+            )
+        else:
+            # Pre run: current_airplanes is an empty tuple and panels is an
+            # empty object array.
+            object.__setattr__(obj, "current_airplanes", ())
+            object.__setattr__(obj, "panels", np.empty(0, dtype=object))
 
 
 def _ndarray_to_dict(arr: np.ndarray) -> dict[str, Any]:
