@@ -27,6 +27,8 @@ from ._vortices._line_vortex import LineVortex
 from ._vortices.horseshoe_vortex import HorseshoeVortex
 from ._vortices.ring_vortex import RingVortex
 from .geometry.airfoil import Airfoil
+from .geometry.airplane import Airplane
+from .geometry.wing import Wing
 from .geometry.wing_cross_section import WingCrossSection
 
 # noinspection PyProtectedMember
@@ -59,6 +61,8 @@ _CLASS_REGISTRY: dict[str, type] = {
     "OperatingPoint": OperatingPoint,
     "WingCrossSection": WingCrossSection,
     "Panel": Panel,
+    "Wing": Wing,
+    "Airplane": Airplane,
 }
 
 

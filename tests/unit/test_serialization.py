@@ -29,6 +29,8 @@ from pterasoftware._vortices._line_vortex import LineVortex
 from pterasoftware._vortices.horseshoe_vortex import HorseshoeVortex
 from pterasoftware._vortices.ring_vortex import RingVortex
 from pterasoftware.geometry.airfoil import Airfoil
+from pterasoftware.geometry.airplane import Airplane
+from pterasoftware.geometry.wing import Wing
 from pterasoftware.geometry.wing_cross_section import WingCrossSection
 
 # noinspection PyProtectedMember
@@ -1479,3 +1481,132 @@ class TestPanelRoundTrip(unittest.TestCase):
         result = _deserialize_value(_serialize_value(panel))
         assert isinstance(result, Panel)
         self.assertFalse(result.Frpp_G_Cg.flags.writeable)
+
+
+def _make_meshed_airplane() -> Airplane:
+    """Creates a simple meshed Airplane for testing.
+
+    :return: A meshed Airplane with one Wing containing 2x2 Panels.
+    """
+    import pterasoftware as ps
+
+    wing = Wing(
+        wing_cross_sections=[
+            WingCrossSection(
+                airfoil=Airfoil(name="NACA0012"),
+                num_spanwise_panels=2,
+                chord=1.0,
+            ),
+            WingCrossSection(
+                airfoil=Airfoil(name="NACA0012"),
+                num_spanwise_panels=None,
+                chord=1.0,
+                Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
+            ),
+        ],
+        num_chordwise_panels=2,
+        chordwise_spacing="uniform",
+    )
+    airplane = Airplane(wings=[wing])
+    op = ps.operating_point.OperatingPoint()
+    ps.problems.SteadyProblem(airplanes=[airplane], operating_point=op)
+    return airplane
+
+
+class TestWingRoundTrip(unittest.TestCase):
+    """This class contains methods for testing Wing serialization round trips."""
+
+    def test_round_trip(self):
+        """Tests that a meshed Wing survives a full round trip.
+
+        :return: None
+        """
+        airplane = _make_meshed_airplane()
+        wing = airplane.wings[0]
+        result = _deserialize_value(_serialize_value(wing))
+        assert isinstance(result, Wing)
+        self.assertEqual(result.name, wing.name)
+        self.assertEqual(result.num_chordwise_panels, wing.num_chordwise_panels)
+        self.assertEqual(result.chordwise_spacing, wing.chordwise_spacing)
+
+    def test_panels_dtype_object_round_trip(self):
+        """Tests that the dtype=object _panels array survives round trip with Panel
+        objects.
+
+        :return: None
+        """
+        airplane = _make_meshed_airplane()
+        wing = airplane.wings[0]
+        assert wing.panels is not None
+        result = _deserialize_value(_serialize_value(wing))
+        assert isinstance(result, Wing)
+        assert result.panels is not None
+        self.assertEqual(result.panels.shape, wing.panels.shape)
+        self.assertEqual(result.panels.dtype, object)
+        for i in range(result.panels.shape[0]):
+            for j in range(result.panels.shape[1]):
+                assert isinstance(result.panels[i, j], Panel)
+                npt.assert_array_equal(
+                    result.panels[i, j].Frpp_G_Cg,
+                    wing.panels[i, j].Frpp_G_Cg,
+                )
+
+    def test_wing_cross_sections_tuple_round_trip(self):
+        """Tests that the _wing_cross_sections tuple survives round trip.
+
+        :return: None
+        """
+        airplane = _make_meshed_airplane()
+        wing = airplane.wings[0]
+        result = _deserialize_value(_serialize_value(wing))
+        assert isinstance(result, Wing)
+        self.assertEqual(len(result.wing_cross_sections), len(wing.wing_cross_sections))
+        for orig, loaded in zip(wing.wing_cross_sections, result.wing_cross_sections):
+            assert isinstance(loaded, WingCrossSection)
+            self.assertEqual(loaded.chord, orig.chord)
+
+
+class TestAirplaneRoundTrip(unittest.TestCase):
+    """This class contains methods for testing Airplane serialization round trips."""
+
+    def test_round_trip(self):
+        """Tests that a meshed Airplane survives a full round trip.
+
+        :return: None
+        """
+        airplane = _make_meshed_airplane()
+        result = _deserialize_value(_serialize_value(airplane))
+        assert isinstance(result, Airplane)
+        self.assertEqual(result.name, airplane.name)
+        self.assertEqual(len(result.wings), len(airplane.wings))
+        self.assertEqual(result.s_ref, airplane.s_ref)
+        self.assertEqual(result.c_ref, airplane.c_ref)
+        self.assertEqual(result.b_ref, airplane.b_ref)
+
+    def test_nested_wing_panels(self):
+        """Tests that an Airplane's nested Wing Panel arrays survive round trip.
+
+        :return: None
+        """
+        airplane = _make_meshed_airplane()
+        result = _deserialize_value(_serialize_value(airplane))
+        assert isinstance(result, Airplane)
+        for orig_wing, loaded_wing in zip(airplane.wings, result.wings):
+            assert isinstance(loaded_wing, Wing)
+            assert loaded_wing.panels is not None
+            assert orig_wing.panels is not None
+            self.assertEqual(loaded_wing.panels.shape, orig_wing.panels.shape)
+
+    def test_save_load_round_trip(self):
+        """Tests that a meshed Airplane survives a save/load round trip.
+
+        :return: None
+        """
+        airplane = _make_meshed_airplane()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "airplane.json"
+            save(path, airplane)
+            result = load(path)
+        assert isinstance(result, Airplane)
+        self.assertEqual(result.name, airplane.name)
+        self.assertEqual(len(result.wings), len(airplane.wings))
