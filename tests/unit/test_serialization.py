@@ -42,8 +42,15 @@ from pterasoftware.movements._functions import (
     oscillating_linspaces,
     oscillating_sinspaces,
 )
+from pterasoftware.movements.airplane_movement import AirplaneMovement
+from pterasoftware.movements.movement import Movement
+from pterasoftware.movements.operating_point_movement import OperatingPointMovement
+from pterasoftware.movements.wing_cross_section_movement import (
+    WingCrossSectionMovement,
+)
+from pterasoftware.movements.wing_movement import WingMovement
 from pterasoftware.operating_point import OperatingPoint
-from pterasoftware.problems import SteadyProblem
+from pterasoftware.problems import SteadyProblem, UnsteadyProblem
 from pterasoftware.steady_horseshoe_vortex_lattice_method import (
     SteadyHorseshoeVortexLatticeMethodSolver,
 )
@@ -1499,8 +1506,6 @@ def _make_meshed_airplane() -> Airplane:
 
     :return: A meshed Airplane with one Wing containing 2x2 Panels.
     """
-    import pterasoftware as ps
-
     wing = Wing(
         wing_cross_sections=[
             WingCrossSection(
@@ -1519,8 +1524,8 @@ def _make_meshed_airplane() -> Airplane:
         chordwise_spacing="uniform",
     )
     airplane = Airplane(wings=[wing])
-    op = ps.operating_point.OperatingPoint()
-    ps.problems.SteadyProblem(airplanes=[airplane], operating_point=op)
+    op = OperatingPoint()
+    SteadyProblem(airplanes=[airplane], operating_point=op)
     return airplane
 
 
@@ -1529,8 +1534,6 @@ def _make_steady_problem() -> SteadyProblem:
 
     :return: A SteadyProblem with one meshed Airplane and 2x2 Panels.
     """
-    import pterasoftware as ps
-
     wing = Wing(
         wing_cross_sections=[
             WingCrossSection(
@@ -1549,8 +1552,46 @@ def _make_steady_problem() -> SteadyProblem:
         chordwise_spacing="uniform",
     )
     airplane = Airplane(wings=[wing])
-    op = ps.operating_point.OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0)
-    return ps.problems.SteadyProblem(airplanes=[airplane], operating_point=op)
+    op = OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0)
+    return SteadyProblem(airplanes=[airplane], operating_point=op)
+
+
+def _make_two_airplane_wing() -> Wing:
+    """Creates a simple Wing for use in multi airplane tests.
+
+    :return: An unmeshed Wing with 2x2 panels.
+    """
+    return Wing(
+        wing_cross_sections=[
+            WingCrossSection(
+                airfoil=Airfoil(name="NACA0012"),
+                num_spanwise_panels=2,
+                chord=1.0,
+            ),
+            WingCrossSection(
+                airfoil=Airfoil(name="NACA0012"),
+                num_spanwise_panels=None,
+                chord=1.0,
+                Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
+            ),
+        ],
+        num_chordwise_panels=2,
+        chordwise_spacing="uniform",
+    )
+
+
+def _make_formation_steady_problem() -> SteadyProblem:
+    """Creates a SteadyProblem with two Airplanes for formation flight testing.
+
+    :return: A SteadyProblem with two meshed Airplanes.
+    """
+    airplane1 = Airplane(wings=[_make_two_airplane_wing()])
+    airplane2 = Airplane(
+        wings=[_make_two_airplane_wing()],
+        Cg_GP1_CgP1=(0.0, 10.0, 0.0),
+    )
+    op = OperatingPoint()
+    return SteadyProblem(airplanes=[airplane1, airplane2], operating_point=op)
 
 
 class TestWingRoundTrip(unittest.TestCase):
@@ -1700,6 +1741,35 @@ class TestSteadyProblemRoundTrip(unittest.TestCase):
         self.assertEqual(len(result.airplanes), 1)
         assert isinstance(result.operating_point, OperatingPoint)
 
+    def test_formation_flight_round_trip(self):
+        """Tests that a SteadyProblem with two Airplanes survives a full round trip.
+
+        :return: None
+        """
+        problem = _make_formation_steady_problem()
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, SteadyProblem)
+        self.assertEqual(len(result.airplanes), 2)
+        for i in range(2):
+            assert isinstance(result.airplanes[i], Airplane)
+            assert result.airplanes[i].wings[0].panels is not None
+
+    def test_formation_flight_gp1_coordinates(self):
+        """Tests that both Airplanes' Panels have correct GP1 coordinates after round
+        trip in a formation flight SteadyProblem.
+
+        :return: None
+        """
+        problem = _make_formation_steady_problem()
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, SteadyProblem)
+        for i in range(2):
+            orig_panel = problem.airplanes[i].wings[0].panels[0, 0]
+            loaded_panel = result.airplanes[i].wings[0].panels[0, 0]
+            assert orig_panel.Frpp_GP1_CgP1 is not None
+            assert loaded_panel.Frpp_GP1_CgP1 is not None
+            npt.assert_array_equal(loaded_panel.Frpp_GP1_CgP1, orig_panel.Frpp_GP1_CgP1)
+
 
 class TestSteadyHorseshoeSolverRoundTrip(unittest.TestCase):
     """This class contains methods for testing SteadyHorseshoeVortexLatticeMethodSolver
@@ -1826,3 +1896,285 @@ class TestSteadyRingSolverRoundTrip(unittest.TestCase):
             result = load(path)
         assert isinstance(result, SteadyRingVortexLatticeMethodSolver)
         self.assertTrue(result.ran)
+
+
+def _make_unsteady_problem() -> UnsteadyProblem:
+    """Creates a simple UnsteadyProblem for testing.
+
+    :return: An UnsteadyProblem with a static Movement and 2x2 Panels.
+    """
+    wing_cross_section_movement_root = WingCrossSectionMovement(
+        base_wing_cross_section=WingCrossSection(
+            airfoil=Airfoil(name="NACA0012"),
+            num_spanwise_panels=2,
+            chord=1.0,
+        ),
+    )
+    wing_cross_section_movement_tip = WingCrossSectionMovement(
+        base_wing_cross_section=WingCrossSection(
+            airfoil=Airfoil(name="NACA0012"),
+            num_spanwise_panels=None,
+            chord=1.0,
+            Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
+        ),
+    )
+    wing_movement = WingMovement(
+        base_wing=Wing(
+            wing_cross_sections=[
+                wing_cross_section_movement_root.base_wing_cross_section,
+                wing_cross_section_movement_tip.base_wing_cross_section,
+            ],
+            num_chordwise_panels=2,
+            chordwise_spacing="uniform",
+        ),
+        wing_cross_section_movements=[
+            wing_cross_section_movement_root,
+            wing_cross_section_movement_tip,
+        ],
+    )
+    airplane_movement = AirplaneMovement(
+        base_airplane=Airplane(wings=[wing_movement.base_wing]),
+        wing_movements=[wing_movement],
+    )
+    operating_point_movement = OperatingPointMovement(
+        base_operating_point=OperatingPoint(),
+    )
+    movement = Movement(
+        airplane_movements=[airplane_movement],
+        operating_point_movement=operating_point_movement,
+        num_steps=3,
+    )
+    return UnsteadyProblem(movement=movement)
+
+
+class TestMovementClassesRoundTrip(unittest.TestCase):
+    """This class contains methods for testing movement class serialization round
+    trips.
+    """
+
+    def test_operating_point_movement(self):
+        """Tests that an OperatingPointMovement survives a full round trip.
+
+        :return: None
+        """
+        op_movement = OperatingPointMovement(
+            base_operating_point=OperatingPoint(),
+        )
+        result = _deserialize_value(_serialize_value(op_movement))
+        assert isinstance(result, OperatingPointMovement)
+        self.assertEqual(result.base_operating_point.vCg__E, 10.0)
+
+    def test_wing_cross_section_movement(self):
+        """Tests that a WingCrossSectionMovement survives a full round trip.
+
+        :return: None
+        """
+        wcs_movement = WingCrossSectionMovement(
+            base_wing_cross_section=WingCrossSection(
+                airfoil=Airfoil(name="NACA0012"),
+                num_spanwise_panels=4,
+                chord=1.0,
+            ),
+        )
+        result = _deserialize_value(_serialize_value(wcs_movement))
+        assert isinstance(result, WingCrossSectionMovement)
+        self.assertEqual(result.base_wing_cross_section.chord, 1.0)
+
+    def test_wing_movement(self):
+        """Tests that a WingMovement survives a full round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        wm = problem.movement.airplane_movements[0].wing_movements[0]
+        result = _deserialize_value(_serialize_value(wm))
+        assert isinstance(result, WingMovement)
+        self.assertEqual(result.base_wing.name, wm.base_wing.name)
+        self.assertEqual(
+            len(result.wing_cross_section_movements),
+            len(wm.wing_cross_section_movements),
+        )
+
+    def test_airplane_movement(self):
+        """Tests that an AirplaneMovement survives a full round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        am = problem.movement.airplane_movements[0]
+        result = _deserialize_value(_serialize_value(am))
+        assert isinstance(result, AirplaneMovement)
+        self.assertEqual(result.base_airplane.name, am.base_airplane.name)
+
+    def test_bare_movement(self):
+        """Tests that a bare Movement (not inside UnsteadyProblem) serializes all
+        slots including _airplanes and _operating_points.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        movement = problem.movement
+        result = _deserialize_value(_serialize_value(movement))
+        assert isinstance(result, Movement)
+        self.assertEqual(len(result.airplanes), len(movement.airplanes))
+        self.assertEqual(len(result.operating_points), len(movement.operating_points))
+
+
+class TestUnsteadyProblemRoundTrip(unittest.TestCase):
+    """This class contains methods for testing UnsteadyProblem serialization round
+    trips.
+    """
+
+    def test_round_trip(self):
+        """Tests that an UnsteadyProblem survives a full round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, UnsteadyProblem)
+        self.assertEqual(result.num_steps, problem.num_steps)
+        self.assertEqual(len(result.steady_problems), len(problem.steady_problems))
+
+    def test_movement_airplanes_identity(self):
+        """Tests that Movement._airplanes and SteadyProblem.airplanes point to the
+        same objects after round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, UnsteadyProblem)
+        for step in range(result.num_steps):
+            for am_idx in range(len(result.movement.airplane_movements)):
+                self.assertIs(
+                    result.movement.airplanes[am_idx][step],
+                    result.steady_problems[step].airplanes[am_idx],
+                )
+
+    def test_movement_operating_points_identity(self):
+        """Tests that Movement._operating_points and SteadyProblem.operating_point
+        point to the same objects after round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, UnsteadyProblem)
+        for step in range(result.num_steps):
+            self.assertIs(
+                result.movement.operating_points[step],
+                result.steady_problems[step].operating_point,
+            )
+
+    def test_save_load_round_trip(self):
+        """Tests that an UnsteadyProblem survives a save/load round trip.
+
+        :return: None
+        """
+        problem = _make_unsteady_problem()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "unsteady.json"
+            save(path, problem)
+            result = load(path)
+        assert isinstance(result, UnsteadyProblem)
+        self.assertEqual(result.num_steps, problem.num_steps)
+
+    def test_formation_flight_round_trip(self):
+        """Tests that an UnsteadyProblem with two Airplanes survives a full round
+        trip with correct DAG identity.
+
+        :return: None
+        """
+        wing_cross_section_movements = [
+            WingCrossSectionMovement(
+                base_wing_cross_section=WingCrossSection(
+                    airfoil=Airfoil(name="NACA0012"),
+                    num_spanwise_panels=2,
+                    chord=1.0,
+                ),
+            ),
+            WingCrossSectionMovement(
+                base_wing_cross_section=WingCrossSection(
+                    airfoil=Airfoil(name="NACA0012"),
+                    num_spanwise_panels=None,
+                    chord=1.0,
+                    Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
+                ),
+            ),
+        ]
+        wing_movement1 = WingMovement(
+            base_wing=Wing(
+                wing_cross_sections=[
+                    wcsm.base_wing_cross_section
+                    for wcsm in wing_cross_section_movements
+                ],
+                num_chordwise_panels=2,
+                chordwise_spacing="uniform",
+            ),
+            wing_cross_section_movements=wing_cross_section_movements,
+        )
+        airplane_movement1 = AirplaneMovement(
+            base_airplane=Airplane(wings=[wing_movement1.base_wing]),
+            wing_movements=[wing_movement1],
+        )
+
+        wing_cross_section_movements2 = [
+            WingCrossSectionMovement(
+                base_wing_cross_section=WingCrossSection(
+                    airfoil=Airfoil(name="NACA0012"),
+                    num_spanwise_panels=2,
+                    chord=1.0,
+                ),
+            ),
+            WingCrossSectionMovement(
+                base_wing_cross_section=WingCrossSection(
+                    airfoil=Airfoil(name="NACA0012"),
+                    num_spanwise_panels=None,
+                    chord=1.0,
+                    Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
+                ),
+            ),
+        ]
+        wing_movement2 = WingMovement(
+            base_wing=Wing(
+                wing_cross_sections=[
+                    wcsm.base_wing_cross_section
+                    for wcsm in wing_cross_section_movements2
+                ],
+                num_chordwise_panels=2,
+                chordwise_spacing="uniform",
+            ),
+            wing_cross_section_movements=wing_cross_section_movements2,
+        )
+        airplane_movement2 = AirplaneMovement(
+            base_airplane=Airplane(
+                wings=[wing_movement2.base_wing],
+                Cg_GP1_CgP1=(0.0, 10.0, 0.0),
+            ),
+            wing_movements=[wing_movement2],
+        )
+
+        movement = Movement(
+            airplane_movements=[airplane_movement1, airplane_movement2],
+            operating_point_movement=OperatingPointMovement(
+                base_operating_point=OperatingPoint(),
+            ),
+            num_steps=3,
+        )
+        problem = UnsteadyProblem(movement=movement)
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, UnsteadyProblem)
+        self.assertEqual(len(result.movement.airplane_movements), 2)
+
+        # Verify DAG identity for both airplanes across all time steps.
+        for step in range(result.num_steps):
+            for am_idx in range(2):
+                self.assertIs(
+                    result.movement.airplanes[am_idx][step],
+                    result.steady_problems[step].airplanes[am_idx],
+                )
+            self.assertIs(
+                result.movement.operating_points[step],
+                result.steady_problems[step].operating_point,
+            )

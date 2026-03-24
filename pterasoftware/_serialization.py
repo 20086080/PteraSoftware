@@ -34,8 +34,13 @@ from .geometry.wing_cross_section import WingCrossSection
 
 # noinspection PyProtectedMember
 from .movements._functions import oscillating_linspaces, oscillating_sinspaces
+from .movements.airplane_movement import AirplaneMovement
+from .movements.movement import Movement
+from .movements.operating_point_movement import OperatingPointMovement
+from .movements.wing_cross_section_movement import WingCrossSectionMovement
+from .movements.wing_movement import WingMovement
 from .operating_point import OperatingPoint
-from .problems import SteadyProblem
+from .problems import SteadyProblem, UnsteadyProblem
 from .steady_horseshoe_vortex_lattice_method import (
     SteadyHorseshoeVortexLatticeMethodSolver,
 )
@@ -72,12 +77,23 @@ _CLASS_REGISTRY: dict[str, type] = {
     "SteadyProblem": SteadyProblem,
     "SteadyHorseshoeVortexLatticeMethodSolver": SteadyHorseshoeVortexLatticeMethodSolver,
     "SteadyRingVortexLatticeMethodSolver": SteadyRingVortexLatticeMethodSolver,
+    "Movement": Movement,
+    "AirplaneMovement": AirplaneMovement,
+    "WingMovement": WingMovement,
+    "WingCrossSectionMovement": WingCrossSectionMovement,
+    "OperatingPointMovement": OperatingPointMovement,
+    "UnsteadyProblem": UnsteadyProblem,
 }
 
 # Slots on steady solvers that are aliases into the SteadyProblem graph.
 _STEADY_SOLVER_SKIP_SLOTS: frozenset[str] = frozenset(
     {"airplanes", "operating_point", "reynolds_numbers", "vInf_GP1__E", "panels"}
 )
+
+# Slots on Movement that are redundant when serialized inside an UnsteadyProblem.
+# The canonical data lives in the SteadyProblem objects; these are reconstructed
+# on deserialization to preserve object identity.
+_MOVEMENT_SKIP_SLOTS: frozenset[str] = frozenset({"_airplanes", "_operating_points"})
 
 
 def save(path: str | Path, obj: object) -> None:
@@ -273,9 +289,16 @@ def _object_to_dict(
         _skip_slots = _skip_slots | _STEADY_SOLVER_SKIP_SLOTS
 
     result: dict[str, Any] = {"_type": class_name}
+    is_unsteady_problem = isinstance(obj, UnsteadyProblem)
     for slot_name in getattr(cls, "__slots__"):
         if slot_name in _skip_slots:
             result[slot_name] = None
+        elif is_unsteady_problem and slot_name == "_movement":
+            # Pass _MOVEMENT_SKIP_SLOTS to the Movement child so that
+            # _airplanes and _operating_points are serialized as null.
+            result[slot_name] = _object_to_dict(
+                getattr(obj, slot_name), _skip_slots=_MOVEMENT_SKIP_SLOTS
+            )
         else:
             result[slot_name] = _serialize_value(getattr(obj, slot_name))
     return result
@@ -342,6 +365,27 @@ def _reconstruct_shared_references(obj: object) -> None:
             # Pre run: panels is an uninitialized object array sized to
             # num_panels.
             object.__setattr__(obj, "panels", np.empty(obj.num_panels, dtype=object))
+
+    if isinstance(obj, UnsteadyProblem):
+        movement = obj.movement
+        steady_problems = obj.steady_problems
+        num_steps = len(steady_problems)
+        num_airplane_movements = len(movement.airplane_movements)
+
+        # Reconstruct Movement._airplanes as a tuple[tuple[Airplane, ...], ...].
+        # Outer index = airplane movement, inner index = time step.
+        airplanes = tuple(
+            tuple(steady_problems[step].airplanes[am_idx] for step in range(num_steps))
+            for am_idx in range(num_airplane_movements)
+        )
+        object.__setattr__(movement, "_airplanes", airplanes)
+
+        # Reconstruct Movement._operating_points: tuple[OperatingPoint, ...].
+        # Indexed by time step.
+        operating_points = tuple(
+            steady_problems[step].operating_point for step in range(num_steps)
+        )
+        object.__setattr__(movement, "_operating_points", operating_points)
 
 
 def _ndarray_to_dict(arr: np.ndarray) -> dict[str, Any]:
