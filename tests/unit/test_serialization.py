@@ -26,7 +26,11 @@ from pterasoftware._serialization import (
 
 # noinspection PyProtectedMember
 from pterasoftware._vortices._line_vortex import LineVortex
+
+# noinspection PyProtectedMember
 from pterasoftware._vortices.horseshoe_vortex import HorseshoeVortex
+
+# noinspection PyProtectedMember
 from pterasoftware._vortices.ring_vortex import RingVortex
 from pterasoftware.geometry.airfoil import Airfoil
 from pterasoftware.geometry.airplane import Airplane
@@ -39,6 +43,7 @@ from pterasoftware.movements._functions import (
     oscillating_sinspaces,
 )
 from pterasoftware.operating_point import OperatingPoint
+from pterasoftware.problems import SteadyProblem
 
 
 class TestNdarrayRoundTrip(unittest.TestCase):
@@ -1513,6 +1518,35 @@ def _make_meshed_airplane() -> Airplane:
     return airplane
 
 
+def _make_steady_problem() -> SteadyProblem:
+    """Creates a simple SteadyProblem for testing.
+
+    :return: A SteadyProblem with one meshed Airplane and 2x2 Panels.
+    """
+    import pterasoftware as ps
+
+    wing = Wing(
+        wing_cross_sections=[
+            WingCrossSection(
+                airfoil=Airfoil(name="NACA0012"),
+                num_spanwise_panels=2,
+                chord=1.0,
+            ),
+            WingCrossSection(
+                airfoil=Airfoil(name="NACA0012"),
+                num_spanwise_panels=None,
+                chord=1.0,
+                Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
+            ),
+        ],
+        num_chordwise_panels=2,
+        chordwise_spacing="uniform",
+    )
+    airplane = Airplane(wings=[wing])
+    op = ps.operating_point.OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0)
+    return ps.problems.SteadyProblem(airplanes=[airplane], operating_point=op)
+
+
 class TestWingRoundTrip(unittest.TestCase):
     """This class contains methods for testing Wing serialization round trips."""
 
@@ -1610,3 +1644,52 @@ class TestAirplaneRoundTrip(unittest.TestCase):
         assert isinstance(result, Airplane)
         self.assertEqual(result.name, airplane.name)
         self.assertEqual(len(result.wings), len(airplane.wings))
+
+
+class TestSteadyProblemRoundTrip(unittest.TestCase):
+    """This class contains methods for testing SteadyProblem serialization round
+    trips.
+    """
+
+    def test_round_trip(self):
+        """Tests that a SteadyProblem survives a full round trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, SteadyProblem)
+        self.assertEqual(len(result.airplanes), 1)
+        assert isinstance(result.airplanes[0], Airplane)
+        assert isinstance(result.operating_point, OperatingPoint)
+        self.assertEqual(result.operating_point.rho, 1.225)
+        self.assertEqual(result.operating_point.alpha, 5.0)
+
+    def test_panels_have_gp1_coordinates(self):
+        """Tests that deserialized Panels retain their GP1 coordinates set by the
+        SteadyProblem.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        orig_panel = problem.airplanes[0].wings[0].panels[0, 0]
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, SteadyProblem)
+        loaded_panel = result.airplanes[0].wings[0].panels[0, 0]
+        assert orig_panel.Frpp_GP1_CgP1 is not None
+        assert loaded_panel.Frpp_GP1_CgP1 is not None
+        npt.assert_array_equal(loaded_panel.Frpp_GP1_CgP1, orig_panel.Frpp_GP1_CgP1)
+
+    def test_save_load_round_trip(self):
+        """Tests that a SteadyProblem survives a save/load round trip.
+
+        :return: None
+        """
+        problem = _make_steady_problem()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "problem.json"
+            save(path, problem)
+            result = load(path)
+        assert isinstance(result, SteadyProblem)
+        self.assertEqual(len(result.airplanes), 1)
+        assert isinstance(result.operating_point, OperatingPoint)

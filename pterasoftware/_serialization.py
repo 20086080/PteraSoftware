@@ -34,6 +34,7 @@ from .geometry.wing_cross_section import WingCrossSection
 # noinspection PyProtectedMember
 from .movements._functions import oscillating_linspaces, oscillating_sinspaces
 from .operating_point import OperatingPoint
+from .problems import SteadyProblem
 
 _logger = _logging.get_logger("_serialization")
 
@@ -63,6 +64,7 @@ _CLASS_REGISTRY: dict[str, type] = {
     "Panel": Panel,
     "Wing": Wing,
     "Airplane": Airplane,
+    "SteadyProblem": SteadyProblem,
 }
 
 
