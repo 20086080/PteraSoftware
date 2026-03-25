@@ -312,7 +312,14 @@
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
     "allowUnsandboxedCommands": false,
-    "excludedCommands": [],
+    "excludedCommands": [
+      "git"
+    ],
+    "filesystem": {
+      "allowWrite": [
+        "~/.cache/pre-commit"
+      ]
+    },
     "network": {
       "allowedDomains": [
         "github.com",
