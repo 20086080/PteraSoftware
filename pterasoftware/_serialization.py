@@ -89,6 +89,31 @@ _CLASS_REGISTRY: dict[str, type] = {
     "UnsteadyRingVortexLatticeMethodSolver": UnsteadyRingVortexLatticeMethodSolver,
 }
 
+# Classes that can be saved and loaded as top level objects via save() and load().
+# Internal classes (LineVortex, RingVortex, HorseshoeVortex, Panel) are excluded
+# because they are not part of the public API and their structure may change without
+# a format version bump. They are still serializable as nested objects within public
+# classes.
+_PUBLIC_SAVEABLE_CLASSES: frozenset[str] = frozenset(
+    {
+        "Airfoil",
+        "OperatingPoint",
+        "WingCrossSection",
+        "Wing",
+        "Airplane",
+        "SteadyProblem",
+        "SteadyHorseshoeVortexLatticeMethodSolver",
+        "SteadyRingVortexLatticeMethodSolver",
+        "Movement",
+        "AirplaneMovement",
+        "WingMovement",
+        "WingCrossSectionMovement",
+        "OperatingPointMovement",
+        "UnsteadyProblem",
+        "UnsteadyRingVortexLatticeMethodSolver",
+    }
+)
+
 # Slots on steady solvers that are aliases into the SteadyProblem graph.
 _STEADY_SOLVER_SKIP_SLOTS: frozenset[str] = frozenset(
     {"airplanes", "operating_point", "reynolds_numbers", "vInf_GP1__E", "panels"}
@@ -111,7 +136,9 @@ def save(path: str | Path, obj: object) -> None:
     If the path ends with ".json.gz", the output is gzip compressed automatically.
 
     :param path: The file path to save to. Should end with ".json" or ".json.gz".
-    :param obj: The Ptera Software object to save.
+    :param obj: The Ptera Software object to save. Must be a public Ptera Software class
+        (e.g., Airplane, SteadyProblem, or a solver). Internal classes such as Panel and
+        LineVortex cannot be saved directly.
     :return: None
     """
     path = Path(path)
@@ -119,7 +146,15 @@ def save(path: str | Path, obj: object) -> None:
         raise ValueError(
             f"Path must end with '.json' or '.json.gz', got '{path.name}'."
         )
-    _logger.info("Saving %s to %s.", type(obj).__name__, path)
+
+    class_name = type(obj).__name__
+    if class_name not in _PUBLIC_SAVEABLE_CLASSES:
+        raise TypeError(
+            f"{class_name} is not a public saveable class. Only public Ptera Software "
+            f"classes can be saved via save()."
+        )
+
+    _logger.info("Saving %s to %s.", class_name, path)
 
     data = _object_to_dict(obj)
 
@@ -176,6 +211,14 @@ def load(path: str | Path) -> object:
         raise ValueError(
             f"Format version mismatch: file has version {file_version}, but the "
             f"current code expects version {_FORMAT_VERSION}."
+        )
+
+    # Validate that the top level type is a public saveable class.
+    top_level_type = data.get("_type")
+    if top_level_type not in _PUBLIC_SAVEABLE_CLASSES:
+        raise TypeError(
+            f"'{top_level_type}' is not a public saveable class. Only files containing "
+            f"public Ptera Software classes can be loaded via load()."
         )
 
     # Log provenance warnings.

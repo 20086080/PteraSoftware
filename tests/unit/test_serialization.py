@@ -1,5 +1,6 @@
 """This module contains classes to test functions in the serialization module."""
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -946,51 +947,15 @@ class TestObjectFromDict(unittest.TestCase):
 class TestSaveLoad(unittest.TestCase):
     """This class contains methods for testing save and load."""
 
-    def test_json_round_trip(self):
-        """Tests that save and load produce a correct round trip via JSON.
-
-        :return: None
-        """
-        start = np.array([1.0, 2.0, 3.0])
-        end = np.array([4.0, 5.0, 6.0])
-        line_vortex = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "test.json"
-            save(path, line_vortex)
-            result = load(path)
-        assert isinstance(result, LineVortex)
-        npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
-        npt.assert_array_equal(result.Elvp_GP1_CgP1, end)
-        self.assertEqual(result.strength, 5.0)
-
-    def test_gzip_round_trip(self):
-        """Tests that save and load produce a correct round trip via gzip JSON.
-
-        :return: None
-        """
-        start = np.array([1.0, 2.0, 3.0])
-        end = np.array([4.0, 5.0, 6.0])
-        line_vortex = LineVortex(Slvp_GP1_CgP1=start, Elvp_GP1_CgP1=end, strength=5.0)
-        with tempfile.TemporaryDirectory() as tmp:
-            path = Path(tmp) / "test.json.gz"
-            save(path, line_vortex)
-            result = load(path)
-        assert isinstance(result, LineVortex)
-        npt.assert_array_equal(result.Slvp_GP1_CgP1, start)
-        npt.assert_array_equal(result.Elvp_GP1_CgP1, end)
-        self.assertEqual(result.strength, 5.0)
-
     def test_file_contains_format_version(self):
         """Tests that the saved file contains the format version.
 
         :return: None
         """
-        import json
-
-        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
+        operating_point = OperatingPoint()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
-            save(path, line_vortex)
+            save(path, operating_point)
             with open(path) as f:
                 data = json.load(f)
         self.assertEqual(data["_format_version"], _FORMAT_VERSION)
@@ -1000,12 +965,10 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        import json
-
-        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
+        operating_point = OperatingPoint()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
-            save(path, line_vortex)
+            save(path, operating_point)
             with open(path) as f:
                 data = json.load(f)
         self.assertIn("_saved_at", data)
@@ -1018,12 +981,10 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        import json
-
-        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
+        operating_point = OperatingPoint()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
-            save(path, line_vortex)
+            save(path, operating_point)
             with open(path) as f:
                 data = json.load(f)
             data["_format_version"] = 9999
@@ -1037,21 +998,21 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
+        operating_point = OperatingPoint()
         with tempfile.TemporaryDirectory() as tmp:
             path = str(Path(tmp) / "test.json")
-            save(path, line_vortex)
+            save(path, operating_point)
             result = load(path)
-        assert isinstance(result, LineVortex)
+        assert isinstance(result, OperatingPoint)
 
     def test_save_invalid_extension_raises(self):
         """Tests that save raises a ValueError for an unsupported file extension.
 
         :return: None
         """
-        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
+        operating_point = OperatingPoint()
         with self.assertRaises(ValueError):
-            save("test.txt", line_vortex)
+            save("test.txt", operating_point)
 
     def test_load_invalid_extension_raises(self):
         """Tests that load raises a ValueError for an unsupported file extension.
@@ -1066,13 +1027,36 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
+        operating_point = OperatingPoint()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json.gz"
-            save(path, line_vortex)
+            save(path, operating_point)
             with patch("pterasoftware._serialization._MAX_DECOMPRESSED_SIZE", 10):
                 with self.assertRaises(ValueError):
                     load(path)
+
+    def test_save_private_class_raises(self):
+        """Tests that saving a private class raises a TypeError.
+
+        :return: None
+        """
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
+        with self.assertRaises(TypeError):
+            save("test.json", line_vortex)
+
+    def test_load_private_class_raises(self):
+        """Tests that loading a file containing a private class raises a TypeError.
+
+        :return: None
+        """
+        # Manually construct a JSON file with a private class at the top level.
+        data = {"_format_version": _FORMAT_VERSION, "_type": "LineVortex"}
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "test.json"
+            with open(path, "w") as f:
+                json.dump(data, f)
+            with self.assertRaises(TypeError):
+                load(path)
 
 
 class TestRingVortexRoundTrip(unittest.TestCase):
@@ -1312,6 +1296,20 @@ class TestOperatingPointRoundTrip(unittest.TestCase):
         self.assertIsNone(object.__getattribute__(result, "_T_pas_GP1_CgP1_to_W_CgP1"))
         self.assertIsNone(object.__getattribute__(result, "_vInf_GP1__E"))
 
+    def test_save_load_round_trip(self):
+        """Tests that an OperatingPoint survives a save/load round trip.
+
+        :return: None
+        """
+        operating_point = OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "operating_point.json"
+            save(path, operating_point)
+            result = load(path)
+        assert isinstance(result, OperatingPoint)
+        self.assertEqual(result.rho, 1.225)
+        self.assertEqual(result.alpha, 5.0)
+
 
 class TestWingCrossSectionRoundTrip(unittest.TestCase):
     """This class contains methods for testing WingCrossSection serialization round
@@ -1361,6 +1359,24 @@ class TestWingCrossSectionRoundTrip(unittest.TestCase):
         result = _deserialize_value(_serialize_value(wing_cross_section))
         assert isinstance(result, WingCrossSection)
         npt.assert_array_equal(result.airfoil.outline_A_lp, airfoil.outline_A_lp)
+
+    def test_save_load_round_trip(self):
+        """Tests that a WingCrossSection survives a save/load round trip.
+
+        :return: None
+        """
+        wing_cross_section = WingCrossSection(
+            airfoil=Airfoil(name="NACA0012"),
+            num_spanwise_panels=8,
+            chord=1.0,
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "wing_cross_section.json"
+            save(path, wing_cross_section)
+            result = load(path)
+        assert isinstance(result, WingCrossSection)
+        self.assertEqual(result.chord, 1.0)
+        self.assertEqual(result.num_spanwise_panels, 8)
 
 
 class TestPanelRoundTrip(unittest.TestCase):
@@ -1453,6 +1469,21 @@ class TestWingRoundTrip(unittest.TestCase):
         for orig, loaded in zip(wing.wing_cross_sections, result.wing_cross_sections):
             assert isinstance(loaded, WingCrossSection)
             self.assertEqual(loaded.chord, orig.chord)
+
+    def test_save_load_round_trip(self):
+        """Tests that a meshed Wing survives a save/load round trip.
+
+        :return: None
+        """
+        airplane = serialization_fixtures.make_meshed_airplane_fixture()
+        wing = airplane.wings[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "wing.json"
+            save(path, wing)
+            result = load(path)
+        assert isinstance(result, Wing)
+        self.assertEqual(result.name, wing.name)
+        self.assertEqual(result.num_chordwise_panels, wing.num_chordwise_panels)
 
 
 class TestAirplaneRoundTrip(unittest.TestCase):
@@ -1779,6 +1810,84 @@ class TestMovementClassesRoundTrip(unittest.TestCase):
         assert isinstance(result, Movement)
         self.assertEqual(len(result.airplanes), len(movement.airplanes))
         self.assertEqual(len(result.operating_points), len(movement.operating_points))
+
+    def test_save_load_operating_point_movement(self):
+        """Tests that an OperatingPointMovement survives a save/load round trip.
+
+        :return: None
+        """
+        operating_point_movement = OperatingPointMovement(
+            base_operating_point=OperatingPoint(),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "operating_point_movement.json"
+            save(path, operating_point_movement)
+            result = load(path)
+        assert isinstance(result, OperatingPointMovement)
+        self.assertEqual(result.base_operating_point.vCg__E, 10.0)
+
+    def test_save_load_wing_cross_section_movement(self):
+        """Tests that a WingCrossSectionMovement survives a save/load round trip.
+
+        :return: None
+        """
+        wing_cross_section_movement = WingCrossSectionMovement(
+            base_wing_cross_section=WingCrossSection(
+                airfoil=Airfoil(name="NACA0012"),
+                num_spanwise_panels=4,
+                chord=1.0,
+            ),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "wing_cross_section_movement.json"
+            save(path, wing_cross_section_movement)
+            result = load(path)
+        assert isinstance(result, WingCrossSectionMovement)
+        self.assertEqual(result.base_wing_cross_section.chord, 1.0)
+
+    def test_save_load_wing_movement(self):
+        """Tests that a WingMovement survives a save/load round trip.
+
+        :return: None
+        """
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
+        wing_movement = problem.movement.airplane_movements[0].wing_movements[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "wing_movement.json"
+            save(path, wing_movement)
+            result = load(path)
+        assert isinstance(result, WingMovement)
+        self.assertEqual(result.base_wing.name, wing_movement.base_wing.name)
+
+    def test_save_load_airplane_movement(self):
+        """Tests that an AirplaneMovement survives a save/load round trip.
+
+        :return: None
+        """
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
+        airplane_movement = problem.movement.airplane_movements[0]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "airplane_movement.json"
+            save(path, airplane_movement)
+            result = load(path)
+        assert isinstance(result, AirplaneMovement)
+        self.assertEqual(
+            result.base_airplane.name, airplane_movement.base_airplane.name
+        )
+
+    def test_save_load_movement(self):
+        """Tests that a bare Movement survives a save/load round trip.
+
+        :return: None
+        """
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
+        movement = problem.movement
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "movement.json"
+            save(path, movement)
+            result = load(path)
+        assert isinstance(result, Movement)
+        self.assertEqual(len(result.airplanes), len(movement.airplanes))
 
 
 class TestUnsteadyProblemRoundTrip(unittest.TestCase):
