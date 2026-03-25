@@ -253,7 +253,7 @@ def _get_provenance() -> dict[str, str | bool | None]:
     """
     try:
         pkg_version = version("PteraSoftware")
-    except PackageNotFoundError:
+    except PackageNotFoundError:  # pragma: no cover
         pkg_version = None
 
     commit = None
@@ -274,7 +274,7 @@ def _get_provenance() -> dict[str, str | bool | None]:
             .strip()
         )
         dirty = len(status) > 0
-    except (FileNotFoundError, subprocess.CalledProcessError):
+    except (FileNotFoundError, subprocess.CalledProcessError):  # pragma: no cover
         _logger.warning("Git is not available. Provenance fields will be null.")
 
     return {
@@ -291,7 +291,7 @@ def _log_load_warnings(data: dict[str, Any]) -> None:
     :param data: The top level dict loaded from the JSON file.
     :return: None
     """
-    if data.get("_dirty"):
+    if data.get("_dirty"):  # pragma: no branch
         _logger.warning(
             "The file was saved with uncommitted changes (_dirty=true). The _commit "
             "hash may not fully represent the code state at save time."
@@ -307,7 +307,7 @@ def _log_load_warnings(data: dict[str, Any]) -> None:
                 .decode("ascii")
                 .strip()
             )
-            if file_commit != current_commit:
+            if file_commit != current_commit:  # pragma: no cover
                 _logger.warning(
                     "The file was saved at commit %s, but the current HEAD is %s.",
                     file_commit[:12],
@@ -320,9 +320,9 @@ def _log_load_warnings(data: dict[str, Any]) -> None:
                 .decode("ascii")
                 .strip()
             )
-            if len(current_status) > 0:
+            if len(current_status) > 0:  # pragma: no branch
                 _logger.warning("The current working tree has uncommitted changes.")
-        except (FileNotFoundError, subprocess.CalledProcessError):
+        except (FileNotFoundError, subprocess.CalledProcessError):  # pragma: no cover
             pass
 
 
@@ -674,4 +674,6 @@ def _deserialize_value(data: object) -> object:
             "values should be wrapped in _type dicts."
         )
 
-    raise TypeError(f"_deserialize_value does not handle {type(data).__name__}.")
+    raise TypeError(  # pragma: no cover
+        f"_deserialize_value does not handle {type(data).__name__}."
+    )
