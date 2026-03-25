@@ -62,9 +62,10 @@ _CALLABLE_FUNC_TO_NAME = {func: name for name, func in _CALLABLE_NAME_TO_FUNC.it
 # renamed, class registry changed, encoding strategy changed).
 _FORMAT_VERSION = 1
 
-# Maximum decompressed size in bytes when reading gzip files. Prevents gzip bombs
-# from exhausting memory.
-_MAX_DECOMPRESSED_SIZE = 1_073_741_824  # 1 GB
+# Default maximum decompressed size in bytes when reading gzip files. Prevents gzip
+# bombs from exhausting memory. Users can override this via the max_size parameter on
+# load().
+_DEFAULT_MAX_DECOMPRESSED_SIZE = 4_000_000_000  # 4 GB
 
 # Maps class names to their types for deserialization dispatch.
 _CLASS_REGISTRY: dict[str, type] = {
@@ -176,12 +177,15 @@ def save(path: str | Path, obj: object) -> None:
     _logger.info("Saved %s to %s (%d bytes).", type(obj).__name__, path, file_size)
 
 
-def load(path: str | Path) -> object:
+def load(path: str | Path, max_size: int | None = None) -> object:
     """Loads a Ptera Software object from a JSON file.
 
     If the path ends with ".json.gz", the input is gzip decompressed automatically.
 
     :param path: The file path to load from.
+    :param max_size: The maximum decompressed size in bytes for gzip files. If None, the
+        default of 4 GB is used. Set this to a larger value if loading very large
+        simulation results. Only applies to ".json.gz" files.
     :return: The deserialized Ptera Software object.
     """
     path = Path(path)
@@ -191,13 +195,16 @@ def load(path: str | Path) -> object:
         )
     _logger.info("Loading from %s.", path)
 
+    if max_size is None:
+        max_size = _DEFAULT_MAX_DECOMPRESSED_SIZE
+
     if path.name.endswith(".json.gz"):
         with gzip.open(path, "rb") as f:
-            raw = f.read(_MAX_DECOMPRESSED_SIZE + 1)
-            if len(raw) > _MAX_DECOMPRESSED_SIZE:
+            raw = f.read(max_size + 1)
+            if len(raw) > max_size:
                 raise ValueError(
                     f"Decompressed file exceeds the maximum allowed size of "
-                    f"{_MAX_DECOMPRESSED_SIZE} bytes."
+                    f"{max_size} bytes."
                 )
     else:
         with open(path, "rb") as f:

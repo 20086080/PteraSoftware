@@ -4,7 +4,6 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 import numpy as np
 import numpy.testing as npt
@@ -1023,7 +1022,7 @@ class TestSaveLoad(unittest.TestCase):
             load("test.dat")
 
     def test_gzip_bomb_protection(self):
-        """Tests that loading a gzip file that exceeds the size limit raises.
+        """Tests that the max_size parameter on load controls the size limit.
 
         :return: None
         """
@@ -1031,9 +1030,8 @@ class TestSaveLoad(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json.gz"
             save(path, operating_point)
-            with patch("pterasoftware._serialization._MAX_DECOMPRESSED_SIZE", 10):
-                with self.assertRaises(ValueError):
-                    load(path)
+            with self.assertRaises(ValueError):
+                load(path, max_size=10)
 
     def test_save_private_class_raises(self):
         """Tests that saving a private class raises a TypeError.
