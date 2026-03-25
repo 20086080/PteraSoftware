@@ -317,7 +317,7 @@
       "allowWrite": [
         "~/.cache/pre-commit",
         ".git",
-        "/tmp"
+        "/tmp/claude"
       ]
     },
     "network": {
