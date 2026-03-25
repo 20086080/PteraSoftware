@@ -316,7 +316,8 @@
     "filesystem": {
       "allowWrite": [
         "~/.cache/pre-commit",
-        ".git"
+        ".git",
+        "/tmp"
       ]
     },
     "network": {
