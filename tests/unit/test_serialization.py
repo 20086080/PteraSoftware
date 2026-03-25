@@ -60,6 +60,7 @@ from pterasoftware.steady_ring_vortex_lattice_method import (
 from pterasoftware.unsteady_ring_vortex_lattice_method import (
     UnsteadyRingVortexLatticeMethodSolver,
 )
+from tests.unit.fixtures import serialization_fixtures
 
 
 class TestNdarrayRoundTrip(unittest.TestCase):
@@ -750,11 +751,7 @@ class TestObjectToDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         serialized_dict = _object_to_dict(line_vortex)
         self.assertEqual(serialized_dict["_type"], "LineVortex")
 
@@ -763,11 +760,7 @@ class TestObjectToDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         serialized_dict = _object_to_dict(line_vortex)
         for slot_name in LineVortex.__slots__:
             self.assertIn(slot_name, serialized_dict)
@@ -808,11 +801,7 @@ class TestObjectToDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         serialized_dict = _object_to_dict(line_vortex)
         self.assertIsNone(serialized_dict["_vector_GP1"])
         self.assertIsNone(serialized_dict["_Clvp_GP1_CgP1"])
@@ -822,11 +811,7 @@ class TestObjectToDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         # Trigger cache population by accessing the properties.
         _ = line_vortex.vector_GP1
         _ = line_vortex.Clvp_GP1_CgP1
@@ -841,11 +826,7 @@ class TestObjectToDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         result = _serialize_value(line_vortex)
         assert isinstance(result, dict)
         self.assertEqual(result["_type"], "LineVortex")
@@ -855,11 +836,7 @@ class TestObjectToDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         serialized_dict = _object_to_dict(
             line_vortex, _skip_slots=frozenset({"strength"})
         )
@@ -899,11 +876,7 @@ class TestObjectFromDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         result = _object_from_dict(_object_to_dict(line_vortex))
         assert isinstance(result, LineVortex)
         self.assertFalse(result.Slvp_GP1_CgP1.flags.writeable)
@@ -914,11 +887,7 @@ class TestObjectFromDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         result = _object_from_dict(_object_to_dict(line_vortex))
         assert isinstance(result, LineVortex)
         # Access private cache slots directly to verify they are None.
@@ -930,11 +899,7 @@ class TestObjectFromDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         # Trigger cache population.
         expected_vector = line_vortex.vector_GP1.copy()
         expected_center = line_vortex.Clvp_GP1_CgP1.copy()
@@ -949,11 +914,7 @@ class TestObjectFromDict(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         serialized_dict = _object_to_dict(line_vortex)
         result = _deserialize_value(serialized_dict)
         assert isinstance(result, LineVortex)
@@ -1026,11 +987,7 @@ class TestSaveLoad(unittest.TestCase):
         """
         import json
 
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
             save(path, line_vortex)
@@ -1045,11 +1002,7 @@ class TestSaveLoad(unittest.TestCase):
         """
         import json
 
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
             save(path, line_vortex)
@@ -1067,11 +1020,7 @@ class TestSaveLoad(unittest.TestCase):
         """
         import json
 
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json"
             save(path, line_vortex)
@@ -1088,11 +1037,7 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         with tempfile.TemporaryDirectory() as tmp:
             path = str(Path(tmp) / "test.json")
             save(path, line_vortex)
@@ -1104,11 +1049,7 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         with self.assertRaises(ValueError):
             save("test.txt", line_vortex)
 
@@ -1125,11 +1066,7 @@ class TestSaveLoad(unittest.TestCase):
 
         :return: None
         """
-        line_vortex = LineVortex(
-            Slvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            Elvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        line_vortex = serialization_fixtures.make_basic_line_vortex_fixture()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "test.json.gz"
             save(path, line_vortex)
@@ -1172,13 +1109,7 @@ class TestRingVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        ring_vortex = RingVortex(
-            Frrvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            Flrvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
-            Blrvp_GP1_CgP1=np.array([0.0, 1.0, 0.0]),
-            Brrvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        ring_vortex = serialization_fixtures.make_basic_ring_vortex_fixture()
         # Trigger cache population.
         _ = ring_vortex.front_leg
         _ = ring_vortex.left_leg
@@ -1196,13 +1127,7 @@ class TestRingVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        ring_vortex = RingVortex(
-            Frrvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            Flrvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
-            Blrvp_GP1_CgP1=np.array([0.0, 1.0, 0.0]),
-            Brrvp_GP1_CgP1=np.array([0.0, 0.0, 0.0]),
-            strength=1.0,
-        )
+        ring_vortex = serialization_fixtures.make_basic_ring_vortex_fixture()
         result = _deserialize_value(_serialize_value(ring_vortex))
         assert isinstance(result, RingVortex)
         self.assertIsNone(object.__getattribute__(result, "_front_leg"))
@@ -1245,13 +1170,7 @@ class TestHorseshoeVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        horseshoe_vortex = HorseshoeVortex(
-            Frhvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            Flhvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
-            leftLegVector_GP1=np.array([-1.0, 0.0, 0.0]),
-            left_right_leg_lengths=20.0,
-            strength=1.0,
-        )
+        horseshoe_vortex = serialization_fixtures.make_basic_horseshoe_vortex_fixture()
         # Trigger cache population.
         _ = horseshoe_vortex.right_leg
         _ = horseshoe_vortex.finite_leg
@@ -1268,13 +1187,7 @@ class TestHorseshoeVortexRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        horseshoe_vortex = HorseshoeVortex(
-            Frhvp_GP1_CgP1=np.array([1.0, 0.0, 0.0]),
-            Flhvp_GP1_CgP1=np.array([1.0, 1.0, 0.0]),
-            leftLegVector_GP1=np.array([-1.0, 0.0, 0.0]),
-            left_right_leg_lengths=20.0,
-            strength=1.0,
-        )
+        horseshoe_vortex = serialization_fixtures.make_basic_horseshoe_vortex_fixture()
         result = _deserialize_value(_serialize_value(horseshoe_vortex))
         assert isinstance(result, HorseshoeVortex)
         self.assertIsNone(object.__getattribute__(result, "_right_leg"))
@@ -1458,14 +1371,7 @@ class TestPanelRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        panel = Panel(
-            Frpp_G_Cg=np.array([1.0, 0.0, 0.0]),
-            Flpp_G_Cg=np.array([1.0, 1.0, 0.0]),
-            Blpp_G_Cg=np.array([0.0, 1.0, 0.0]),
-            Brpp_G_Cg=np.array([0.0, 0.0, 0.0]),
-            is_leading_edge=True,
-            is_trailing_edge=False,
-        )
+        panel = serialization_fixtures.make_basic_panel_fixture()
         result = _deserialize_value(_serialize_value(panel))
         assert isinstance(result, Panel)
         npt.assert_array_equal(result.Frpp_G_Cg, np.array([1.0, 0.0, 0.0]))
@@ -1478,14 +1384,7 @@ class TestPanelRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        panel = Panel(
-            Frpp_G_Cg=np.array([1.0, 0.0, 0.0]),
-            Flpp_G_Cg=np.array([1.0, 1.0, 0.0]),
-            Blpp_G_Cg=np.array([0.0, 1.0, 0.0]),
-            Brpp_G_Cg=np.array([0.0, 0.0, 0.0]),
-            is_leading_edge=True,
-            is_trailing_edge=False,
-        )
+        panel = serialization_fixtures.make_basic_panel_fixture()
         result = _deserialize_value(_serialize_value(panel))
         assert isinstance(result, Panel)
         self.assertIsNone(result.ring_vortex)
@@ -1497,112 +1396,10 @@ class TestPanelRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        panel = Panel(
-            Frpp_G_Cg=np.array([1.0, 0.0, 0.0]),
-            Flpp_G_Cg=np.array([1.0, 1.0, 0.0]),
-            Blpp_G_Cg=np.array([0.0, 1.0, 0.0]),
-            Brpp_G_Cg=np.array([0.0, 0.0, 0.0]),
-            is_leading_edge=True,
-            is_trailing_edge=False,
-        )
+        panel = serialization_fixtures.make_basic_panel_fixture()
         result = _deserialize_value(_serialize_value(panel))
         assert isinstance(result, Panel)
         self.assertFalse(result.Frpp_G_Cg.flags.writeable)
-
-
-def _make_meshed_airplane() -> Airplane:
-    """Creates a simple meshed Airplane for testing.
-
-    :return: A meshed Airplane with one Wing containing 2x2 Panels.
-    """
-    wing = Wing(
-        wing_cross_sections=[
-            WingCrossSection(
-                airfoil=Airfoil(name="NACA0012"),
-                num_spanwise_panels=2,
-                chord=1.0,
-            ),
-            WingCrossSection(
-                airfoil=Airfoil(name="NACA0012"),
-                num_spanwise_panels=None,
-                chord=1.0,
-                Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
-            ),
-        ],
-        num_chordwise_panels=2,
-        chordwise_spacing="uniform",
-    )
-    airplane = Airplane(wings=[wing])
-    operating_point = OperatingPoint()
-    SteadyProblem(airplanes=[airplane], operating_point=operating_point)
-    return airplane
-
-
-def _make_steady_problem() -> SteadyProblem:
-    """Creates a simple SteadyProblem for testing.
-
-    :return: A SteadyProblem with one meshed Airplane and 2x2 Panels.
-    """
-    wing = Wing(
-        wing_cross_sections=[
-            WingCrossSection(
-                airfoil=Airfoil(name="NACA0012"),
-                num_spanwise_panels=2,
-                chord=1.0,
-            ),
-            WingCrossSection(
-                airfoil=Airfoil(name="NACA0012"),
-                num_spanwise_panels=None,
-                chord=1.0,
-                Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
-            ),
-        ],
-        num_chordwise_panels=2,
-        chordwise_spacing="uniform",
-    )
-    airplane = Airplane(wings=[wing])
-    operating_point = OperatingPoint(rho=1.225, vCg__E=10.0, alpha=5.0)
-    return SteadyProblem(airplanes=[airplane], operating_point=operating_point)
-
-
-def _make_two_airplane_wing() -> Wing:
-    """Creates a simple Wing for use in multi airplane tests.
-
-    :return: An unmeshed Wing with 2x2 panels.
-    """
-    return Wing(
-        wing_cross_sections=[
-            WingCrossSection(
-                airfoil=Airfoil(name="NACA0012"),
-                num_spanwise_panels=2,
-                chord=1.0,
-            ),
-            WingCrossSection(
-                airfoil=Airfoil(name="NACA0012"),
-                num_spanwise_panels=None,
-                chord=1.0,
-                Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
-            ),
-        ],
-        num_chordwise_panels=2,
-        chordwise_spacing="uniform",
-    )
-
-
-def _make_formation_steady_problem() -> SteadyProblem:
-    """Creates a SteadyProblem with two Airplanes for formation flight testing.
-
-    :return: A SteadyProblem with two meshed Airplanes.
-    """
-    airplane1 = Airplane(wings=[_make_two_airplane_wing()])
-    airplane2 = Airplane(
-        wings=[_make_two_airplane_wing()],
-        Cg_GP1_CgP1=(0.0, 10.0, 0.0),
-    )
-    operating_point = OperatingPoint()
-    return SteadyProblem(
-        airplanes=[airplane1, airplane2], operating_point=operating_point
-    )
 
 
 class TestWingRoundTrip(unittest.TestCase):
@@ -1613,7 +1410,7 @@ class TestWingRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        airplane = _make_meshed_airplane()
+        airplane = serialization_fixtures.make_meshed_airplane_fixture()
         wing = airplane.wings[0]
         result = _deserialize_value(_serialize_value(wing))
         assert isinstance(result, Wing)
@@ -1627,7 +1424,7 @@ class TestWingRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        airplane = _make_meshed_airplane()
+        airplane = serialization_fixtures.make_meshed_airplane_fixture()
         wing = airplane.wings[0]
         assert wing.panels is not None
         result = _deserialize_value(_serialize_value(wing))
@@ -1648,7 +1445,7 @@ class TestWingRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        airplane = _make_meshed_airplane()
+        airplane = serialization_fixtures.make_meshed_airplane_fixture()
         wing = airplane.wings[0]
         result = _deserialize_value(_serialize_value(wing))
         assert isinstance(result, Wing)
@@ -1666,7 +1463,7 @@ class TestAirplaneRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        airplane = _make_meshed_airplane()
+        airplane = serialization_fixtures.make_meshed_airplane_fixture()
         result = _deserialize_value(_serialize_value(airplane))
         assert isinstance(result, Airplane)
         self.assertEqual(result.name, airplane.name)
@@ -1680,7 +1477,7 @@ class TestAirplaneRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        airplane = _make_meshed_airplane()
+        airplane = serialization_fixtures.make_meshed_airplane_fixture()
         result = _deserialize_value(_serialize_value(airplane))
         assert isinstance(result, Airplane)
         for orig_wing, loaded_wing in zip(airplane.wings, result.wings):
@@ -1694,7 +1491,7 @@ class TestAirplaneRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        airplane = _make_meshed_airplane()
+        airplane = serialization_fixtures.make_meshed_airplane_fixture()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "airplane.json"
             save(path, airplane)
@@ -1714,7 +1511,7 @@ class TestSteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         result = _deserialize_value(_serialize_value(problem))
         assert isinstance(result, SteadyProblem)
         self.assertEqual(len(result.airplanes), 1)
@@ -1729,7 +1526,7 @@ class TestSteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         orig_panel = problem.airplanes[0].wings[0].panels[0, 0]
         result = _deserialize_value(_serialize_value(problem))
         assert isinstance(result, SteadyProblem)
@@ -1743,7 +1540,7 @@ class TestSteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "problem.json"
             save(path, problem)
@@ -1757,7 +1554,7 @@ class TestSteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_formation_steady_problem()
+        problem = serialization_fixtures.make_formation_steady_problem_fixture()
         result = _deserialize_value(_serialize_value(problem))
         assert isinstance(result, SteadyProblem)
         self.assertEqual(len(result.airplanes), 2)
@@ -1771,7 +1568,7 @@ class TestSteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_formation_steady_problem()
+        problem = serialization_fixtures.make_formation_steady_problem_fixture()
         result = _deserialize_value(_serialize_value(problem))
         assert isinstance(result, SteadyProblem)
         for i in range(2):
@@ -1792,7 +1589,7 @@ class TestSteadyHorseshoeSolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         solver = SteadyHorseshoeVortexLatticeMethodSolver(problem)
         solver.run()
         result = _deserialize_value(_serialize_value(solver))
@@ -1810,7 +1607,7 @@ class TestSteadyHorseshoeSolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         solver = SteadyHorseshoeVortexLatticeMethodSolver(problem)
         solver.run()
         result = _deserialize_value(_serialize_value(solver))
@@ -1823,7 +1620,7 @@ class TestSteadyHorseshoeSolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         solver = SteadyHorseshoeVortexLatticeMethodSolver(problem)
         result = _deserialize_value(_serialize_value(solver))
         assert isinstance(result, SteadyHorseshoeVortexLatticeMethodSolver)
@@ -1835,7 +1632,7 @@ class TestSteadyHorseshoeSolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         solver = SteadyHorseshoeVortexLatticeMethodSolver(problem)
         solver.run()
         with tempfile.TemporaryDirectory() as tmp:
@@ -1856,7 +1653,7 @@ class TestSteadyRingSolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         solver = SteadyRingVortexLatticeMethodSolver(problem)
         solver.run()
         result = _deserialize_value(_serialize_value(solver))
@@ -1874,7 +1671,7 @@ class TestSteadyRingSolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         solver = SteadyRingVortexLatticeMethodSolver(problem)
         solver.run()
         result = _deserialize_value(_serialize_value(solver))
@@ -1887,7 +1684,7 @@ class TestSteadyRingSolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         solver = SteadyRingVortexLatticeMethodSolver(problem)
         result = _deserialize_value(_serialize_value(solver))
         assert isinstance(result, SteadyRingVortexLatticeMethodSolver)
@@ -1898,7 +1695,7 @@ class TestSteadyRingSolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_steady_problem()
+        problem = serialization_fixtures.make_steady_problem_fixture()
         solver = SteadyRingVortexLatticeMethodSolver(problem)
         solver.run()
         with tempfile.TemporaryDirectory() as tmp:
@@ -1907,55 +1704,6 @@ class TestSteadyRingSolverRoundTrip(unittest.TestCase):
             result = load(path)
         assert isinstance(result, SteadyRingVortexLatticeMethodSolver)
         self.assertTrue(result.ran)
-
-
-def _make_unsteady_problem() -> UnsteadyProblem:
-    """Creates a simple UnsteadyProblem for testing.
-
-    :return: An UnsteadyProblem with a static Movement and 2x2 Panels.
-    """
-    wing_cross_section_movement_root = WingCrossSectionMovement(
-        base_wing_cross_section=WingCrossSection(
-            airfoil=Airfoil(name="NACA0012"),
-            num_spanwise_panels=2,
-            chord=1.0,
-        ),
-    )
-    wing_cross_section_movement_tip = WingCrossSectionMovement(
-        base_wing_cross_section=WingCrossSection(
-            airfoil=Airfoil(name="NACA0012"),
-            num_spanwise_panels=None,
-            chord=1.0,
-            Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
-        ),
-    )
-    wing_movement = WingMovement(
-        base_wing=Wing(
-            wing_cross_sections=[
-                wing_cross_section_movement_root.base_wing_cross_section,
-                wing_cross_section_movement_tip.base_wing_cross_section,
-            ],
-            num_chordwise_panels=2,
-            chordwise_spacing="uniform",
-        ),
-        wing_cross_section_movements=[
-            wing_cross_section_movement_root,
-            wing_cross_section_movement_tip,
-        ],
-    )
-    airplane_movement = AirplaneMovement(
-        base_airplane=Airplane(wings=[wing_movement.base_wing]),
-        wing_movements=[wing_movement],
-    )
-    operating_point_movement = OperatingPointMovement(
-        base_operating_point=OperatingPoint(),
-    )
-    movement = Movement(
-        airplane_movements=[airplane_movement],
-        operating_point_movement=operating_point_movement,
-        num_steps=3,
-    )
-    return UnsteadyProblem(movement=movement)
 
 
 class TestMovementClassesRoundTrip(unittest.TestCase):
@@ -1996,7 +1744,7 @@ class TestMovementClassesRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         wing_movement = problem.movement.airplane_movements[0].wing_movements[0]
         result = _deserialize_value(_serialize_value(wing_movement))
         assert isinstance(result, WingMovement)
@@ -2011,7 +1759,7 @@ class TestMovementClassesRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         airplane_movement = problem.movement.airplane_movements[0]
         result = _deserialize_value(_serialize_value(airplane_movement))
         assert isinstance(result, AirplaneMovement)
@@ -2025,7 +1773,7 @@ class TestMovementClassesRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         movement = problem.movement
         result = _deserialize_value(_serialize_value(movement))
         assert isinstance(result, Movement)
@@ -2043,7 +1791,7 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         result = _deserialize_value(_serialize_value(problem))
         assert isinstance(result, UnsteadyProblem)
         self.assertEqual(result.num_steps, problem.num_steps)
@@ -2055,7 +1803,7 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         result = _deserialize_value(_serialize_value(problem))
         assert isinstance(result, UnsteadyProblem)
         for step in range(result.num_steps):
@@ -2073,7 +1821,7 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         result = _deserialize_value(_serialize_value(problem))
         assert isinstance(result, UnsteadyProblem)
         for step in range(result.num_steps):
@@ -2087,7 +1835,7 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "unsteady.json"
             save(path, problem)
@@ -2101,83 +1849,7 @@ class TestUnsteadyProblemRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        wing_cross_section_movements = [
-            WingCrossSectionMovement(
-                base_wing_cross_section=WingCrossSection(
-                    airfoil=Airfoil(name="NACA0012"),
-                    num_spanwise_panels=2,
-                    chord=1.0,
-                ),
-            ),
-            WingCrossSectionMovement(
-                base_wing_cross_section=WingCrossSection(
-                    airfoil=Airfoil(name="NACA0012"),
-                    num_spanwise_panels=None,
-                    chord=1.0,
-                    Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
-                ),
-            ),
-        ]
-        wing_movement1 = WingMovement(
-            base_wing=Wing(
-                wing_cross_sections=[
-                    wing_cross_section_movement.base_wing_cross_section
-                    for wing_cross_section_movement in wing_cross_section_movements
-                ],
-                num_chordwise_panels=2,
-                chordwise_spacing="uniform",
-            ),
-            wing_cross_section_movements=wing_cross_section_movements,
-        )
-        airplane_movement1 = AirplaneMovement(
-            base_airplane=Airplane(wings=[wing_movement1.base_wing]),
-            wing_movements=[wing_movement1],
-        )
-
-        wing_cross_section_movements2 = [
-            WingCrossSectionMovement(
-                base_wing_cross_section=WingCrossSection(
-                    airfoil=Airfoil(name="NACA0012"),
-                    num_spanwise_panels=2,
-                    chord=1.0,
-                ),
-            ),
-            WingCrossSectionMovement(
-                base_wing_cross_section=WingCrossSection(
-                    airfoil=Airfoil(name="NACA0012"),
-                    num_spanwise_panels=None,
-                    chord=1.0,
-                    Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
-                ),
-            ),
-        ]
-        wing_movement2 = WingMovement(
-            base_wing=Wing(
-                wing_cross_sections=[
-                    wing_cross_section_movement.base_wing_cross_section
-                    for wing_cross_section_movement in wing_cross_section_movements2
-                ],
-                num_chordwise_panels=2,
-                chordwise_spacing="uniform",
-            ),
-            wing_cross_section_movements=wing_cross_section_movements2,
-        )
-        airplane_movement2 = AirplaneMovement(
-            base_airplane=Airplane(
-                wings=[wing_movement2.base_wing],
-                Cg_GP1_CgP1=(0.0, 10.0, 0.0),
-            ),
-            wing_movements=[wing_movement2],
-        )
-
-        movement = Movement(
-            airplane_movements=[airplane_movement1, airplane_movement2],
-            operating_point_movement=OperatingPointMovement(
-                base_operating_point=OperatingPoint(),
-            ),
-            num_steps=3,
-        )
-        problem = UnsteadyProblem(movement=movement)
+        problem = serialization_fixtures.make_formation_unsteady_problem_fixture()
         result = _deserialize_value(_serialize_value(problem))
         assert isinstance(result, UnsteadyProblem)
         self.assertEqual(len(result.movement.airplane_movements), 2)
@@ -2205,7 +1877,7 @@ class TestUnsteadySolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         solver = UnsteadyRingVortexLatticeMethodSolver(problem)
         solver.run()
         result = _deserialize_value(_serialize_value(solver))
@@ -2219,7 +1891,7 @@ class TestUnsteadySolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         solver = UnsteadyRingVortexLatticeMethodSolver(problem)
         solver.run()
         result = _deserialize_value(_serialize_value(solver))
@@ -2232,7 +1904,7 @@ class TestUnsteadySolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         solver = UnsteadyRingVortexLatticeMethodSolver(problem)
         solver.run()
         result = _deserialize_value(_serialize_value(solver))
@@ -2254,7 +1926,7 @@ class TestUnsteadySolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         solver = UnsteadyRingVortexLatticeMethodSolver(problem)
         result = _deserialize_value(_serialize_value(solver))
         assert isinstance(result, UnsteadyRingVortexLatticeMethodSolver)
@@ -2265,7 +1937,7 @@ class TestUnsteadySolverRoundTrip(unittest.TestCase):
 
         :return: None
         """
-        problem = _make_unsteady_problem()
+        problem = serialization_fixtures.make_unsteady_problem_fixture()
         solver = UnsteadyRingVortexLatticeMethodSolver(problem)
         solver.run()
         with tempfile.TemporaryDirectory() as tmp:
