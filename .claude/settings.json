@@ -312,12 +312,11 @@
     "enabled": true,
     "autoAllowBashIfSandboxed": true,
     "allowUnsandboxedCommands": false,
-    "excludedCommands": [
-      "git"
-    ],
+    "excludedCommands": [],
     "filesystem": {
       "allowWrite": [
-        "~/.cache/pre-commit"
+        "~/.cache/pre-commit",
+        ".git"
       ]
     },
     "network": {
