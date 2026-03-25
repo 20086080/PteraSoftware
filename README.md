@@ -4,7 +4,6 @@
 
 ![build](https://github.com/camUrban/PteraSoftware/actions/workflows/tests.yml/badge.svg?branch=main)
 ![coverage](https://img.shields.io/codecov/c/gh/camUrban/PteraSoftware)
-![code quality](https://img.shields.io/codefactor/grade/github/camUrban/PteraSoftware)
 ![source rank](https://img.shields.io/librariesio/sourcerank/pypi/PteraSoftware?color=blue&label=source%20rank)
 ![python](https://img.shields.io/pypi/pyversions/pterasoftware)
 ![license](https://img.shields.io/github/license/camUrban/PteraSoftware?color=blue)
