@@ -1,0 +1,112 @@
+Serialization Benchmark
+============================================================
+
+  LineVortex
+    JSON:      390 B | save 0.0006s | load 0.0035s
+    GZIP:      192 B | save 0.0010s | load 0.0211s
+    Compression ratio: 2.0x
+
+  RingVortex
+    JSON:      785 B | save 0.0010s | load 0.0032s
+    GZIP:      235 B | save 0.0015s | load 0.0196s
+    Compression ratio: 3.3x
+
+  HorseshoeVortex
+    JSON:      667 B | save 0.0011s | load 0.0032s
+    GZIP:      245 B | save 0.0015s | load 0.0216s
+    Compression ratio: 2.7x
+
+  Airfoil
+    JSON:   25,914 B | save 0.0015s | load 0.0232s
+    GZIP:   19,347 B | save 0.0062s | load 0.0226s
+    Compression ratio: 1.3x
+
+  OperatingPoint
+    JSON:    1,154 B | save 0.0014s | load 0.0031s
+    GZIP:      335 B | save 0.0013s | load 0.0194s
+    Compression ratio: 3.4x
+
+  WingCrossSection
+    JSON:   26,652 B | save 0.0014s | load 0.0237s
+    GZIP:   15,083 B | save 0.0069s | load 0.0217s
+    Compression ratio: 1.8x
+
+  Panel
+    JSON:    1,347 B | save 0.0011s | load 0.0025s
+    GZIP:      367 B | save 0.0013s | load 0.0201s
+    Compression ratio: 3.7x
+
+  Wing (meshed, 128 panels)
+    JSON:  294,731 B | save 0.0100s | load 0.0302s
+    GZIP:   22,328 B | save 0.0184s | load 0.0313s
+    Compression ratio: 13.2x
+
+  Airplane (meshed, 256 panels)
+    JSON:  533,480 B | save 0.0156s | load 0.0385s
+    GZIP:   30,326 B | save 0.0263s | load 0.0344s
+    Compression ratio: 17.6x
+
+  SteadyProblem (256 panels)
+    JSON:  534,756 B | save 0.0139s | load 0.0327s
+    GZIP:   30,608 B | save 0.0254s | load 0.0301s
+    Compression ratio: 17.5x
+
+  Horseshoe solver (unsolved, 256 panels)
+    JSON: 1,313,670 B | save 0.0201s | load 0.0357s
+    GZIP:   33,224 B | save 0.0323s | load 0.0384s
+    Compression ratio: 39.5x
+
+  Horseshoe solver (solved, 256 panels)
+    JSON: 2,038,057 B | save 0.0499s | load 0.0612s
+    GZIP:  619,830 B | save 0.1155s | load 0.0624s
+    Compression ratio: 3.3x
+
+  Ring solver (unsolved, 256 panels)
+    JSON: 1,401,362 B | save 0.0193s | load 0.0326s
+    GZIP:   33,489 B | save 0.0347s | load 0.0435s
+    Compression ratio: 41.8x
+
+  Ring solver (solved, 256 panels)
+    JSON: 2,634,996 B | save 0.0699s | load 0.0682s
+    GZIP:  652,564 B | save 0.1485s | load 0.0806s
+    Compression ratio: 4.0x
+
+  OperatingPointMovement
+    JSON:    1,412 B | save 0.0006s | load 0.0016s
+    GZIP:      392 B | save 0.0006s | load 0.0166s
+    Compression ratio: 3.6x
+
+  WingCrossSectionMovement
+    JSON:   27,810 B | save 0.0012s | load 0.0221s
+    GZIP:   15,201 B | save 0.0066s | load 0.0223s
+    Compression ratio: 1.8x
+
+  WingMovement (base: 128 panels)
+    JSON:  111,358 B | save 0.0028s | load 0.0248s
+    GZIP:   16,397 B | save 0.0108s | load 0.0229s
+    Compression ratio: 6.8x
+
+  AirplaneMovement (base: 256 panels)
+    JSON: 1,061,225 B | save 0.0855s | load 0.0415s
+    GZIP:   98,637 B | save 0.0401s | load 0.0359s
+    Compression ratio: 10.8x
+
+  Movement (150 steps, 256 panels)
+    JSON: 72,184,888 B | save 1.6637s | load 1.5202s
+    GZIP: 6,259,232 B | save 2.7991s | load 1.4649s
+    Compression ratio: 11.5x
+
+  UnsteadyProblem (150 steps, 256 panels)
+    JSON: 89,752,873 B | save 2.7013s | load 2.3122s
+    GZIP: 7,002,209 B | save 4.9386s | load 3.4332s
+    Compression ratio: 12.8x
+
+  Unsteady solver (unsolved, 150 steps, 256 panels)
+    JSON: 89,830,965 B | save 3.5571s | load 3.2868s
+    GZIP: 6,885,335 B | save 7.0603s | load 3.1337s
+    Compression ratio: 13.0x
+
+  Unsteady solver (solved, 150 steps, 256 panels)
+    JSON: 626,213,465 B | save 51.2878s | load 25.9868s
+    GZIP: 51,228,779 B | save 66.5699s | load 24.2007s
+    Compression ratio: 12.2x
