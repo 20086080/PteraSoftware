@@ -1,5 +1,9 @@
 import os
+import sys
 from datetime import datetime
+
+# Add project root to sys.path so sphinx.ext.autodoc can import pterasoftware.
+sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 
 # -- Project information -----------------------------------------------------
 
@@ -14,6 +18,7 @@ copyright = f"{current_year}, {author}"
 extensions = [
     "myst_parser",
     "autoapi.extension",
+    "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
     "sphinx.ext.intersphinx",
@@ -21,6 +26,33 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx_copybutton",
 ]
+
+# Mock all runtime dependencies so autodoc can import pterasoftware without them
+# installed. This is safe because the documented functions (save, load,
+# set_up_logging) only use stdlib types in their signatures.
+autodoc_mock_imports = [
+    "cmocean",
+    "matplotlib",
+    "numba",
+    "numpy",
+    "PySide6",
+    "pyvista",
+    "scipy",
+    "tqdm",
+    "webp",
+]
+
+from pterasoftware._logging import set_up_logging as _set_up_logging
+
+# Override __module__ for public functions that live in private modules so
+# autodoc renders them with the public package path (e.g., pterasoftware.save
+# instead of pterasoftware._serialization.save).
+from pterasoftware._serialization import load as _load
+from pterasoftware._serialization import save as _save
+
+_save.__module__ = "pterasoftware"
+_load.__module__ = "pterasoftware"
+_set_up_logging.__module__ = "pterasoftware"
 
 myst_enable_extensions = [
     "colon_fence",
