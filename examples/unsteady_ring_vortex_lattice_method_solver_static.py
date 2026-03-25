@@ -304,7 +304,7 @@ ps.output.draw(
     save=False,
 )
 
-# Call the animate function on the solver. This produces a GIF of the wake being  shed.
+# Call the animate function on the loaded solver. This produces a GIF of the wake being shed.
 # The GIF is saved in the same directory as this script. Press any key, after orienting
 # the view, to begin the animation.
 ps.output.animate(
