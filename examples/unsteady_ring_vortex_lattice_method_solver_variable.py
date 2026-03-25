@@ -330,7 +330,7 @@ example_solver.run(
 )
 
 # Call the animate function on the solver. This produces a GIF of the wake being shed.
-# The GIF is saved in the same directory as this script. Press any key, after after
+# The GIF is saved in the same directory as this script. Press any key, after
 # orienting the view, to begin the animation.
 ps.output.animate(
     unsteady_solver=example_solver,
