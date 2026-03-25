@@ -25,7 +25,11 @@ cd ${WORKSPACE} && ".venv/Scripts/python.exe" black .
 cd ${WORKSPACE} && ".venv/Scripts/codespell.exe" --ignore-words=.codespell-ignore.txt --skip="*/_build/*,*.dat"
 ```
 
-## Miscellaneous Guidelines
+## Imports
 
 - Import Ptera Software using the following pattern: ```import pterasoftware as ps```
+- Always place import statements at the top of the file. Never use imports inside functions or methods.
+
+## Miscellaneous Guidelines
+
 - Use `np.deg2rad` and `np.rad2deg` for angle conversions instead of `np.radians` and `np.degrees` or manual conversions.

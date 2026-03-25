@@ -87,7 +87,7 @@ def generate_rot_T(
         must be distinct.
     :return: The transformation matrix as a (4,4) ndarray of floats.
     """
-    angleX_rad, angleY_rad, angleZ_rad = np.radians(angles)
+    angleX_rad, angleY_rad, angleZ_rad = np.deg2rad(angles)
 
     x_R_act = np.array(
         [
@@ -168,7 +168,7 @@ def generate_2D_rot_R(
         rotates vectors in "A" axes (``rPrime_A=R@r_A``).
     :return: The rotation matrix as a (2,2) ndarray of floats.
     """
-    angle_rad = np.radians(angle)
+    angle_rad = np.deg2rad(angle)
 
     R_act = np.array(
         [

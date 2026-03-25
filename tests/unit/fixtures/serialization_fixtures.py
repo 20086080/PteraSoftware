@@ -10,6 +10,8 @@ from pterasoftware._vortices._line_vortex import LineVortex
 
 # noinspection PyProtectedMember
 from pterasoftware._vortices.horseshoe_vortex import HorseshoeVortex
+
+# noinspection PyProtectedMember
 from pterasoftware._vortices.ring_vortex import RingVortex
 from pterasoftware.geometry.airfoil import Airfoil
 from pterasoftware.geometry.airplane import Airplane

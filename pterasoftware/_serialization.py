@@ -134,7 +134,10 @@ _MOVEMENT_SKIP_SLOTS: frozenset[str] = frozenset({"_airplanes", "_operating_poin
 def save(path: str | Path, obj: object) -> None:
     """Saves a Ptera Software object to a JSON file.
 
-    If the path ends with ".json.gz", the output is gzip compressed automatically.
+    If the path ends with ".json.gz", the output is gzip compressed automatically. Using
+    ".json.gz" is highly recommended for all but the smallest unmeshed geometry objects.
+    Gzip compression typically reduces file sizes by 10x or more, and plain ".json"
+    files use indented formatting that further increases their size.
 
     :param path: The file path to save to. Should end with ".json" or ".json.gz".
     :param obj: The Ptera Software object to save. Must be a public Ptera Software class
@@ -164,12 +167,15 @@ def save(path: str | Path, obj: object) -> None:
     header = {"_format_version": _FORMAT_VERSION, **provenance}
     data = {**header, **data}
 
-    json_bytes = json.dumps(data).encode("utf-8")
-
     if path.name.endswith(".json.gz"):
+        # Use compact format for gzip since readability does not matter and
+        # whitespace would increase the pre-compression size.
+        json_bytes = json.dumps(data).encode("utf-8")
         with gzip.open(path, "wb") as f:
             f.write(json_bytes)
     else:
+        # Use indented format for plain JSON for human readability.
+        json_bytes = json.dumps(data, indent=2).encode("utf-8")
         with open(path, "wb") as f:
             f.write(json_bytes)
 

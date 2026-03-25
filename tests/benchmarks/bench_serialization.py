@@ -13,12 +13,21 @@ from pathlib import Path
 
 import numpy as np
 
+import pterasoftware as ps
+
+# noinspection PyProtectedMember
 from pterasoftware._panel import Panel
 
 # noinspection PyProtectedMember
 from pterasoftware._serialization import _object_from_dict, _object_to_dict
+
+# noinspection PyProtectedMember
 from pterasoftware._vortices._line_vortex import LineVortex
+
+# noinspection PyProtectedMember
 from pterasoftware._vortices.horseshoe_vortex import HorseshoeVortex
+
+# noinspection PyProtectedMember
 from pterasoftware._vortices.ring_vortex import RingVortex
 from pterasoftware.geometry.airfoil import Airfoil
 from pterasoftware.geometry.airplane import Airplane
@@ -50,30 +59,38 @@ def _benchmark(name: str, obj: object) -> None:
     Uses private serialization functions directly to bypass the public API restriction
     that limits save/load to public classes.
     """
+    serialized_dict = _object_to_dict(obj)
+
     with tempfile.TemporaryDirectory() as tmp:
-        json_path = Path(tmp) / "test.json"
+        compact_path = Path(tmp) / "compact.json"
+        indented_path = Path(tmp) / "indented.json"
         gz_path = Path(tmp) / "test.json.gz"
 
-        # Benchmark JSON save.
+        # Benchmark compact JSON save.
         start = time.perf_counter()
-        json_bytes = json.dumps(_object_to_dict(obj)).encode("utf-8")
-        with open(json_path, "wb") as f:
-            f.write(json_bytes)
-        save_time = time.perf_counter() - start
+        compact_bytes = json.dumps(serialized_dict).encode("utf-8")
+        with open(compact_path, "wb") as f:
+            f.write(compact_bytes)
+        compact_save_time = time.perf_counter() - start
 
-        json_size = json_path.stat().st_size
+        compact_size = compact_path.stat().st_size
 
-        # Benchmark JSON load.
+        # Benchmark compact JSON load.
         start = time.perf_counter()
-        with open(json_path, "rb") as f:
+        with open(compact_path, "rb") as f:
             _object_from_dict(json.loads(f.read()))
-        load_time = time.perf_counter() - start
+        compact_load_time = time.perf_counter() - start
 
-        # Benchmark gzip save.
+        # Measure indented JSON size (used by save() for .json files).
+        indented_bytes = json.dumps(serialized_dict, indent=2).encode("utf-8")
+        with open(indented_path, "wb") as f:
+            f.write(indented_bytes)
+        indented_size = indented_path.stat().st_size
+
+        # Benchmark gzip save (compact format).
         start = time.perf_counter()
-        json_bytes = json.dumps(_object_to_dict(obj)).encode("utf-8")
         with gzip.open(gz_path, "wb") as f:
-            f.write(json_bytes)
+            f.write(compact_bytes)
         gz_save_time = time.perf_counter() - start
 
         gz_size = gz_path.stat().st_size
@@ -84,14 +101,20 @@ def _benchmark(name: str, obj: object) -> None:
             _object_from_dict(json.loads(f.read()))
         gz_load_time = time.perf_counter() - start
 
+    indent_overhead = indented_size / compact_size
     print(f"  {name}")
     print(
-        f"    JSON: {json_size:>8,} B | save {save_time:.4f}s | load {load_time:.4f}s"
+        f"    JSON (compact):  {compact_size:>12,} B | save {compact_save_time:.4f}s"
+        f" | load {compact_load_time:.4f}s"
     )
     print(
-        f"    GZIP: {gz_size:>8,} B | save {gz_save_time:.4f}s | load {gz_load_time:.4f}s"
+        f"    JSON (indented): {indented_size:>12,} B | {indent_overhead:.2f}x overhead"
     )
-    print(f"    Compression ratio: {json_size / gz_size:.1f}x")
+    print(
+        f"    GZIP:            {gz_size:>12,} B | save {gz_save_time:.4f}s"
+        f" | load {gz_load_time:.4f}s"
+    )
+    print(f"    Compression ratio (compact / gzip): {compact_size / gz_size:.1f}x")
     print()
 
 
@@ -412,6 +435,8 @@ def _make_unsteady_solver_problem() -> UnsteadyProblem:
 
 
 if __name__ == "__main__":
+    ps.set_up_logging()
+
     print("Serialization Benchmark")
     print("=" * 60)
     print()

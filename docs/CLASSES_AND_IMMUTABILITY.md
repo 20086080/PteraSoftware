@@ -49,7 +49,7 @@ Most attribute falls into one of these categories:
 
 5. **`__slots__` on every class**: All classes in the package define `__slots__`, which eliminates per-instance `__dict__` overhead and prevents accidental dynamic attribute assignment. This catches typos like `self.num_panles = 5` at runtime with an `AttributeError` instead of silently creating a new attribute.
 
-### Numpy Array Mutability
+### NumPy Array Mutability
 
 Even with read-only properties, numpy arrays can still be mutated in place via the getter (e.g., `panel.Frpp_G_Cg[0] = 999.0`). To prevent this, all numpy arrays that should be immutable are set to read-only using `arr.flags.writeable = False`:
 
@@ -64,6 +64,18 @@ When implementing `__deepcopy__`, handle cached derived properties based on thei
 
 1. **Derived from Immutable -> Preserve**: Copy the cached values (they remain valid since the source immutable attributes are also copied). For numpy arrays, use `.copy()` then set `flags.writeable = False`.
 2. **Derived from Set Once -> Reset to None**: These depend on values that will be set fresh by the solver or meshing, so reset them.
+
+### Serialization Attribute Handling
+
+The `_serialization` module uses the same `object.__new__()` + `object.__setattr__()` pattern as the `__deepcopy__` methods but with a simpler strategy: all attributes are preserved exactly as they were at save time, including all cached values. No attributes are reset to `None` during deserialization.
+
+This works because:
+
+1. Deserialized objects are fully formed snapshots. There is no subsequent `__init__`, solver run, or meshing step that would populate set once attributes, so there is no conflict with set once guards.
+2. Cached derived values remain valid because the immutable and set once attributes they depend on are also restored with their original values.
+3. NumPy array writeable flags are preserved through serialization, maintaining the same mutability guarantees as the original objects.
+
+When adding or renaming `__slots__` on any class, both `__deepcopy__` and `_serialization` are affected. The serialization module discovers attributes generically via `__slots__`, so new slots are automatically serialized. However, adding or removing slots requires incrementing `_FORMAT_VERSION` in `_serialization.py` to ensure old files are not loaded with incompatible code.
 
 ### List Collection Immutability
 
