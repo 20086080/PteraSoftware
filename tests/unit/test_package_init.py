@@ -1,5 +1,6 @@
 """This module contains tests for the pterasoftware package __init__.py."""
 
+import importlib
 import unittest
 
 import pterasoftware as ps
@@ -137,11 +138,10 @@ class TestLazyCallableImports(unittest.TestCase):
 
         :return: None
         """
-        # noinspection PyProtectedMember
-        from pterasoftware import _logging
+        logging_module = importlib.import_module("pterasoftware._logging")
 
         lazy_func = ps.set_up_logging
-        direct_func = _logging.set_up_logging
+        direct_func = logging_module.set_up_logging
 
         self.assertIs(lazy_func, direct_func)
 
@@ -150,20 +150,18 @@ class TestLazyCallableImports(unittest.TestCase):
 
         :return: None
         """
-        # noinspection PyProtectedMember
-        from pterasoftware import _serialization
+        serialization_module = importlib.import_module("pterasoftware._serialization")
 
-        self.assertIs(ps.save, _serialization.save)
+        self.assertIs(ps.save, serialization_module.save)
 
     def test_lazy_callable_load_is_correct_function(self):
         """The lazy imported load should be the actual function from _serialization.
 
         :return: None
         """
-        # noinspection PyProtectedMember
-        from pterasoftware import _serialization
+        serialization_module = importlib.import_module("pterasoftware._serialization")
 
-        self.assertIs(ps.load, _serialization.load)
+        self.assertIs(ps.load, serialization_module.load)
 
 
 class TestEagerImports(unittest.TestCase):

@@ -28,7 +28,7 @@ cd ${WORKSPACE} && ".venv/Scripts/codespell.exe" --ignore-words=.codespell-ignor
 ## Imports
 
 - Import Ptera Software using the following pattern: ```import pterasoftware as ps```
-- Always place import statements at the top of the file. Never use imports inside functions or methods.
+- By default, place import statements at the top of the file and avoid imports inside functions or methods. The only exceptions are intentional lazy-import patterns (for example, using `importlib.import_module` inside `__getattr__` for lazy loading) and cases where there is no other way to avoid circular imports.
 
 ## Miscellaneous Guidelines
 
