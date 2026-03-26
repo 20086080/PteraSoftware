@@ -1,6 +1,7 @@
 import os
 import sys
 from datetime import datetime
+from unittest.mock import MagicMock
 
 # Add project root to sys.path so sphinx.ext.autodoc can import pterasoftware.
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
@@ -41,6 +42,33 @@ autodoc_mock_imports = [
     "tqdm",
     "webp",
 ]
+
+# autodoc_mock_imports only takes effect during autodoc's build phase, not when
+# conf.py executes. Since we import from pterasoftware below (to override
+# __module__), we need the mocks in sys.modules before those imports trigger the
+# full package import chain.
+
+
+class _MockModuleFinder:
+    """Meta path finder that returns MagicMock for mocked top-level packages."""
+
+    def __init__(self, mock_names):
+        self._mock_names = set(mock_names)
+
+    def find_module(self, fullname, path=None):
+        if fullname.split(".")[0] in self._mock_names:
+            return self
+        return None
+
+    def load_module(self, fullname):
+        if fullname in sys.modules:
+            return sys.modules[fullname]
+        mod = MagicMock()
+        sys.modules[fullname] = mod
+        return mod
+
+
+sys.meta_path.insert(0, _MockModuleFinder(autodoc_mock_imports))
 
 from pterasoftware._logging import set_up_logging as _set_up_logging
 
