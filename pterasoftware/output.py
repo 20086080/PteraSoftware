@@ -56,8 +56,13 @@ _image_surface_color_a = np.array([40, 40, 40], dtype=np.uint8)
 _image_surface_color_b = np.array([80, 80, 80], dtype=np.uint8)
 _plotter_background_color = "black"
 _figure_background_color = "None"
-_text_color = np.array([129, 129, 129], dtype=np.uint8)
-_text_color_surface = np.array([220, 220, 220], dtype=np.uint8)
+_text_color = (129, 129, 129)
+_text_color_normalized: tuple[float, float, float] = (
+    _text_color[0] / 255,
+    _text_color[1] / 255,
+    _text_color[2] / 255,
+)
+_text_color_surface = (220, 220, 220)
 _quality = 75.0
 _window_size = [1024, 768]
 
@@ -1002,32 +1007,32 @@ def plot_results_versus_time(
         moment_coefficients_axes.spines.top.set_visible(False)
 
         # Format all the plots' spine and label colors.
-        force_axes.spines.bottom.set_color(_text_color)
-        force_axes.spines.left.set_color(_text_color)
-        force_axes.xaxis.label.set_color(_text_color)
-        force_axes.yaxis.label.set_color(_text_color)
-        force_coefficients_axes.spines.bottom.set_color(_text_color)
-        force_coefficients_axes.spines.left.set_color(_text_color)
-        force_coefficients_axes.xaxis.label.set_color(_text_color)
-        force_coefficients_axes.yaxis.label.set_color(_text_color)
-        moment_coefficients_axes.spines.bottom.set_color(_text_color)
-        moment_coefficients_axes.spines.left.set_color(_text_color)
-        moment_coefficients_axes.xaxis.label.set_color(_text_color)
-        moment_coefficients_axes.yaxis.label.set_color(_text_color)
-        moment_axes.spines.bottom.set_color(_text_color)
-        moment_axes.spines.left.set_color(_text_color)
-        moment_axes.xaxis.label.set_color(_text_color)
-        moment_axes.yaxis.label.set_color(_text_color)
+        force_axes.spines.bottom.set_color(_text_color_normalized)
+        force_axes.spines.left.set_color(_text_color_normalized)
+        force_axes.xaxis.label.set_color(_text_color_normalized)
+        force_axes.yaxis.label.set_color(_text_color_normalized)
+        force_coefficients_axes.spines.bottom.set_color(_text_color_normalized)
+        force_coefficients_axes.spines.left.set_color(_text_color_normalized)
+        force_coefficients_axes.xaxis.label.set_color(_text_color_normalized)
+        force_coefficients_axes.yaxis.label.set_color(_text_color_normalized)
+        moment_coefficients_axes.spines.bottom.set_color(_text_color_normalized)
+        moment_coefficients_axes.spines.left.set_color(_text_color_normalized)
+        moment_coefficients_axes.xaxis.label.set_color(_text_color_normalized)
+        moment_coefficients_axes.yaxis.label.set_color(_text_color_normalized)
+        moment_axes.spines.bottom.set_color(_text_color_normalized)
+        moment_axes.spines.left.set_color(_text_color_normalized)
+        moment_axes.xaxis.label.set_color(_text_color_normalized)
+        moment_axes.yaxis.label.set_color(_text_color_normalized)
 
         # Format all the plots' tick colors.
-        force_axes.tick_params(axis="x", colors=_text_color)
-        force_axes.tick_params(axis="y", colors=_text_color)
-        force_coefficients_axes.tick_params(axis="x", colors=_text_color)
-        force_coefficients_axes.tick_params(axis="y", colors=_text_color)
-        moment_coefficients_axes.tick_params(axis="x", colors=_text_color)
-        moment_coefficients_axes.tick_params(axis="y", colors=_text_color)
-        moment_axes.tick_params(axis="x", colors=_text_color)
-        moment_axes.tick_params(axis="y", colors=_text_color)
+        force_axes.tick_params(axis="x", colors=_text_color_normalized)
+        force_axes.tick_params(axis="y", colors=_text_color_normalized)
+        force_coefficients_axes.tick_params(axis="x", colors=_text_color_normalized)
+        force_coefficients_axes.tick_params(axis="y", colors=_text_color_normalized)
+        moment_coefficients_axes.tick_params(axis="x", colors=_text_color_normalized)
+        moment_coefficients_axes.tick_params(axis="y", colors=_text_color_normalized)
+        moment_axes.tick_params(axis="x", colors=_text_color_normalized)
+        moment_axes.tick_params(axis="y", colors=_text_color_normalized)
 
         # Format all the plots' background colors.
         force_figure.patch.set_facecolor(_figure_background_color)
@@ -1157,39 +1162,47 @@ def plot_results_versus_time(
         moment_coefficient_title = airplane_name + " Moment Coefficients vs. Time"
 
         # Name the plots' axis labels and titles.
-        force_axes.set_xlabel("Time (s)", color=_text_color)
-        force_axes.set_ylabel("Force (N)", color=_text_color)
-        force_axes.set_title(force_title, color=_text_color)
-        force_coefficients_axes.set_xlabel("Time (s)", color=_text_color)
-        force_coefficients_axes.set_ylabel("Force Coefficient", color=_text_color)
-        force_coefficients_axes.set_title(force_coefficient_title, color=_text_color)
-        moment_axes.set_xlabel("Time (s)", color=_text_color)
-        moment_axes.set_ylabel("Moment (N m)", color=_text_color)
-        moment_axes.set_title(moment_title, color=_text_color)
-        moment_coefficients_axes.set_xlabel("Time (s)", color=_text_color)
-        moment_coefficients_axes.set_ylabel("Moment Coefficient", color=_text_color)
-        moment_coefficients_axes.set_title(moment_coefficient_title, color=_text_color)
+        force_axes.set_xlabel("Time (s)", color=_text_color_normalized)
+        force_axes.set_ylabel("Force (N)", color=_text_color_normalized)
+        force_axes.set_title(force_title, color=_text_color_normalized)
+        force_coefficients_axes.set_xlabel("Time (s)", color=_text_color_normalized)
+        force_coefficients_axes.set_ylabel(
+            "Force Coefficient", color=_text_color_normalized
+        )
+        force_coefficients_axes.set_title(
+            force_coefficient_title, color=_text_color_normalized
+        )
+        moment_axes.set_xlabel("Time (s)", color=_text_color_normalized)
+        moment_axes.set_ylabel("Moment (N m)", color=_text_color_normalized)
+        moment_axes.set_title(moment_title, color=_text_color_normalized)
+        moment_coefficients_axes.set_xlabel("Time (s)", color=_text_color_normalized)
+        moment_coefficients_axes.set_ylabel(
+            "Moment Coefficient", color=_text_color_normalized
+        )
+        moment_coefficients_axes.set_title(
+            moment_coefficient_title, color=_text_color_normalized
+        )
 
         # Format the plots' legends.
         force_axes.legend(
             facecolor=_figure_background_color,
             edgecolor=_figure_background_color,
-            labelcolor=_text_color,
+            labelcolor=_text_color_normalized,
         )
         force_coefficients_axes.legend(
             facecolor=_figure_background_color,
             edgecolor=_figure_background_color,
-            labelcolor=_text_color,
+            labelcolor=_text_color_normalized,
         )
         moment_axes.legend(
             facecolor=_figure_background_color,
             edgecolor=_figure_background_color,
-            labelcolor=_text_color,
+            labelcolor=_text_color_normalized,
         )
         moment_coefficients_axes.legend(
             facecolor=_figure_background_color,
             edgecolor=_figure_background_color,
-            labelcolor=_text_color,
+            labelcolor=_text_color_normalized,
         )
 
         # Save the figures as PNGs if the user wants to do so.
@@ -1788,7 +1801,7 @@ def _plot_scalars(
     c_min: float,
     c_max: float,
     panel_surfaces: pv.PolyData,
-    text_color: str = _text_color,
+    text_color: tuple[int, int, int] = _text_color,
 ) -> None:
     """Plots a scalar bar, the surfaces of a set of Panels with particular scalars, and
     labels for the minimum and maximum scalar values.
