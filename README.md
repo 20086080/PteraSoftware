@@ -2,13 +2,14 @@
 
 ***
 
+[![DOI](https://zenodo.org/badge/249337717.svg)](https://doi.org/10.5281/zenodo.19229119)
+![license](https://img.shields.io/github/license/camUrban/PteraSoftware?color=blue)
 ![build](https://github.com/camUrban/PteraSoftware/actions/workflows/tests.yml/badge.svg?branch=main)
 ![coverage](https://img.shields.io/codecov/c/gh/camUrban/PteraSoftware)
-![source rank](https://img.shields.io/librariesio/sourcerank/pypi/PteraSoftware?color=blue&label=source%20rank)
 ![python](https://img.shields.io/pypi/pyversions/pterasoftware)
-![license](https://img.shields.io/github/license/camUrban/PteraSoftware?color=blue)
 ![types](https://img.shields.io/pypi/types/pterasoftware)
 ![code style](https://img.shields.io/badge/code%20style-black-black)
+![source rank](https://img.shields.io/librariesio/sourcerank/pypi/PteraSoftware?color=blue&label=source%20rank)
 
 ***
 <!-- docs-include-start -->
