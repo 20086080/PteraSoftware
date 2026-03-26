@@ -4,7 +4,6 @@
 
 ![build](https://github.com/camUrban/PteraSoftware/actions/workflows/tests.yml/badge.svg?branch=main)
 ![coverage](https://img.shields.io/codecov/c/gh/camUrban/PteraSoftware)
-![code quality](https://img.shields.io/codefactor/grade/github/camUrban/PteraSoftware)
 ![source rank](https://img.shields.io/librariesio/sourcerank/pypi/PteraSoftware?color=blue&label=source%20rank)
 ![python](https://img.shields.io/pypi/pyversions/pterasoftware)
 ![license](https://img.shields.io/github/license/camUrban/PteraSoftware?color=blue)
@@ -13,7 +12,7 @@
 
 ***
 <!-- docs-include-start -->
-![Example Unsteady Formation Flight](https://raw.githubusercontent.com/camUrban/PteraSoftware/main/docs/examples_expected_output/unsteady_ring_vortex_lattice_method_solver_variable_formation/Animate.webp)
+![Flapping Wings in Ground Effect](https://raw.githubusercontent.com/camUrban/PteraSoftware/main/docs/hero_graphics/hero_animated.webp)
 
 This is Ptera Software: a fast, easy-to-use, and open-source package for analyzing flapping-wing flight.
 
@@ -82,6 +81,7 @@ ps.output.draw(solver=solver, scalar_type="lift", show_streamlines=True)
     * Unsteady simulations use a ring unsteady VLM (UVLM) solver.
     * Unsteady simulations support both fixed and free wakes.
     * Unsteady simulations implement vortex aging to reduce numerical instabilities.
+    * All three solvers support surface effects (e.g., ground effect) via the method of images.
 2. Customizable Aircraft Geometry
     * Aircraft can be defined as a collection of one or more wings of any dimensions and positions.
     * Wings can be defined as a collection of two or more wing cross sections of any dimensions and positions.
@@ -125,7 +125,7 @@ Your IDE should automatically provide docstring hints for the available classes 
 
 If you want to browse the example scripts or dig into the source code, you will need a local copy of the repository. Follow the environment setup instructions in the [Contributing Guidelines](CONTRIBUTING.md#contributing-code) to clone the repository, create a virtual environment, and install dependencies.
 
-Once set up, the `examples/` directory contains scripts that demonstrate the full range of Ptera Software's features and solvers.
+Once set up, the `examples/` directory contains scripts that demonstrate the full range of Ptera Software's features and solvers. These scripts are also available on the [documentation site](https://pterasoftware.readthedocs.io/en/latest/examples.html).
 
 ## Example Output
 
