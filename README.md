@@ -12,7 +12,7 @@
 
 ***
 <!-- docs-include-start -->
-![Example Unsteady Formation Flight](https://raw.githubusercontent.com/camUrban/PteraSoftware/main/docs/examples_expected_output/unsteady_ring_vortex_lattice_method_solver_variable_formation/Animate.webp)
+![Flapping Wings in Ground Effect](https://raw.githubusercontent.com/camUrban/PteraSoftware/main/docs/hero_graphics/hero_animated.webp)
 
 This is Ptera Software: a fast, easy-to-use, and open-source package for analyzing flapping-wing flight.
 
