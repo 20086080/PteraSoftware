@@ -147,7 +147,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         self.steady_problems = self.unsteady_problem.steady_problems
 
-        first_steady_problem: problems.SteadyProblem = self.steady_problems[0]
+        first_steady_problem: problems.SteadyProblem = self._get_steady_problem_at(0)
 
         self.current_airplanes: tuple[geometry.airplane.Airplane, ...] = ()
         self.current_operating_point: operating_point.OperatingPoint = (
@@ -293,7 +293,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         # method eliminates the need for computationally expensive on-the-fly
         # allocation and object copying.
         for step in range(self.num_steps):
-            this_problem: problems.SteadyProblem = self.steady_problems[step]
+            this_problem: problems.SteadyProblem = self._get_steady_problem_at(step)
             these_airplanes = this_problem.airplanes
 
             # Loop through this time step's Airplanes to gather their Wings.
@@ -362,7 +362,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         # progress bar during the simulation initialization.
         approx_times = np.zeros(self.num_steps + 1, dtype=float)
         for step in range(1, self.num_steps):
-            this_problem = self.steady_problems[step]
+            this_problem = self._get_steady_problem_at(step)
             these_airplanes = this_problem.airplanes
 
             # Iterate through this time step's Airplanes to get the total number of
@@ -414,9 +414,9 @@ class UnsteadyRingVortexLatticeMethodSolver:
                 # and OperatingPoint, and freestream velocity (in the first
                 # Airplane's geometry axes, observed from the Earth frame).
                 self._current_step = step
-                current_problem: problems.SteadyProblem = self.steady_problems[
+                current_problem: problems.SteadyProblem = self._get_steady_problem_at(
                     self._current_step
-                ]
+                )
                 self.current_airplanes = current_problem.airplanes
                 self.current_operating_point = current_problem.operating_point
                 self._currentVInf_GP1__E = self.current_operating_point.vInf_GP1__E
@@ -598,7 +598,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         # Set the current step and related state.
         self._current_step = step
-        current_problem: problems.SteadyProblem = self.steady_problems[step]
+        current_problem: problems.SteadyProblem = self._get_steady_problem_at(step)
         self.current_airplanes = current_problem.airplanes
         self.current_operating_point = current_problem.operating_point
         self._currentVInf_GP1__E = self.current_operating_point.vInf_GP1__E
@@ -701,9 +701,9 @@ class UnsteadyRingVortexLatticeMethodSolver:
                                         + vInf_GP1__E * self.delta_time * 0.25
                                     )
                                 else:
-                                    last_steady_problem = self.steady_problems[
+                                    last_steady_problem = self._get_steady_problem_at(
                                         steady_problem_id - 1
-                                    ]
+                                    )
                                     last_airplane = last_steady_problem.airplanes[
                                         airplane_id
                                     ]
@@ -848,7 +848,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             # Reset the global Panel position variable.
             global_panel_position = 0
 
-            last_problem = self.steady_problems[self._current_step - 1]
+            last_problem = self._get_steady_problem_at(self._current_step - 1)
             last_airplanes = last_problem.airplanes
 
             # Iterate through the last time step's Airplanes' Wings.
@@ -1660,9 +1660,9 @@ class UnsteadyRingVortexLatticeMethodSolver:
             wake_singularity_counts = np.zeros(4, dtype=np.int64)
 
             # Get the next time step's Airplanes.
-            next_problem: problems.SteadyProblem = self.steady_problems[
+            next_problem: problems.SteadyProblem = self._get_steady_problem_at(
                 self._current_step + 1
-            ]
+            )
             next_airplanes = next_problem.airplanes
 
             # Get the current Airplanes' combined number of Wings.
@@ -1923,7 +1923,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         if self._current_step < self.num_steps - 1:
 
             # Get the next time step's Airplanes.
-            next_problem = self.steady_problems[self._current_step + 1]
+            next_problem = self._get_steady_problem_at(self._current_step + 1)
             next_airplanes = next_problem.airplanes
 
             # Iterate through the next time step's Airplanes.
@@ -2252,7 +2252,9 @@ class UnsteadyRingVortexLatticeMethodSolver:
         for step in range(self._first_averaging_step, self.num_steps):
 
             # Get the Airplanes from the SteadyProblem at this time step.
-            this_steady_problem: problems.SteadyProblem = self.steady_problems[step]
+            this_steady_problem: problems.SteadyProblem = self._get_steady_problem_at(
+                step
+            )
             these_airplanes = this_steady_problem.airplanes
 
             # Iterate through this time step's Airplanes.
@@ -2272,7 +2274,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         # RMS loads and load coefficients. For variable geometry cases, use the
         # trapezoidal rule to compute the time-averaged mean and RMS over the final
         # cycle.
-        first_problem: problems.SteadyProblem = self.steady_problems[0]
+        first_problem: problems.SteadyProblem = self._get_steady_problem_at(0)
         for airplane_id, airplane in enumerate(first_problem.airplanes):
             if static:
                 self.unsteady_problem.finalForces_W.append(forces_W[airplane_id, :, -1])
