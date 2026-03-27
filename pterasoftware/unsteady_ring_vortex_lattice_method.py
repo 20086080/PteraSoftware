@@ -2341,3 +2341,16 @@ class UnsteadyRingVortexLatticeMethodSolver:
                         / num_intervals
                     )
                 )
+
+    def _get_steady_problem_at(self, step: int) -> problems.SteadyProblem:
+        """Gets the SteadyProblem at a given time step.
+
+        Dynamic dispatch is used with _CoreUnsteadyProblems to provide different ways of
+        accessing SteadyProblems based on the solver type without added code
+        duplication. However, other methods must behave the same way regardless of
+        solver type.
+
+        :param step: The time step of the desired SteadyProblem.
+        :return: The SteadyProblem at the given time step.
+        """
+        return self.steady_problems[step]
