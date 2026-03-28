@@ -45,7 +45,7 @@ class OperatingPointMovement:
         base_operating_point: operating_point_mod.OperatingPoint,
         ampVCg__E: float | int = 0.0,
         periodVCg__E: float | int = 0.0,
-        spacingVCg__E: str | Callable[[np.ndarray], np.ndarray] = "sine",
+        spacingVCg__E: str | Callable[[float], float] = "sine",
         phaseVCg__E: float | int = 0.0,
     ) -> None:
         """The initialization method.
@@ -66,12 +66,12 @@ class OperatingPointMovement:
         :param spacingVCg__E: Determines the spacing of the OperatingPointMovement's
             change in its OperatingPoints' vCg__E parameters. Can be "sine", "uniform",
             or a callable custom spacing function. Custom spacing functions are for
-            advanced users and must start at 0.0, return to 0.0 after one period of 2*pi
-            radians, have amplitude of 1.0, be periodic, return finite values only, and
-            accept a ndarray as input and return a ndarray of the same shape. The custom
-            function is scaled by ampVCg__E, shifted horizontally and vertically by
-            phaseVCg__E and the base value, and have a period set by periodVCg__E. The
-            default is "sine".
+            advanced users and must start at 0.0, return to 0.0 after one period of 2.0
+            * pi radians, have amplitude of 1.0, be periodic, return finite values only,
+            and accept a float as input and return a float. The custom function is
+            scaled by ampVCg__E, shifted horizontally and vertically by phaseVCg__E and
+            the base value, and have a period set by periodVCg__E. The default is
+            "sine".
         :param phaseVCg__E: The phase offset of the first time step's OperatingPoint's
             vCg__E parameter relative to the base OperatingPoint's vCg__E parameter.
             Must be a number (int or float) in the range (-180.0, 180.0], and will be
@@ -133,7 +133,7 @@ class OperatingPointMovement:
         return self._periodVCg__E
 
     @property
-    def spacingVCg__E(self) -> str | Callable[[np.ndarray], np.ndarray]:
+    def spacingVCg__E(self) -> str | Callable[[float], float]:
         return self._spacingVCg__E
 
     @property
@@ -176,35 +176,41 @@ class OperatingPointMovement:
             delta_time, "delta_time", min_val=0.0, min_inclusive=False
         )
 
+        # Get the time at each time step.
+        times = np.linspace(
+            0.0, num_steps * delta_time, num_steps, endpoint=False, dtype=float
+        )
+
         # Generate oscillating values for VCg__E.
+        listVCg__E = np.zeros(num_steps, dtype=float)
         if self._spacingVCg__E == "sine":
-            listVCg__E = _functions.oscillating_sinspaces(
-                amps=self._ampVCg__E,
-                periods=self._periodVCg__E,
-                phases=self._phaseVCg__E,
-                bases=self._base_operating_point.vCg__E,
-                num_steps=num_steps,
-                delta_time=delta_time,
-            )
+            for this_time_step, this_time in enumerate(times):
+                listVCg__E[this_time_step] = _functions.oscillating_sin_at_time(
+                    amp=self._ampVCg__E,
+                    period=self._periodVCg__E,
+                    phase=self._phaseVCg__E,
+                    base=self._base_operating_point.vCg__E,
+                    time=this_time,
+                )
         elif self._spacingVCg__E == "uniform":
-            listVCg__E = _functions.oscillating_linspaces(
-                amps=self._ampVCg__E,
-                periods=self._periodVCg__E,
-                phases=self._phaseVCg__E,
-                bases=self._base_operating_point.vCg__E,
-                num_steps=num_steps,
-                delta_time=delta_time,
-            )
+            for this_time_step, this_time in enumerate(times):
+                listVCg__E[this_time_step] = _functions.oscillating_lin_at_time(
+                    amp=self._ampVCg__E,
+                    period=self._periodVCg__E,
+                    phase=self._phaseVCg__E,
+                    base=self._base_operating_point.vCg__E,
+                    time=this_time,
+                )
         elif callable(self._spacingVCg__E):
-            listVCg__E = _functions.oscillating_customspaces(
-                amps=self._ampVCg__E,
-                periods=self._periodVCg__E,
-                phases=self._phaseVCg__E,
-                bases=self._base_operating_point.vCg__E,
-                num_steps=num_steps,
-                delta_time=delta_time,
-                custom_function=self._spacingVCg__E,
-            )
+            for this_time_step, this_time in enumerate(times):
+                listVCg__E[this_time_step] = _functions.oscillating_custom_at_time(
+                    amp=self._ampVCg__E,
+                    period=self._periodVCg__E,
+                    phase=self._phaseVCg__E,
+                    base=self._base_operating_point.vCg__E,
+                    time=this_time,
+                    custom_function=self._spacingVCg__E,
+                )
         else:
             raise ValueError(f"Invalid spacing value: {self._spacingVCg__E}")
 

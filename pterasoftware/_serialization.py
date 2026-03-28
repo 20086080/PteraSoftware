@@ -33,7 +33,7 @@ from .geometry.wing import Wing
 from .geometry.wing_cross_section import WingCrossSection
 
 # noinspection PyProtectedMember
-from .movements._functions import oscillating_linspaces, oscillating_sinspaces
+from .movements._functions import oscillating_lin_at_time, oscillating_sin_at_time
 from .movements.airplane_movement import AirplaneMovement
 from .movements.movement import Movement
 from .movements.operating_point_movement import OperatingPointMovement
@@ -53,8 +53,8 @@ _logger = _logging.get_logger("_serialization")
 
 # Maps serializable callable names to their function objects and vice versa.
 _CALLABLE_NAME_TO_FUNC = {
-    "sine": oscillating_sinspaces,
-    "uniform": oscillating_linspaces,
+    "sine": oscillating_sin_at_time,
+    "uniform": oscillating_lin_at_time,
 }
 _CALLABLE_FUNC_TO_NAME = {func: name for name, func in _CALLABLE_NAME_TO_FUNC.items()}
 

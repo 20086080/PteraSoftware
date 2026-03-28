@@ -56,9 +56,7 @@ class AirplaneMovement:
         wing_movements: list[wing_movement_mod.WingMovement],
         ampCg_GP1_CgP1: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
         periodCg_GP1_CgP1: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
-        spacingCg_GP1_CgP1: (
-            np.ndarray | Sequence[str | Callable[[np.ndarray], np.ndarray]]
-        ) = (
+        spacingCg_GP1_CgP1: np.ndarray | Sequence[str | Callable[[float], float]] = (
             "sine",
             "sine",
             "sine",
@@ -93,12 +91,12 @@ class AirplaneMovement:
             Airplanes' Cg_GP1_CgP1 parameters. Can be a tuple, list, or ndarray. Each
             element can be the str "sine", the str "uniform", or a callable custom
             spacing function. Custom spacing functions are for advanced users and must
-            start at 0.0, return to 0.0 after one period of 2*pi radians, have amplitude
-            of 1.0, be periodic, return finite values only, and accept a ndarray as
-            input and return a ndarray of the same shape. Custom functions are scaled by
-            ampCg_GP1_CgP1, shifted horizontally and vertically by phaseCg_GP1_CgP1 and
-            the base value, and have a period set by periodCg_GP1_CgP1. The default is
-            ("sine", "sine", "sine").
+            start at 0.0, return to 0.0 after one period of 2.0 * pi radians, have
+            amplitude of 1.0, be periodic, return finite values only, and accept a float
+            as input and return a float. Custom functions are scaled by ampCg_GP1_CgP1,
+            shifted horizontally and vertically by phaseCg_GP1_CgP1 and the base value,
+            and have a period set by periodCg_GP1_CgP1. The default is ("sine", "sine",
+            "sine").
         :param phaseCg_GP1_CgP1: An array-like object of numbers (int or float) with
             shape (3,) representing the phase offsets of the elements in the first time
             step's Airplane's Cg_GP1_CgP1 parameter relative to the base Airplane's
@@ -249,7 +247,7 @@ class AirplaneMovement:
     @property
     def spacingCg_GP1_CgP1(
         self,
-    ) -> tuple[str | Callable[[np.ndarray], np.ndarray], ...]:
+    ) -> tuple[str | Callable[[float], float], ...]:
         return self._spacingCg_GP1_CgP1
 
     @property
@@ -330,40 +328,56 @@ class AirplaneMovement:
             delta_time, "delta_time", min_val=0.0, min_inclusive=False
         )
 
+        # Get the time at each time step.
+        times = np.linspace(
+            0.0, num_steps * delta_time, num_steps, endpoint=False, dtype=float
+        )
+
         # Generate oscillating values for each dimension of Cg_GP1_CgP1.
         listCg_GP1_CgP1 = np.zeros((3, num_steps), dtype=float)
         for dim in range(3):
-            spacing = self._spacingCg_GP1_CgP1[dim]
-            if spacing == "sine":
-                listCg_GP1_CgP1[dim, :] = _functions.oscillating_sinspaces(
-                    amps=self._ampCg_GP1_CgP1[dim],
-                    periods=self._periodCg_GP1_CgP1[dim],
-                    phases=self._phaseCg_GP1_CgP1[dim],
-                    bases=self._base_airplane.Cg_GP1_CgP1[dim],
-                    num_steps=num_steps,
-                    delta_time=delta_time,
-                )
-            elif spacing == "uniform":
-                listCg_GP1_CgP1[dim, :] = _functions.oscillating_linspaces(
-                    amps=self._ampCg_GP1_CgP1[dim],
-                    periods=self._periodCg_GP1_CgP1[dim],
-                    phases=self._phaseCg_GP1_CgP1[dim],
-                    bases=self._base_airplane.Cg_GP1_CgP1[dim],
-                    num_steps=num_steps,
-                    delta_time=delta_time,
-                )
-            elif callable(spacing):
-                listCg_GP1_CgP1[dim, :] = _functions.oscillating_customspaces(
-                    amps=self._ampCg_GP1_CgP1[dim],
-                    periods=self._periodCg_GP1_CgP1[dim],
-                    phases=self._phaseCg_GP1_CgP1[dim],
-                    bases=self._base_airplane.Cg_GP1_CgP1[dim],
-                    num_steps=num_steps,
-                    delta_time=delta_time,
-                    custom_function=spacing,
-                )
+            this_spacing = self._spacingCg_GP1_CgP1[dim]
+            this_amp = self._ampCg_GP1_CgP1[dim]
+            this_period = self._periodCg_GP1_CgP1[dim]
+            this_phase = self._phaseCg_GP1_CgP1[dim]
+            this_base = self._base_airplane.Cg_GP1_CgP1[dim]
+
+            if this_spacing == "sine":
+                for this_time_step, this_time in enumerate(times):
+                    listCg_GP1_CgP1[dim, this_time_step] = (
+                        _functions.oscillating_sin_at_time(
+                            amp=this_amp,
+                            period=this_period,
+                            phase=this_phase,
+                            base=this_base,
+                            time=this_time,
+                        )
+                    )
+            elif this_spacing == "uniform":
+                for this_time_step, this_time in enumerate(times):
+                    listCg_GP1_CgP1[dim, this_time_step] = (
+                        _functions.oscillating_lin_at_time(
+                            amp=this_amp,
+                            period=this_period,
+                            phase=this_phase,
+                            base=this_base,
+                            time=this_time,
+                        )
+                    )
+            elif callable(this_spacing):
+                for this_time_step, this_time in enumerate(times):
+                    listCg_GP1_CgP1[dim, this_time_step] = (
+                        _functions.oscillating_custom_at_time(
+                            amp=this_amp,
+                            period=this_period,
+                            phase=this_phase,
+                            base=this_base,
+                            time=this_time,
+                            custom_function=this_spacing,
+                        )
+                    )
             else:
-                raise ValueError(f"Invalid spacing value: {spacing}")
+                raise ValueError(f"Invalid spacing value: {this_spacing}")
 
         # Check if geometry is static (no periodic motion).
         is_static_geometry = self.max_period == 0.0
