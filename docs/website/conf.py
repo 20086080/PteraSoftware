@@ -296,7 +296,7 @@ autoapi_options = [
     "members",
     "show-module-summary",
     "show-inheritance",
-    "show-inherited-members",
+    "inherited-members",
 ]
 autoapi_template_dir = "_autoapi_templates"
 
