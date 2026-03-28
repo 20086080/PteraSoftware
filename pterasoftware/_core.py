@@ -48,27 +48,12 @@ class CoreMovement:
     """A core class used to contain the shared foundation of Movement and its feature
     variant siblings.
 
-    CoreMovement holds the fundamental parameters (AirplaneMovements,
-    OperatingPointMovement, delta_time, num_steps, and max_wake_rows) and provides the
-    shared derived properties that all Movement variants need. Unlike Movement,
-    CoreMovement requires delta_time and num_steps to be provided directly and does not
-    perform automatic estimation or calculation.
+    See Movement for full documentation of the shared interface.
 
-    **Contains the following methods:**
-
-    lcm_period: The least common multiple of all motion periods, ensuring all motions
-    complete an integer number of cycles when cycle averaging forces and moments.
-
-    max_period: The longest period of motion of CoreMovement's sub movement objects, the
-    motion(s) of its sub sub movement object(s), and the motions of its sub sub sub
-    movement objects.
-
-    min_period: The shortest non zero period of motion of CoreMovement's sub movement
-    objects, the motion(s) of its sub sub movement object(s), and the motions of its sub
-    sub sub movement objects.
-
-    static: Flags if CoreMovement's sub movement objects, its sub sub movement
-    object(s), and its sub sub sub movement objects all represent no motion.
+    CoreMovement holds the fundamental parameters and shared derived properties that all
+    Movement variants need. Unlike Movement, CoreMovement requires delta_time and
+    num_steps to be provided directly and does not perform automatic estimation or batch
+    generation.
     """
 
     __slots__ = (
@@ -93,17 +78,15 @@ class CoreMovement:
     ) -> None:
         """The initialization method.
 
-        :param airplane_movements: A list of the AirplaneMovements associated with each
-            of the UnsteadyProblem's Airplanes.
-        :param operating_point_movement: An OperatingPointMovement characterizing any
-            changes to the UnsteadyProblem's operating conditions.
-        :param delta_time: The time between each time step. It must be a positive number
-            (int or float). Values are converted to floats internally. The units are in
-            seconds.
-        :param num_steps: The number of time steps of the unsteady simulation. It must
-            be a positive int.
-        :param max_wake_rows: The maximum number of chordwise wake RingVortex rows per
-            Wing. Must be a positive int if set. The default is None (no truncation).
+        See Movement's initialization method for full parameter descriptions.
+
+        :param airplane_movements: The AirplaneMovements for each Airplane.
+        :param operating_point_movement: The OperatingPointMovement for operating
+            conditions.
+        :param delta_time: The time step size in seconds. Must be positive.
+        :param num_steps: The number of time steps. Must be a positive int.
+        :param max_wake_rows: The maximum chordwise wake rows per Wing. The default is
+            None (no truncation).
         :return: None
         """
         # Validate and store the AirplaneMovements.

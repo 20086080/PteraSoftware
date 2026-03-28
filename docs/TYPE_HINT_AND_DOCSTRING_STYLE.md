@@ -8,6 +8,7 @@ This document defines the conventions for type hints and docstrings in the Ptera
 - [Docstring Format](#docstring-format)
     - [Module-Level Docstrings](#module-level-docstrings)
     - [Class Docstrings](#class-docstrings)
+    - [Public Subclasses of Private Parents](#public-subclasses-of-private-parents)
     - [Function and Method Docstrings](#function-and-method-docstrings)
 - [Examples](#examples)
 
@@ -416,6 +417,111 @@ def __init__(
 - Reference the parent class's `__init__` docstring for inherited parameters
 - Only document parameters that are NEW to the subclass
 - Call `super().__init__()` with inherited parameters
+
+### Public Subclasses of Private Parents
+
+When a public class inherits from a private parent (a class in an underscore prefixed module like `_core.py`), the conventions above are inverted. The public child keeps a self-contained docstring that documents inherited methods and parameters as its own. The private parent uses a minimal docstring that references the public child.
+
+This is because:
+
+1. The ReadTheDocs site is purely public API. Private parents are excluded from the generated documentation, so inherited methods would not appear on the public child's page unless the child documents them itself.
+2. Users should never need to navigate to a private module to understand the public API.
+3. Contributors reading the private parent's source code can easily navigate to the public child for full documentation.
+
+#### Private Parent Class Docstring Template
+
+```python
+class _CoreClass:
+    """A core class used to contain the shared foundation of PublicClass and its
+    feature variant siblings.
+
+    See PublicClass for full documentation of the shared interface.
+
+    <Brief description of what the core class provides and why it exists as a
+    separate class, aimed at contributors who need to understand the internal
+    architecture.>
+    """
+```
+
+**Key points:**
+
+- Reference the public child for full documentation of the shared interface
+- Include a brief architectural description for contributors
+- Do not duplicate the full method listing or parameter documentation
+
+#### Private Parent `__init__` Docstring Template
+
+```python
+def __init__(
+    self,
+    param1: Type1,
+    param2: Type2,
+) -> None:
+    """The initialization method.
+
+    See PublicClass's initialization method for full parameter descriptions.
+
+    :param param1: Brief description.
+    :param param2: Brief description.
+    :return: None
+    """
+```
+
+**Key points:**
+
+- Reference the public child's `__init__` docstring for full parameter descriptions
+- Include brief parameter descriptions (enough for contributors to understand the code without navigating away)
+
+#### Public Child Class Docstring Template
+
+```python
+class PublicClass(_core.CoreClass):
+    """A class used to <description>.
+
+    **Contains the following methods:**
+
+    inherited_method_1: Short description.
+
+    inherited_method_2: Short description.
+
+    new_method_1: Short description (if any).
+    """
+```
+
+**Key points:**
+
+- Do not mention the private parent in the short description or the methods listing
+- List all methods (inherited and new) as if they were the child's own
+- The class reads as a standalone public API entry point
+
+#### Public Child `__init__` Docstring Template
+
+```python
+def __init__(
+    self,
+    inherited_param1: Type1,
+    inherited_param2: Type2,
+    new_param: Type3,
+) -> None:
+    """The initialization method.
+
+    :param inherited_param1: Full description.
+    :param inherited_param2: Full description.
+    :param new_param: Full description.
+    :return: None
+    """
+    super().__init__(inherited_param1, inherited_param2)
+    self.new_param = new_param
+```
+
+**Key points:**
+
+- Document all parameters fully (inherited and new)
+- Do not reference the private parent
+
+#### Multiple Public Siblings
+
+When multiple public classes share the same private parent (e.g., `Movement`, `FreeFlightMovement`, and `AeroelasticMovement` all extending `CoreMovement`), each sibling maintains its own self-contained docstring. The inherited method descriptions can be tailored to each sibling's context (e.g., "Movement's sub movement objects" vs "FreeFlightMovement's sub movement objects").
 
 ### Property Docstring Template
 

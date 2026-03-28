@@ -60,7 +60,25 @@ _CALLABLE_FUNC_TO_NAME = {func: name for name, func in _CALLABLE_NAME_TO_FUNC.it
 
 # Increments only when the serialization structure changes (slots added/removed/
 # renamed, class registry changed, encoding strategy changed).
-_FORMAT_VERSION = 1
+_FORMAT_VERSION = 2
+
+
+def _all_slots(cls: type) -> list[str]:
+    """Collects all __slots__ from a class and its parents via the MRO.
+
+    Walks the method resolution order so that inherited slots (e.g., those on
+    CoreMovement) are included alongside the class's own slots.
+
+    :param cls: The class to inspect.
+    :return: A list of slot names in MRO order (parent slots first).
+    """
+    slots: list[str] = []
+    for klass in reversed(cls.__mro__):
+        for slot in getattr(klass, "__slots__", ()):
+            if slot not in slots:
+                slots.append(slot)
+    return slots
+
 
 # Default maximum decompressed size in bytes when reading gzip files. Prevents gzip
 # bombs from exhausting memory. Users can override this via the max_size parameter on
@@ -359,7 +377,7 @@ def _object_to_dict(
 
     result: dict[str, Any] = {"_type": class_name}
     is_unsteady_problem = isinstance(obj, UnsteadyProblem)
-    for slot_name in getattr(cls, "__slots__"):
+    for slot_name in _all_slots(cls):
         if slot_name in _skip_slots:
             result[slot_name] = None
         elif is_unsteady_problem and slot_name == "_movement":
@@ -393,7 +411,7 @@ def _object_from_dict(data: dict[str, Any]) -> object:
     _logger.debug("Deserializing %s.", type_tag)
 
     obj: object = object.__new__(cls)
-    for slot_name in getattr(cls, "__slots__"):
+    for slot_name in _all_slots(cls):
         object.__setattr__(obj, slot_name, _deserialize_value(data[slot_name]))
     _reconstruct_shared_references(obj)
     return obj
