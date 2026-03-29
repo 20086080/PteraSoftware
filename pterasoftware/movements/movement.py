@@ -422,12 +422,10 @@ class Movement(_core.CoreMovement):
             tuple(airplane_list) for airplane_list in airplanes_temp
         )
 
-        # Generate a lists of OperatingPoints that are the steps through the
+        # Generate a list of OperatingPoints that are the steps through the
         # OperatingPointMovement.
-        operating_points_temp = (
-            self._operating_point_movement.generate_operating_points(
-                num_steps=self._num_steps, delta_time=self._delta_time
-            )
+        operating_points_temp = operating_point_movement.generate_operating_points(
+            num_steps=self._num_steps, delta_time=self._delta_time
         )
         # Store as tuple to prevent external mutation.
         self._operating_points: tuple[operating_point_mod.OperatingPoint, ...] = tuple(
@@ -435,6 +433,16 @@ class Movement(_core.CoreMovement):
         )
 
     # --- Immutable: read only properties ---
+    @property
+    def operating_point_movement(
+        self,
+    ) -> operating_point_movement_mod.OperatingPointMovement:
+        assert isinstance(
+            self._operating_point_movement,
+            operating_point_movement_mod.OperatingPointMovement,
+        )
+        return self._operating_point_movement
+
     @property
     def num_cycles(self) -> int | None:
         return self._num_cycles
