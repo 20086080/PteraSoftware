@@ -8,7 +8,7 @@ from collections.abc import Callable, Sequence
 
 import numpy as np
 
-from . import _parameter_validation, geometry
+from . import _parameter_validation, _transformations, geometry
 from . import operating_point as operating_point_mod
 from .movements import _functions
 from .movements import airplane_movement as airplane_movement_mod
@@ -692,6 +692,567 @@ class CoreWingCrossSectionMovement:
                 self._base_wing_cross_section.control_surface_deflection
             ),
             spanwise_spacing=(self._base_wing_cross_section.spanwise_spacing),
+        )
+
+
+class CoreWingMovement:
+    """A core class used to contain the shared foundation of WingMovement and its
+    feature variant siblings.
+
+    See WingMovement for full documentation of the shared interface.
+
+    CoreWingMovement holds the base Wing, WingCrossSectionMovements, and oscillation
+    parameters, and provides generate_wing_at_time_step() for creating Wings one step at
+    a time.
+    """
+
+    __slots__ = (
+        "_base_wing",
+        "_wing_cross_section_movements",
+        "_ampLer_Gs_Cgs",
+        "_periodLer_Gs_Cgs",
+        "_spacingLer_Gs_Cgs",
+        "_phaseLer_Gs_Cgs",
+        "_ampAngles_Gs_to_Wn_ixyz",
+        "_periodAngles_Gs_to_Wn_ixyz",
+        "_spacingAngles_Gs_to_Wn_ixyz",
+        "_phaseAngles_Gs_to_Wn_ixyz",
+        "_rotationPointOffset_Gs_Ler",
+        "_all_periods",
+        "_max_period",
+    )
+
+    def __init__(
+        self,
+        base_wing: geometry.wing.Wing,
+        wing_cross_section_movements: Sequence[CoreWingCrossSectionMovement],
+        ampLer_Gs_Cgs: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
+        periodLer_Gs_Cgs: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
+        spacingLer_Gs_Cgs: np.ndarray | Sequence[str | Callable[[float], float]] = (
+            "sine",
+            "sine",
+            "sine",
+        ),
+        phaseLer_Gs_Cgs: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
+        ampAngles_Gs_to_Wn_ixyz: np.ndarray | Sequence[float | int] = (
+            0.0,
+            0.0,
+            0.0,
+        ),
+        periodAngles_Gs_to_Wn_ixyz: np.ndarray | Sequence[float | int] = (
+            0.0,
+            0.0,
+            0.0,
+        ),
+        spacingAngles_Gs_to_Wn_ixyz: (
+            np.ndarray | Sequence[str | Callable[[float], float]]
+        ) = (
+            "sine",
+            "sine",
+            "sine",
+        ),
+        phaseAngles_Gs_to_Wn_ixyz: np.ndarray | Sequence[float | int] = (
+            0.0,
+            0.0,
+            0.0,
+        ),
+        rotationPointOffset_Gs_Ler: np.ndarray | Sequence[float | int] = (
+            0.0,
+            0.0,
+            0.0,
+        ),
+    ) -> None:
+        """The initialization method.
+
+        See WingMovement's initialization method for full parameter descriptions.
+
+        :param base_wing: The base Wing.
+        :param wing_cross_section_movements: The CoreWingCrossSectionMovements for each
+            WingCrossSection.
+        :param ampLer_Gs_Cgs: The amplitudes of Ler_Gs_Cgs oscillation in meters.
+        :param periodLer_Gs_Cgs: The periods of Ler_Gs_Cgs oscillation in seconds.
+        :param spacingLer_Gs_Cgs: The spacing types for Ler_Gs_Cgs oscillation.
+        :param phaseLer_Gs_Cgs: The phase offsets of Ler_Gs_Cgs oscillation in degrees.
+        :param ampAngles_Gs_to_Wn_ixyz: The amplitudes of angles_Gs_to_Wn_ixyz
+            oscillation in degrees.
+        :param periodAngles_Gs_to_Wn_ixyz: The periods of angles_Gs_to_Wn_ixyz
+            oscillation in seconds.
+        :param spacingAngles_Gs_to_Wn_ixyz: The spacing types for angles_Gs_to_Wn_ixyz
+            oscillation.
+        :param phaseAngles_Gs_to_Wn_ixyz: The phase offsets of angles_Gs_to_Wn_ixyz
+            oscillation in degrees.
+        :param rotationPointOffset_Gs_Ler: The position of the rotation point for
+            angular motion in meters.
+        :return: None
+        """
+        # Validate and store immutable attributes. Set those that are numpy
+        # arrays to be read only.
+        if not isinstance(base_wing, geometry.wing.Wing):
+            raise TypeError("base_wing must be a Wing.")
+        self._base_wing = base_wing
+
+        if not isinstance(wing_cross_section_movements, list):
+            raise TypeError("wing_cross_section_movements must be a list.")
+        if len(wing_cross_section_movements) != len(
+            self._base_wing.wing_cross_sections
+        ):
+            raise ValueError(
+                "wing_cross_section_movements must have the same length "
+                "as base_wing.wing_cross_sections."
+            )
+        for wing_cross_section_movement in wing_cross_section_movements:
+            if not isinstance(
+                wing_cross_section_movement,
+                CoreWingCrossSectionMovement,
+            ):
+                raise TypeError(
+                    "Every element in wing_cross_section_movements must "
+                    "be a CoreWingCrossSectionMovement."
+                )
+        # Store as tuple to prevent external mutation.
+        self._wing_cross_section_movements: tuple[CoreWingCrossSectionMovement, ...] = (
+            tuple(wing_cross_section_movements)
+        )
+
+        ampLer_Gs_Cgs = _parameter_validation.threeD_number_vectorLike_return_float(
+            ampLer_Gs_Cgs, "ampLer_Gs_Cgs"
+        )
+        if not np.all(ampLer_Gs_Cgs >= 0.0):
+            raise ValueError("All elements in ampLer_Gs_Cgs must be non negative.")
+        self._ampLer_Gs_Cgs = ampLer_Gs_Cgs
+        self._ampLer_Gs_Cgs.flags.writeable = False
+
+        periodLer_Gs_Cgs = _parameter_validation.threeD_number_vectorLike_return_float(
+            periodLer_Gs_Cgs, "periodLer_Gs_Cgs"
+        )
+        if not np.all(periodLer_Gs_Cgs >= 0.0):
+            raise ValueError("All elements in periodLer_Gs_Cgs must be non negative.")
+        for period_index, period in enumerate(periodLer_Gs_Cgs):
+            amp = self._ampLer_Gs_Cgs[period_index]
+            if amp == 0 and period != 0:
+                raise ValueError(
+                    "If an element in ampLer_Gs_Cgs is 0.0, the "
+                    "corresponding element in periodLer_Gs_Cgs must be "
+                    "also be 0.0."
+                )
+        self._periodLer_Gs_Cgs = periodLer_Gs_Cgs
+        self._periodLer_Gs_Cgs.flags.writeable = False
+
+        # Store as tuple to prevent external mutation.
+        self._spacingLer_Gs_Cgs = (
+            _parameter_validation.threeD_spacing_vectorLike_return_tuple(
+                spacingLer_Gs_Cgs, "spacingLer_Gs_Cgs"
+            )
+        )
+
+        phaseLer_Gs_Cgs = _parameter_validation.threeD_number_vectorLike_return_float(
+            phaseLer_Gs_Cgs, "phaseLer_Gs_Cgs"
+        )
+        if not (np.all(phaseLer_Gs_Cgs > -180.0) and np.all(phaseLer_Gs_Cgs <= 180.0)):
+            raise ValueError(
+                "All elements in phaseLer_Gs_Cgs must be in the range "
+                "(-180.0, 180.0]."
+            )
+        for phase_index, phase in enumerate(phaseLer_Gs_Cgs):
+            amp = self._ampLer_Gs_Cgs[phase_index]
+            if amp == 0 and phase != 0:
+                raise ValueError(
+                    "If an element in ampLer_Gs_Cgs is 0.0, the "
+                    "corresponding element in phaseLer_Gs_Cgs must be "
+                    "also be 0.0."
+                )
+        self._phaseLer_Gs_Cgs = phaseLer_Gs_Cgs
+        self._phaseLer_Gs_Cgs.flags.writeable = False
+
+        ampAngles_Gs_to_Wn_ixyz = (
+            _parameter_validation.threeD_number_vectorLike_return_float(
+                ampAngles_Gs_to_Wn_ixyz, "ampAngles_Gs_to_Wn_ixyz"
+            )
+        )
+        if not (
+            np.all(ampAngles_Gs_to_Wn_ixyz >= 0.0)
+            and np.all(ampAngles_Gs_to_Wn_ixyz <= 180.0)
+        ):
+            raise ValueError(
+                "All elements in ampAngles_Gs_to_Wn_ixyz must be in "
+                "the range [0.0, 180.0]."
+            )
+        self._ampAngles_Gs_to_Wn_ixyz = ampAngles_Gs_to_Wn_ixyz
+        self._ampAngles_Gs_to_Wn_ixyz.flags.writeable = False
+
+        periodAngles_Gs_to_Wn_ixyz = (
+            _parameter_validation.threeD_number_vectorLike_return_float(
+                periodAngles_Gs_to_Wn_ixyz,
+                "periodAngles_Gs_to_Wn_ixyz",
+            )
+        )
+        if not np.all(periodAngles_Gs_to_Wn_ixyz >= 0.0):
+            raise ValueError(
+                "All elements in periodAngles_Gs_to_Wn_ixyz must be " "non negative."
+            )
+        for period_index, period in enumerate(periodAngles_Gs_to_Wn_ixyz):
+            amp = self._ampAngles_Gs_to_Wn_ixyz[period_index]
+            if amp == 0 and period != 0:
+                raise ValueError(
+                    "If an element in ampAngles_Gs_to_Wn_ixyz is 0.0, "
+                    "the corresponding element in "
+                    "periodAngles_Gs_to_Wn_ixyz must be also be 0.0."
+                )
+        self._periodAngles_Gs_to_Wn_ixyz = periodAngles_Gs_to_Wn_ixyz
+        self._periodAngles_Gs_to_Wn_ixyz.flags.writeable = False
+
+        # Store as tuple to prevent external mutation.
+        self._spacingAngles_Gs_to_Wn_ixyz = (
+            _parameter_validation.threeD_spacing_vectorLike_return_tuple(
+                spacingAngles_Gs_to_Wn_ixyz,
+                "spacingAngles_Gs_to_Wn_ixyz",
+            )
+        )
+
+        phaseAngles_Gs_to_Wn_ixyz = (
+            _parameter_validation.threeD_number_vectorLike_return_float(
+                phaseAngles_Gs_to_Wn_ixyz,
+                "phaseAngles_Gs_to_Wn_ixyz",
+            )
+        )
+        if not (
+            np.all(phaseAngles_Gs_to_Wn_ixyz > -180.0)
+            and np.all(phaseAngles_Gs_to_Wn_ixyz <= 180.0)
+        ):
+            raise ValueError(
+                "All elements in phaseAngles_Gs_to_Wn_ixyz must be in "
+                "the range (-180.0, 180.0]."
+            )
+        for phase_index, phase in enumerate(phaseAngles_Gs_to_Wn_ixyz):
+            amp = self._ampAngles_Gs_to_Wn_ixyz[phase_index]
+            if amp == 0 and phase != 0:
+                raise ValueError(
+                    "If an element in ampAngles_Gs_to_Wn_ixyz is 0.0, "
+                    "the corresponding element in "
+                    "phaseAngles_Gs_to_Wn_ixyz must be also be 0.0."
+                )
+        self._phaseAngles_Gs_to_Wn_ixyz = phaseAngles_Gs_to_Wn_ixyz
+        self._phaseAngles_Gs_to_Wn_ixyz.flags.writeable = False
+
+        rotationPointOffset_Gs_Ler = (
+            _parameter_validation.threeD_number_vectorLike_return_float(
+                rotationPointOffset_Gs_Ler,
+                "rotationPointOffset_Gs_Ler",
+            )
+        )
+        self._rotationPointOffset_Gs_Ler = rotationPointOffset_Gs_Ler
+        self._rotationPointOffset_Gs_Ler.flags.writeable = False
+
+        # Initialize the caches for the properties derived from the immutable
+        # attributes.
+        self._all_periods: tuple[float, ...] | None = None
+        self._max_period: float | None = None
+
+    # --- Deep copy method ---
+    def __deepcopy__(self, memo: dict) -> CoreWingMovement:
+        """Creates a deep copy of this CoreWingMovement.
+
+        See WingMovement for full documentation.
+
+        :param memo: A dict used by the copy module to track already copied objects and
+            avoid infinite recursion.
+        :return: A new instance with copied attributes.
+        """
+        # Create a new instance without calling __init__ to avoid redundant
+        # validation. Use type(self) so subclasses get the correct type.
+        new_movement = object.__new__(type(self))
+
+        # Store this instance in memo to handle potential circular references.
+        memo[id(self)] = new_movement
+
+        # Deep copy the base Wing to ensure independence (immutable).
+        new_movement._base_wing = copy.deepcopy(self._base_wing, memo)
+
+        # Deep copy the WingCrossSectionMovements and store as tuple.
+        new_movement._wing_cross_section_movements = tuple(
+            copy.deepcopy(wing_cross_section_movement, memo)
+            for wing_cross_section_movement in (self._wing_cross_section_movements)
+        )
+
+        # Copy numpy arrays and make them read only.
+        new_movement._ampLer_Gs_Cgs = self._ampLer_Gs_Cgs.copy()
+        new_movement._ampLer_Gs_Cgs.flags.writeable = False
+
+        new_movement._periodLer_Gs_Cgs = self._periodLer_Gs_Cgs.copy()
+        new_movement._periodLer_Gs_Cgs.flags.writeable = False
+
+        new_movement._phaseLer_Gs_Cgs = self._phaseLer_Gs_Cgs.copy()
+        new_movement._phaseLer_Gs_Cgs.flags.writeable = False
+
+        new_movement._ampAngles_Gs_to_Wn_ixyz = self._ampAngles_Gs_to_Wn_ixyz.copy()
+        new_movement._ampAngles_Gs_to_Wn_ixyz.flags.writeable = False
+
+        new_movement._periodAngles_Gs_to_Wn_ixyz = (
+            self._periodAngles_Gs_to_Wn_ixyz.copy()
+        )
+        new_movement._periodAngles_Gs_to_Wn_ixyz.flags.writeable = False
+
+        new_movement._phaseAngles_Gs_to_Wn_ixyz = self._phaseAngles_Gs_to_Wn_ixyz.copy()
+        new_movement._phaseAngles_Gs_to_Wn_ixyz.flags.writeable = False
+
+        new_movement._rotationPointOffset_Gs_Ler = (
+            self._rotationPointOffset_Gs_Ler.copy()
+        )
+        new_movement._rotationPointOffset_Gs_Ler.flags.writeable = False
+
+        # Copy tuples directly (they are immutable).
+        new_movement._spacingLer_Gs_Cgs = self._spacingLer_Gs_Cgs
+        new_movement._spacingAngles_Gs_to_Wn_ixyz = self._spacingAngles_Gs_to_Wn_ixyz
+
+        # Initialize cache variables to None (caches will be recomputed on
+        # access).
+        new_movement._all_periods = None
+        new_movement._max_period = None
+
+        return new_movement
+
+    # --- Immutable: read only properties ---
+    @property
+    def base_wing(self) -> geometry.wing.Wing:
+        return self._base_wing
+
+    @property
+    def wing_cross_section_movements(
+        self,
+    ) -> tuple[CoreWingCrossSectionMovement, ...]:
+        return self._wing_cross_section_movements
+
+    @property
+    def ampLer_Gs_Cgs(self) -> np.ndarray:
+        return self._ampLer_Gs_Cgs
+
+    @property
+    def periodLer_Gs_Cgs(self) -> np.ndarray:
+        return self._periodLer_Gs_Cgs
+
+    @property
+    def spacingLer_Gs_Cgs(
+        self,
+    ) -> tuple[str | Callable[[float], float], ...]:
+        return self._spacingLer_Gs_Cgs
+
+    @property
+    def phaseLer_Gs_Cgs(self) -> np.ndarray:
+        return self._phaseLer_Gs_Cgs
+
+    @property
+    def ampAngles_Gs_to_Wn_ixyz(self) -> np.ndarray:
+        return self._ampAngles_Gs_to_Wn_ixyz
+
+    @property
+    def periodAngles_Gs_to_Wn_ixyz(self) -> np.ndarray:
+        return self._periodAngles_Gs_to_Wn_ixyz
+
+    @property
+    def spacingAngles_Gs_to_Wn_ixyz(
+        self,
+    ) -> tuple[str | Callable[[float], float], ...]:
+        return self._spacingAngles_Gs_to_Wn_ixyz
+
+    @property
+    def phaseAngles_Gs_to_Wn_ixyz(self) -> np.ndarray:
+        return self._phaseAngles_Gs_to_Wn_ixyz
+
+    @property
+    def rotationPointOffset_Gs_Ler(self) -> np.ndarray:
+        return self._rotationPointOffset_Gs_Ler
+
+    # --- Immutable derived: manual lazy caching ---
+    @property
+    def all_periods(self) -> tuple[float, ...]:
+        """All unique non zero periods from this CoreWingMovement and its
+        CoreWingCrossSectionMovements.
+
+        See WingMovement for full documentation.
+
+        :return: A tuple of all unique non zero periods in seconds. If all motion is
+            static, this will be an empty tuple.
+        """
+        if self._all_periods is None:
+            periods: list[float] = []
+
+            # Collect all periods from WingCrossSectionMovements.
+            for wing_cross_section_movement in self._wing_cross_section_movements:
+                periods.extend(wing_cross_section_movement.all_periods)
+
+            # Collect all periods from CoreWingMovement's own motion.
+            for period in self._periodLer_Gs_Cgs:
+                if period > 0.0:
+                    periods.append(float(period))
+            for period in self._periodAngles_Gs_to_Wn_ixyz:
+                if period > 0.0:
+                    periods.append(float(period))
+
+            self._all_periods = tuple(periods)
+        return self._all_periods
+
+    @property
+    def max_period(self) -> float:
+        """CoreWingMovement's longest period of motion.
+
+        See WingMovement for full documentation.
+
+        :return: The longest period in seconds. If all the motion is static, this will
+            be 0.0.
+        """
+        if self._max_period is None:
+            wing_cross_section_movement_max_periods = []
+            for wing_cross_section_movement in self._wing_cross_section_movements:
+                wing_cross_section_movement_max_periods.append(
+                    wing_cross_section_movement.max_period
+                )
+            max_wing_cross_section_movement_period = max(
+                wing_cross_section_movement_max_periods
+            )
+
+            self._max_period = float(
+                max(
+                    max_wing_cross_section_movement_period,
+                    np.max(self._periodLer_Gs_Cgs),
+                    np.max(self._periodAngles_Gs_to_Wn_ixyz),
+                )
+            )
+        return self._max_period
+
+    # --- Other methods ---
+    def generate_wing_at_time_step(
+        self, step: int, delta_time: float | int
+    ) -> geometry.wing.Wing:
+        """Creates the Wing at a single time step.
+
+        See WingMovement for full documentation.
+
+        :param step: The time step index. Must be a non negative int.
+        :param delta_time: The time between each time step in seconds. Must be a
+            positive number (int or float).
+        :return: The Wing at this time step.
+        """
+        time = step * delta_time
+
+        # Evaluate the oscillating value for each dimension of Ler_Gs_Cgs.
+        thisLer_Gs_Cgs = np.zeros(3, dtype=float)
+        for dim in range(3):
+            this_spacing = self._spacingLer_Gs_Cgs[dim]
+            this_amp = self._ampLer_Gs_Cgs[dim]
+            this_period = self._periodLer_Gs_Cgs[dim]
+            this_phase = self._phaseLer_Gs_Cgs[dim]
+            this_base = self._base_wing.Ler_Gs_Cgs[dim]
+
+            if this_spacing == "sine":
+                thisLer_Gs_Cgs[dim] = _functions.oscillating_sin_at_time(
+                    amp=this_amp,
+                    period=this_period,
+                    phase=this_phase,
+                    base=this_base,
+                    time=time,
+                )
+            elif this_spacing == "uniform":
+                thisLer_Gs_Cgs[dim] = _functions.oscillating_lin_at_time(
+                    amp=this_amp,
+                    period=this_period,
+                    phase=this_phase,
+                    base=this_base,
+                    time=time,
+                )
+            elif callable(this_spacing):
+                thisLer_Gs_Cgs[dim] = _functions.oscillating_custom_at_time(
+                    amp=this_amp,
+                    period=this_period,
+                    phase=this_phase,
+                    base=this_base,
+                    time=time,
+                    custom_function=this_spacing,
+                )
+            else:
+                raise ValueError(f"Invalid spacing value: {this_spacing}")
+
+        # Evaluate the oscillating value for each dimension of
+        # angles_Gs_to_Wn_ixyz.
+        theseAngles_Gs_to_Wn_ixyz = np.zeros(3, dtype=float)
+        for dim in range(3):
+            this_spacing = self._spacingAngles_Gs_to_Wn_ixyz[dim]
+            this_amp = self._ampAngles_Gs_to_Wn_ixyz[dim]
+            this_period = self._periodAngles_Gs_to_Wn_ixyz[dim]
+            this_phase = self._phaseAngles_Gs_to_Wn_ixyz[dim]
+            this_base = self._base_wing.angles_Gs_to_Wn_ixyz[dim]
+
+            if this_spacing == "sine":
+                theseAngles_Gs_to_Wn_ixyz[dim] = _functions.oscillating_sin_at_time(
+                    amp=this_amp,
+                    period=this_period,
+                    phase=this_phase,
+                    base=this_base,
+                    time=time,
+                )
+            elif this_spacing == "uniform":
+                theseAngles_Gs_to_Wn_ixyz[dim] = _functions.oscillating_lin_at_time(
+                    amp=this_amp,
+                    period=this_period,
+                    phase=this_phase,
+                    base=this_base,
+                    time=time,
+                )
+            elif callable(this_spacing):
+                theseAngles_Gs_to_Wn_ixyz[dim] = _functions.oscillating_custom_at_time(
+                    amp=this_amp,
+                    period=this_period,
+                    phase=this_phase,
+                    base=this_base,
+                    time=time,
+                    custom_function=this_spacing,
+                )
+            else:
+                raise ValueError(f"Invalid spacing value: {this_spacing}")
+
+        # Generate the WingCrossSections for this time step.
+        these_wing_cross_sections = []
+        for wing_cross_section_movement in self._wing_cross_section_movements:
+            these_wing_cross_sections.append(
+                wing_cross_section_movement.generate_wing_cross_section_at_time_step(
+                    step, delta_time
+                )
+            )
+
+        # If there is a non zero rotation point offset, adjust the position
+        # to account for rotation about the offset point instead of the
+        # leading edge root.
+        if not np.allclose(self._rotationPointOffset_Gs_Ler, np.zeros(3, dtype=float)):
+            # TODO: Refactor this procedure for producing offset rotations
+            #  to be a function in _transformations.py.
+            # Get the active rotation matrix for this step's angles.
+            rot_T_act = _transformations.generate_rot_T(
+                theseAngles_Gs_to_Wn_ixyz,
+                passive=False,
+                intrinsic=True,
+                order="xyz",
+            )
+            rot_R_act = rot_T_act[:3, :3]
+
+            # Compute the position adjustment due to the offset rotation
+            # point.
+            offsetRotationPointAdjustment_Gs = (
+                np.eye(3, dtype=float) - rot_R_act
+            ) @ self._rotationPointOffset_Gs_Ler
+
+            # Apply the position adjustment to the leading edge root.
+            thisLer_Gs_Cgs = thisLer_Gs_Cgs + offsetRotationPointAdjustment_Gs
+
+        return geometry.wing.Wing(
+            wing_cross_sections=these_wing_cross_sections,
+            name=self._base_wing.name,
+            Ler_Gs_Cgs=thisLer_Gs_Cgs,
+            angles_Gs_to_Wn_ixyz=theseAngles_Gs_to_Wn_ixyz,
+            symmetric=self._base_wing.symmetric,
+            mirror_only=self._base_wing.mirror_only,
+            symmetryNormal_G=self._base_wing.symmetryNormal_G,
+            symmetryPoint_G_Cg=self._base_wing.symmetryPoint_G_Cg,
+            num_chordwise_panels=self._base_wing.num_chordwise_panels,
+            chordwise_spacing=self._base_wing.chordwise_spacing,
         )
 
 
