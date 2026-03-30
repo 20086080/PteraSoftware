@@ -178,6 +178,19 @@ class FreeFlightWingMovement(_core.CoreWingMovement):
             in meters. The default is (0.0, 0.0, 0.0).
         :return: None
         """
+        # Validate that every element is a FreeFlightWingCrossSectionMovement, not
+        # just a CoreWingCrossSectionMovement. CoreWingMovement.__init__() validates
+        # at the Core level, but FreeFlightWingMovement enforces the stricter type.
+        for wing_cross_section_movement in wing_cross_section_movements:
+            if not isinstance(
+                wing_cross_section_movement,
+                free_flight_wing_cross_section_movement_mod.FreeFlightWingCrossSectionMovement,
+            ):
+                raise TypeError(
+                    "Every element in wing_cross_section_movements must "
+                    "be a FreeFlightWingCrossSectionMovement."
+                )
+
         super().__init__(
             base_wing=base_wing,
             wing_cross_section_movements=wing_cross_section_movements,

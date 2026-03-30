@@ -107,6 +107,19 @@ class FreeFlightAirplaneMovement(_core.CoreAirplaneMovement):
             0.0).
         :return: None
         """
+        # Validate that every element is a FreeFlightWingMovement, not just a
+        # CoreWingMovement. CoreAirplaneMovement.__init__() validates at the Core
+        # level, but FreeFlightAirplaneMovement enforces the stricter type.
+        for wing_movement in wing_movements:
+            if not isinstance(
+                wing_movement,
+                free_flight_wing_movement_mod.FreeFlightWingMovement,
+            ):
+                raise TypeError(
+                    "Every element in wing_movements must be a "
+                    "FreeFlightWingMovement."
+                )
+
         super().__init__(
             base_airplane=base_airplane,
             wing_movements=wing_movements,

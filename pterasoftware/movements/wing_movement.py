@@ -161,6 +161,19 @@ class WingMovement(_core.CoreWingMovement):
             occurs about the leading edge root point (default behavior). The units are
             in meters. The default is (0.0, 0.0, 0.0).
         """
+        # Validate that every element is a WingCrossSectionMovement, not just a
+        # CoreWingCrossSectionMovement. CoreWingMovement.__init__() validates at the
+        # Core level, but WingMovement enforces the stricter type.
+        for wing_cross_section_movement in wing_cross_section_movements:
+            if not isinstance(
+                wing_cross_section_movement,
+                wing_cross_section_movement_mod.WingCrossSectionMovement,
+            ):
+                raise TypeError(
+                    "Every element in wing_cross_section_movements must "
+                    "be a WingCrossSectionMovement."
+                )
+
         super().__init__(
             base_wing=base_wing,
             wing_cross_section_movements=wing_cross_section_movements,

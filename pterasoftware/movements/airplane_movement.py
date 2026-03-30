@@ -98,6 +98,15 @@ class AirplaneMovement(_core.CoreAirplaneMovement):
             0.0).
         :return: None
         """
+        # Validate that every element is a WingMovement, not just a
+        # CoreWingMovement. CoreAirplaneMovement.__init__() validates at the Core
+        # level, but AirplaneMovement enforces the stricter type.
+        for wing_movement in wing_movements:
+            if not isinstance(wing_movement, wing_movement_mod.WingMovement):
+                raise TypeError(
+                    "Every element in wing_movements must be a " "WingMovement."
+                )
+
         super().__init__(
             base_airplane=base_airplane,
             wing_movements=wing_movements,
