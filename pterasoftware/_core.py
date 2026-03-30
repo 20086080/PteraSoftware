@@ -11,7 +11,6 @@ import numpy as np
 from . import _parameter_validation, _transformations, geometry
 from . import operating_point as operating_point_mod
 from .movements import _functions
-from .movements import airplane_movement as airplane_movement_mod
 
 
 def _lcm(a: float, b: float) -> float:
@@ -1256,6 +1255,327 @@ class CoreWingMovement:
         )
 
 
+class CoreAirplaneMovement:
+    """A core class used to contain the shared foundation of AirplaneMovement and its
+    feature variant siblings.
+
+    See AirplaneMovement for full documentation of the shared interface.
+
+    CoreAirplaneMovement holds the base Airplane, WingMovements, and oscillation
+    parameters, and provides generate_airplane_at_time_step() for creating Airplanes one
+    step at a time.
+    """
+
+    __slots__ = (
+        "_base_airplane",
+        "_wing_movements",
+        "_ampCg_GP1_CgP1",
+        "_periodCg_GP1_CgP1",
+        "_spacingCg_GP1_CgP1",
+        "_phaseCg_GP1_CgP1",
+        "_all_periods",
+        "_max_period",
+    )
+
+    def __init__(
+        self,
+        base_airplane: geometry.airplane.Airplane,
+        wing_movements: Sequence[CoreWingMovement],
+        ampCg_GP1_CgP1: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
+        periodCg_GP1_CgP1: np.ndarray | Sequence[float | int] = (
+            0.0,
+            0.0,
+            0.0,
+        ),
+        spacingCg_GP1_CgP1: np.ndarray | Sequence[str | Callable[[float], float]] = (
+            "sine",
+            "sine",
+            "sine",
+        ),
+        phaseCg_GP1_CgP1: np.ndarray | Sequence[float | int] = (
+            0.0,
+            0.0,
+            0.0,
+        ),
+    ) -> None:
+        """The initialization method.
+
+        See AirplaneMovement's initialization method for full parameter descriptions.
+
+        :param base_airplane: The base Airplane.
+        :param wing_movements: The CoreWingMovements for each Wing.
+        :param ampCg_GP1_CgP1: The amplitudes of Cg_GP1_CgP1 oscillation in meters.
+        :param periodCg_GP1_CgP1: The periods of Cg_GP1_CgP1 oscillation in seconds.
+        :param spacingCg_GP1_CgP1: The spacing types for Cg_GP1_CgP1 oscillation.
+        :param phaseCg_GP1_CgP1: The phase offsets of Cg_GP1_CgP1 oscillation in
+            degrees.
+        :return: None
+        """
+        # Validate and store immutable attributes. Set those that are numpy
+        # arrays to be read only.
+        if not isinstance(base_airplane, geometry.airplane.Airplane):
+            raise TypeError("base_airplane must be an Airplane.")
+        self._base_airplane = base_airplane
+
+        if not isinstance(wing_movements, list):
+            raise TypeError("wing_movements must be a list.")
+        if len(wing_movements) != len(self._base_airplane.wings):
+            raise ValueError(
+                "wing_movements must have the same length as " "base_airplane.wings."
+            )
+        for wing_movement in wing_movements:
+            if not isinstance(wing_movement, CoreWingMovement):
+                raise TypeError(
+                    "Every element in wing_movements must be a " "CoreWingMovement."
+                )
+        # Store as tuple to prevent external mutation.
+        self._wing_movements: tuple[CoreWingMovement, ...] = tuple(wing_movements)
+
+        ampCg_GP1_CgP1 = _parameter_validation.threeD_number_vectorLike_return_float(
+            ampCg_GP1_CgP1, "ampCg_GP1_CgP1"
+        )
+        if not np.all(ampCg_GP1_CgP1 >= 0.0):
+            raise ValueError("All elements in ampCg_GP1_CgP1 must be non negative.")
+        self._ampCg_GP1_CgP1 = ampCg_GP1_CgP1
+        self._ampCg_GP1_CgP1.flags.writeable = False
+
+        periodCg_GP1_CgP1 = _parameter_validation.threeD_number_vectorLike_return_float(
+            periodCg_GP1_CgP1, "periodCg_GP1_CgP1"
+        )
+        if not np.all(periodCg_GP1_CgP1 >= 0.0):
+            raise ValueError("All elements in periodCg_GP1_CgP1 must be non negative.")
+        for period_index, period in enumerate(periodCg_GP1_CgP1):
+            amp = self._ampCg_GP1_CgP1[period_index]
+            if amp == 0 and period != 0:
+                raise ValueError(
+                    "If an element in ampCg_GP1_CgP1 is 0.0, the "
+                    "corresponding element in periodCg_GP1_CgP1 must "
+                    "be also be 0.0."
+                )
+        self._periodCg_GP1_CgP1 = periodCg_GP1_CgP1
+        self._periodCg_GP1_CgP1.flags.writeable = False
+
+        # Store as tuple to prevent external mutation.
+        self._spacingCg_GP1_CgP1 = (
+            _parameter_validation.threeD_spacing_vectorLike_return_tuple(
+                spacingCg_GP1_CgP1, "spacingCg_GP1_CgP1"
+            )
+        )
+
+        phaseCg_GP1_CgP1 = _parameter_validation.threeD_number_vectorLike_return_float(
+            phaseCg_GP1_CgP1, "phaseCg_GP1_CgP1"
+        )
+        if not (
+            np.all(phaseCg_GP1_CgP1 > -180.0) and np.all(phaseCg_GP1_CgP1 <= 180.0)
+        ):
+            raise ValueError(
+                "All elements in phaseCg_GP1_CgP1 must be in the range "
+                "(-180.0, 180.0]."
+            )
+        for phase_index, phase in enumerate(phaseCg_GP1_CgP1):
+            amp = self._ampCg_GP1_CgP1[phase_index]
+            if amp == 0 and phase != 0:
+                raise ValueError(
+                    "If an element in ampCg_GP1_CgP1 is 0.0, the "
+                    "corresponding element in phaseCg_GP1_CgP1 must "
+                    "be also be 0.0."
+                )
+        self._phaseCg_GP1_CgP1 = phaseCg_GP1_CgP1
+        self._phaseCg_GP1_CgP1.flags.writeable = False
+
+        # Initialize the caches for the properties derived from the immutable
+        # attributes.
+        self._all_periods: tuple[float, ...] | None = None
+        self._max_period: float | None = None
+
+    # --- Deep copy method ---
+    def __deepcopy__(self, memo: dict) -> CoreAirplaneMovement:
+        """Creates a deep copy of this CoreAirplaneMovement.
+
+        See AirplaneMovement for full documentation.
+
+        :param memo: A dict used by the copy module to track already copied objects and
+            avoid infinite recursion.
+        :return: A new instance with copied attributes.
+        """
+        # Create a new instance without calling __init__ to avoid redundant
+        # validation. Use type(self) so subclasses get the correct type.
+        new_movement = object.__new__(type(self))
+
+        # Store this instance in memo to handle potential circular references.
+        memo[id(self)] = new_movement
+
+        # Deep copy the base Airplane to ensure independence (immutable).
+        new_movement._base_airplane = copy.deepcopy(self._base_airplane, memo)
+
+        # Deep copy WingMovements and store as tuple.
+        new_movement._wing_movements = tuple(
+            copy.deepcopy(wing_movement, memo) for wing_movement in self._wing_movements
+        )
+
+        # Copy numpy arrays and make them read only.
+        new_movement._ampCg_GP1_CgP1 = self._ampCg_GP1_CgP1.copy()
+        new_movement._ampCg_GP1_CgP1.flags.writeable = False
+
+        new_movement._periodCg_GP1_CgP1 = self._periodCg_GP1_CgP1.copy()
+        new_movement._periodCg_GP1_CgP1.flags.writeable = False
+
+        new_movement._phaseCg_GP1_CgP1 = self._phaseCg_GP1_CgP1.copy()
+        new_movement._phaseCg_GP1_CgP1.flags.writeable = False
+
+        # Copy tuple directly (it is immutable).
+        new_movement._spacingCg_GP1_CgP1 = self._spacingCg_GP1_CgP1
+
+        # Initialize cache variables to None (caches will be recomputed on
+        # access).
+        new_movement._all_periods = None
+        new_movement._max_period = None
+
+        return new_movement
+
+    # --- Immutable: read only properties ---
+    @property
+    def base_airplane(self) -> geometry.airplane.Airplane:
+        return self._base_airplane
+
+    @property
+    def wing_movements(self) -> tuple[CoreWingMovement, ...]:
+        return self._wing_movements
+
+    @property
+    def ampCg_GP1_CgP1(self) -> np.ndarray:
+        return self._ampCg_GP1_CgP1
+
+    @property
+    def periodCg_GP1_CgP1(self) -> np.ndarray:
+        return self._periodCg_GP1_CgP1
+
+    @property
+    def spacingCg_GP1_CgP1(
+        self,
+    ) -> tuple[str | Callable[[float], float], ...]:
+        return self._spacingCg_GP1_CgP1
+
+    @property
+    def phaseCg_GP1_CgP1(self) -> np.ndarray:
+        return self._phaseCg_GP1_CgP1
+
+    # --- Immutable derived: manual lazy caching ---
+    @property
+    def all_periods(self) -> tuple[float, ...]:
+        """All unique non zero periods from this CoreAirplaneMovement, its
+        CoreWingMovement(s), and their CoreWingCrossSectionMovements.
+
+        See AirplaneMovement for full documentation.
+
+        :return: A tuple of all unique non zero periods in seconds. If all motion is
+            static, this will be an empty tuple.
+        """
+        if self._all_periods is None:
+            periods: list[float] = []
+
+            # Collect all periods from WingMovement(s).
+            for wing_movement in self._wing_movements:
+                periods.extend(wing_movement.all_periods)
+
+            # Collect all periods from CoreAirplaneMovement's own motion.
+            for period in self._periodCg_GP1_CgP1:
+                if period > 0.0:
+                    periods.append(float(period))
+
+            self._all_periods = tuple(periods)
+        return self._all_periods
+
+    @property
+    def max_period(self) -> float:
+        """CoreAirplaneMovement's longest period of motion.
+
+        See AirplaneMovement for full documentation.
+
+        :return: The longest period in seconds. If all the motion is static, this will
+            be 0.0.
+        """
+        if self._max_period is None:
+            wing_movement_max_periods = []
+            for wing_movement in self._wing_movements:
+                wing_movement_max_periods.append(wing_movement.max_period)
+            max_wing_movement_period = max(wing_movement_max_periods)
+
+            self._max_period = float(
+                max(
+                    max_wing_movement_period,
+                    np.max(self._periodCg_GP1_CgP1),
+                )
+            )
+        return self._max_period
+
+    # --- Other methods ---
+    def generate_airplane_at_time_step(
+        self, step: int, delta_time: float | int
+    ) -> geometry.airplane.Airplane:
+        """Creates the Airplane at a single time step.
+
+        See AirplaneMovement for full documentation.
+
+        :param step: The time step index. Must be a non negative int.
+        :param delta_time: The time between each time step in seconds. Must be a
+            positive number (int or float).
+        :return: The Airplane at this time step.
+        """
+        time = step * delta_time
+
+        # Evaluate the oscillating value for each dimension of Cg_GP1_CgP1.
+        thisCg_GP1_CgP1 = np.zeros(3, dtype=float)
+        for dim in range(3):
+            this_spacing = self._spacingCg_GP1_CgP1[dim]
+            this_amp = self._ampCg_GP1_CgP1[dim]
+            this_period = self._periodCg_GP1_CgP1[dim]
+            this_phase = self._phaseCg_GP1_CgP1[dim]
+            this_base = self._base_airplane.Cg_GP1_CgP1[dim]
+
+            if this_spacing == "sine":
+                thisCg_GP1_CgP1[dim] = _functions.oscillating_sin_at_time(
+                    amp=this_amp,
+                    period=this_period,
+                    phase=this_phase,
+                    base=this_base,
+                    time=time,
+                )
+            elif this_spacing == "uniform":
+                thisCg_GP1_CgP1[dim] = _functions.oscillating_lin_at_time(
+                    amp=this_amp,
+                    period=this_period,
+                    phase=this_phase,
+                    base=this_base,
+                    time=time,
+                )
+            elif callable(this_spacing):
+                thisCg_GP1_CgP1[dim] = _functions.oscillating_custom_at_time(
+                    amp=this_amp,
+                    period=this_period,
+                    phase=this_phase,
+                    base=this_base,
+                    time=time,
+                    custom_function=this_spacing,
+                )
+            else:
+                raise ValueError(f"Invalid spacing value: {this_spacing}")
+
+        # Generate the Wings for this time step.
+        these_wings = []
+        for wing_movement in self._wing_movements:
+            these_wings.append(
+                wing_movement.generate_wing_at_time_step(step, delta_time)
+            )
+
+        return geometry.airplane.Airplane(
+            wings=these_wings,
+            name=self._base_airplane.name,
+            Cg_GP1_CgP1=thisCg_GP1_CgP1,
+            weight=self._base_airplane.weight,
+        )
+
+
 class CoreMovement:
     """A core class used to contain the shared foundation of Movement and its feature
     variant siblings.
@@ -1282,7 +1602,7 @@ class CoreMovement:
 
     def __init__(
         self,
-        airplane_movements: list[airplane_movement_mod.AirplaneMovement],
+        airplane_movements: Sequence[CoreAirplaneMovement],
         operating_point_movement: CoreOperatingPointMovement,
         delta_time: float | int,
         num_steps: int,
@@ -1292,7 +1612,7 @@ class CoreMovement:
 
         See Movement's initialization method for full parameter descriptions.
 
-        :param airplane_movements: The AirplaneMovements for each Airplane.
+        :param airplane_movements: The CoreAirplaneMovements for each Airplane.
         :param operating_point_movement: The CoreOperatingPointMovement for operating
             conditions.
         :param delta_time: The time step size in seconds. Must be positive.
@@ -1301,22 +1621,20 @@ class CoreMovement:
             None (no truncation).
         :return: None
         """
-        # Validate and store the AirplaneMovements.
+        # Validate and store the CoreAirplaneMovements.
         if not isinstance(airplane_movements, list):
             raise TypeError("airplane_movements must be a list.")
         if len(airplane_movements) < 1:
             raise ValueError("airplane_movements must have at least one element.")
         for airplane_movement in airplane_movements:
-            if not isinstance(
-                airplane_movement, airplane_movement_mod.AirplaneMovement
-            ):
+            if not isinstance(airplane_movement, CoreAirplaneMovement):
                 raise TypeError(
-                    "Every element in airplane_movements must be an "
-                    "AirplaneMovement."
+                    "Every element in airplane_movements must be a "
+                    "CoreAirplaneMovement."
                 )
         # Store as tuple to prevent external mutation.
-        self._airplane_movements: tuple[airplane_movement_mod.AirplaneMovement, ...] = (
-            tuple(airplane_movements)
+        self._airplane_movements: tuple[CoreAirplaneMovement, ...] = tuple(
+            airplane_movements
         )
 
         # Validate and store the CoreOperatingPointMovement.
@@ -1366,7 +1684,7 @@ class CoreMovement:
     @property
     def airplane_movements(
         self,
-    ) -> tuple[airplane_movement_mod.AirplaneMovement, ...]:
+    ) -> tuple[CoreAirplaneMovement, ...]:
         return self._airplane_movements
 
     @property

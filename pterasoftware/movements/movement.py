@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import copy
 import math
+from typing import cast
 
 import numpy as np
 import scipy.optimize as sp_opt
@@ -383,7 +384,7 @@ class Movement(_core.CoreMovement):
         # AirplaneMovement. The first index identifies the AirplaneMovement, and the
         # second index identifies the time step.
         airplanes_temp: list[list[geometry.airplane.Airplane]] = []
-        for airplane_movement in self._airplane_movements:
+        for airplane_movement in self.airplane_movements:
             airplanes_temp.append(
                 airplane_movement.generate_airplanes(
                     num_steps=self._num_steps, delta_time=self._delta_time
@@ -442,6 +443,15 @@ class Movement(_core.CoreMovement):
             operating_point_movement_mod.OperatingPointMovement,
         )
         return self._operating_point_movement
+
+    @property
+    def airplane_movements(
+        self,
+    ) -> tuple[airplane_movement_mod.AirplaneMovement, ...]:
+        return cast(
+            tuple[airplane_movement_mod.AirplaneMovement, ...],
+            self._airplane_movements,
+        )
 
     @property
     def num_cycles(self) -> int | None:
