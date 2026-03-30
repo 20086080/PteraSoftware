@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .. import _core, _parameter_validation
+from .. import _core
 from .. import operating_point as operating_point_mod
 
 
@@ -79,35 +79,3 @@ class OperatingPointMovement(_core.CoreOperatingPointMovement):
             spacingVCg__E=spacingVCg__E,
             phaseVCg__E=phaseVCg__E,
         )
-
-    # --- Other methods ---
-    def generate_operating_points(
-        self, num_steps: int, delta_time: float | int
-    ) -> list[operating_point_mod.OperatingPoint]:
-        """Creates the OperatingPoint at each time step, and returns them in a list.
-
-        :param num_steps: The number of time steps in this movement. It must be a
-            positive int.
-        :param delta_time: The time between each time step. It must be a positive number
-            (int or float), and will be converted internally to a float. The units are
-            in seconds.
-        :return: The list of OperatingPoints associated with this
-            OperatingPointMovement.
-        """
-        num_steps = _parameter_validation.int_in_range_return_int(
-            num_steps,
-            "num_steps",
-            min_val=1,
-            min_inclusive=True,
-        )
-        delta_time = _parameter_validation.number_in_range_return_float(
-            delta_time, "delta_time", min_val=0.0, min_inclusive=False
-        )
-
-        operating_points = []
-        for step in range(num_steps):
-            operating_points.append(
-                self.generate_operating_point_at_time_step(step, delta_time)
-            )
-
-        return operating_points
