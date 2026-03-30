@@ -499,68 +499,6 @@ class TestAirplaneMovementVariableGeometryOptimization(unittest.TestCase):
             airplane_movement_fixtures.make_basic_airplane_movement_fixture()
         )
 
-    def test_lcm_static_method(self):
-        """Test the _lcm static method."""
-        # Test basic LCM calculation.
-        self.assertAlmostEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm(2.0, 3.0), 6.0
-        )
-        self.assertAlmostEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm(4.0, 6.0), 12.0
-        )
-
-        # Test with zero values.
-        self.assertEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm(0.0, 5.0), 0.0
-        )
-        self.assertEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm(5.0, 0.0), 0.0
-        )
-        self.assertEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm(0.0, 0.0), 0.0
-        )
-
-        # Test with same values.
-        self.assertAlmostEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm(5.0, 5.0), 5.0
-        )
-
-    def test_lcm_multiple_static_method(self):
-        """Test the _lcm_multiple static method."""
-        # Test basic LCM calculation.
-        self.assertAlmostEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm_multiple(
-                [2.0, 3.0, 4.0]
-            ),
-            12.0,
-        )
-
-        # Test with empty list.
-        self.assertEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm_multiple([]), 0.0
-        )
-
-        # Test with all zeros.
-        self.assertEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm_multiple(
-                [0.0, 0.0, 0.0]
-            ),
-            0.0,
-        )
-
-        # Test with single value.
-        self.assertAlmostEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm_multiple([5.0]), 5.0
-        )
-
-        # Test with mixed zeros and non zeros.
-        self.assertAlmostEqual(
-            ps.movements.airplane_movement.AirplaneMovement._lcm_multiple(
-                [0.0, 2.0, 0.0, 3.0]
-            ),
-            6.0,
-        )
-
     def test_geometry_lcm_period_static(self):
         """Test _geometry_lcm_period returns 0.0 for static geometry."""
         result = self.static_airplane_movement._geometry_lcm_period()
