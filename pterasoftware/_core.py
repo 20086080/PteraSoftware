@@ -693,6 +693,39 @@ class CoreWingCrossSectionMovement:
             spanwise_spacing=(self._base_wing_cross_section.spanwise_spacing),
         )
 
+    def generate_wing_cross_sections(
+        self,
+        num_steps: int,
+        delta_time: float | int,
+    ) -> list[geometry.wing_cross_section.WingCrossSection]:
+        """Creates the WingCrossSection at each time step, and returns them in a list.
+
+        :param num_steps: The number of time steps in this movement. It must be a
+            positive int.
+        :param delta_time: The time between each time step. It must be a positive number
+            (int or float), and will be converted internally to a float. The units are
+            in seconds.
+        :return: The list of WingCrossSections associated with this
+            CoreWingCrossSectionMovement.
+        """
+        num_steps = _parameter_validation.int_in_range_return_int(
+            num_steps,
+            "num_steps",
+            min_val=1,
+            min_inclusive=True,
+        )
+        delta_time = _parameter_validation.number_in_range_return_float(
+            delta_time, "delta_time", min_val=0.0, min_inclusive=False
+        )
+
+        wing_cross_sections = []
+        for step in range(num_steps):
+            wing_cross_sections.append(
+                self.generate_wing_cross_section_at_time_step(step, delta_time)
+            )
+
+        return wing_cross_sections
+
 
 class CoreWingMovement:
     """A core class used to contain the shared foundation of WingMovement and its
@@ -1253,6 +1286,34 @@ class CoreWingMovement:
             num_chordwise_panels=self._base_wing.num_chordwise_panels,
             chordwise_spacing=self._base_wing.chordwise_spacing,
         )
+
+    def generate_wings(
+        self, num_steps: int, delta_time: float | int
+    ) -> list[geometry.wing.Wing]:
+        """Creates the Wing at each time step, and returns them in a list.
+
+        :param num_steps: The number of time steps in this movement. It must be a
+            positive int.
+        :param delta_time: The time between each time step. It must be a positive number
+            (int or float), and will be converted internally to a float. The units are
+            in seconds.
+        :return: The list of Wings associated with this CoreWingMovement.
+        """
+        num_steps = _parameter_validation.int_in_range_return_int(
+            num_steps,
+            "num_steps",
+            min_val=1,
+            min_inclusive=True,
+        )
+        delta_time = _parameter_validation.number_in_range_return_float(
+            delta_time, "delta_time", min_val=0.0, min_inclusive=False
+        )
+
+        wings = []
+        for step in range(num_steps):
+            wings.append(self.generate_wing_at_time_step(step, delta_time))
+
+        return wings
 
 
 class CoreAirplaneMovement:

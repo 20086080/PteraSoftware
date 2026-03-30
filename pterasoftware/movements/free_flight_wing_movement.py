@@ -1,8 +1,9 @@
-"""Contains the WingMovement class.
+"""Contains the FreeFlightWingMovement class.
 
 **Contains the following classes:**
 
-WingMovement: A class used to contain a Wing's movement.
+FreeFlightWingMovement: A class used to contain a Wing's movement in a free flight
+simulation.
 
 **Contains the following functions:**
 
@@ -16,21 +17,28 @@ from collections.abc import Callable, Sequence
 import numpy as np
 
 from .. import _core, geometry
-from . import wing_cross_section_movement as wing_cross_section_movement_mod
+from . import (
+    free_flight_wing_cross_section_movement as free_flight_wing_cross_section_movement_mod,
+)
 
 
-class WingMovement(_core.CoreWingMovement):
-    """A class used to contain a Wing's movement.
+class FreeFlightWingMovement(_core.CoreWingMovement):
+    """A class used to contain a Wing's movement in a free flight simulation.
+
+    In free flight, wing geometry is prescribed (the same oscillation based generation
+    as WingMovement). This class exists so that a FreeFlightAirplaneMovement always
+    accepts FreeFlightWingMovements, keeping the free flight movement hierarchy
+    consistently named.
 
     **Contains the following methods:**
 
-    __deepcopy__: Creates a deep copy of this WingMovement.
+    __deepcopy__: Creates a deep copy of this FreeFlightWingMovement.
 
-    all_periods: All unique non zero periods from this WingMovement and its
-    WingCrossSectionMovements.
+    all_periods: All unique non zero periods from this FreeFlightWingMovement and its
+    FreeFlightWingCrossSectionMovements.
 
-    max_period: The longest period of WingMovement's own motion and that of its sub
-    movement objects.
+    max_period: The longest period of FreeFlightWingMovement's own motion and that of
+    its sub movement objects.
 
     generate_wing_at_time_step: Creates the Wing at a single time step.
 
@@ -40,10 +48,11 @@ class WingMovement(_core.CoreWingMovement):
 
     Wings cannot undergo motion that causes them to switch symmetry types. A transition
     between types could change the number of Wings and the Panel structure, which is
-    incompatible with the unsteady solver. This happens when a WingMovement defines
-    motion that causes its base Wing's wing axes' yz plane and its symmetry plane to
-    transition from coincident to non coincident, or vice versa. This is checked by this
-    WingMovement's parent AirplaneMovement's parent Movement.
+    incompatible with the unsteady solver. This happens when a FreeFlightWingMovement
+    defines motion that causes its base Wing's wing axes' yz plane and its symmetry
+    plane to transition from coincident to non coincident, or vice versa. This is
+    checked by this FreeFlightWingMovement's parent FreeFlightAirplaneMovement's parent
+    FreeFlightMovement.
     """
 
     __slots__ = ()
@@ -52,7 +61,7 @@ class WingMovement(_core.CoreWingMovement):
         self,
         base_wing: geometry.wing.Wing,
         wing_cross_section_movements: list[
-            wing_cross_section_movement_mod.WingCrossSectionMovement
+            free_flight_wing_cross_section_movement_mod.FreeFlightWingCrossSectionMovement
         ],
         ampLer_Gs_Cgs: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
         periodLer_Gs_Cgs: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
@@ -75,7 +84,11 @@ class WingMovement(_core.CoreWingMovement):
             "sine",
             "sine",
         ),
-        phaseAngles_Gs_to_Wn_ixyz: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
+        phaseAngles_Gs_to_Wn_ixyz: np.ndarray | Sequence[float | int] = (
+            0.0,
+            0.0,
+            0.0,
+        ),
         rotationPointOffset_Gs_Ler: np.ndarray | Sequence[float | int] = (
             0.0,
             0.0,
@@ -86,26 +99,28 @@ class WingMovement(_core.CoreWingMovement):
 
         :param base_wing: The base Wing from which the Wing at each time step will be
             created.
-        :param wing_cross_section_movements: A list of WingCrossSectionMovements
-            associated with each of the base Wing's WingCrossSections. It must have the
-            same length as the base Wing's list of WingCrossSections.
+        :param wing_cross_section_movements: A list of
+            FreeFlightWingCrossSectionMovements associated with each of the base Wing's
+            WingCrossSections. It must have the same length as the base Wing's list of
+            WingCrossSections.
         :param ampLer_Gs_Cgs: An array-like object of non negative numbers (int or
-            float) with shape (3,) representing the amplitudes of the WingMovement's
-            changes in its Wings' Ler_Gs_Cgs parameters. Can be a tuple, list, or
-            ndarray. Values are converted to floats internally. Each amplitude must be
-            low enough that it doesn't drive its base value out of the range of valid
-            values. Otherwise, this WingMovement will try to create Wings with invalid
-            parameters values. The units are in meters. The default is (0.0, 0.0, 0.0).
+            float) with shape (3,) representing the amplitudes of the
+            FreeFlightWingMovement's changes in its Wings' Ler_Gs_Cgs parameters. Can be
+            a tuple, list, or ndarray. Values are converted to floats internally. Each
+            amplitude must be low enough that it doesn't drive its base value out of the
+            range of valid values. Otherwise, this FreeFlightWingMovement will try to
+            create Wings with invalid parameters values. The units are in meters. The
+            default is (0.0, 0.0, 0.0).
         :param periodLer_Gs_Cgs: An array-like object of non negative numbers (int or
-            float) with shape (3,) representing the periods of the WingMovement's
-            changes in its Wings' Ler_Gs_Cgs parameters. Can be a tuple, list, or
-            ndarray. Values are converted to floats internally. Each element must be 0.0
-            if the corresponding element in ampLer_Gs_Cgs is 0.0 and non zero if not.
-            The units are in seconds. The default is (0.0, 0.0, 0.0).
+            float) with shape (3,) representing the periods of the
+            FreeFlightWingMovement's changes in its Wings' Ler_Gs_Cgs parameters. Can be
+            a tuple, list, or ndarray. Values are converted to floats internally. Each
+            element must be 0.0 if the corresponding element in ampLer_Gs_Cgs is 0.0 and
+            non zero if not. The units are in seconds. The default is (0.0, 0.0, 0.0).
         :param spacingLer_Gs_Cgs: An array-like object of strs or callables with shape
-            (3,) representing the spacing of the WingMovement's change in its Wings'
-            Ler_Gs_Cgs parameters. Can be a tuple, list, or ndarray. Each element can be
-            the string "sine", the string "uniform", or a callable custom spacing
+            (3,) representing the spacing of the FreeFlightWingMovement's change in its
+            Wings' Ler_Gs_Cgs parameters. Can be a tuple, list, or ndarray. Each element
+            can be the string "sine", the string "uniform", or a callable custom spacing
             function. Custom spacing functions are for advanced users and must start at
             0.0, return to 0.0 after one period of 2.0 * pi radians, have amplitude of
             1.0, be periodic, return finite values only, and accept a float as input and
@@ -120,28 +135,29 @@ class WingMovement(_core.CoreWingMovement):
             must be 0.0 if the corresponding element in ampLer_Gs_Cgs is 0.0 and non
             zero if not. The units are in degrees. The default is (0.0, 0.0, 0.0).
         :param ampAngles_Gs_to_Wn_ixyz: An array-like object of numbers (int or float)
-            with shape (3,) representing the amplitudes of the WingMovement's changes in
-            its Wings' angles_Gs_to_Wn_ixyz parameters. Can be a tuple, list, or
-            ndarray. Values must lie in the range [0.0, 180.0] and will be converted to
-            floats internally. Each amplitude must be low enough that it doesn't drive
-            its base value out of the range of valid values. Otherwise, this
-            WingMovement will try to create Wings with invalid parameters values. The
-            units are in degrees. The default is (0.0, 0.0, 0.0).
-        :param periodAngles_Gs_to_Wn_ixyz: An array-like object of numbers (int or
-            float) with shape (3,) representing the periods of the WingMovement's
+            with shape (3,) representing the amplitudes of the FreeFlightWingMovement's
             changes in its Wings' angles_Gs_to_Wn_ixyz parameters. Can be a tuple, list,
-            or ndarray. Values are converted to floats internally. Each element must be
-            0.0 if the corresponding element in ampAngles_Gs_to_Wn_ixyz is 0.0 and non
-            zero if not. The units are in seconds. The default is (0.0, 0.0, 0.0).
+            or ndarray. Values must lie in the range [0.0, 180.0] and will be converted
+            to floats internally. Each amplitude must be low enough that it doesn't
+            drive its base value out of the range of valid values. Otherwise, this
+            FreeFlightWingMovement will try to create Wings with invalid parameters
+            values. The units are in degrees. The default is (0.0, 0.0, 0.0).
+        :param periodAngles_Gs_to_Wn_ixyz: An array-like object of numbers (int or
+            float) with shape (3,) representing the periods of the
+            FreeFlightWingMovement's changes in its Wings' angles_Gs_to_Wn_ixyz
+            parameters. Can be a tuple, list, or ndarray. Values are converted to floats
+            internally. Each element must be 0.0 if the corresponding element in
+            ampAngles_Gs_to_Wn_ixyz is 0.0 and non zero if not. The units are in
+            seconds. The default is (0.0, 0.0, 0.0).
         :param spacingAngles_Gs_to_Wn_ixyz: An array-like object of strs or callables
-            with shape (3,) representing the spacing of the WingMovement's change in its
-            Wings' angles_Gs_to_Wn_ixyz parameters. Can be a tuple, list, or ndarray.
-            Each element can be the string "sine", the string "uniform", or a callable
-            custom spacing function. Custom spacing functions are for advanced users and
-            must start at 0.0, return to 0.0 after one period of 2.0 * pi radians, have
-            amplitude of 1.0, be periodic, return finite values only, and accept a float
-            as input and return a float. The custom function is scaled by
-            ampAngles_Gs_to_Wn_ixyz, shifted horizontally and vertically by
+            with shape (3,) representing the spacing of the FreeFlightWingMovement's
+            change in its Wings' angles_Gs_to_Wn_ixyz parameters. Can be a tuple, list,
+            or ndarray. Each element can be the string "sine", the string "uniform", or
+            a callable custom spacing function. Custom spacing functions are for
+            advanced users and must start at 0.0, return to 0.0 after one period of 2.0
+            * pi radians, have amplitude of 1.0, be periodic, return finite values only,
+            and accept a float as input and return a float. The custom function is
+            scaled by ampAngles_Gs_to_Wn_ixyz, shifted horizontally and vertically by
             phaseAngles_Gs_to_Wn_ixyz and the base value, with the period set by
             periodAngles_Gs_to_Wn_ixyz. The default is ("sine", "sine", "sine").
         :param phaseAngles_Gs_to_Wn_ixyz: An array-like object of numbers (int or float)
@@ -160,6 +176,7 @@ class WingMovement(_core.CoreWingMovement):
             about when angles_Gs_to_Wn_ixyz oscillates. When set to (0, 0, 0), rotation
             occurs about the leading edge root point (default behavior). The units are
             in meters. The default is (0.0, 0.0, 0.0).
+        :return: None
         """
         super().__init__(
             base_wing=base_wing,
