@@ -1800,3 +1800,163 @@ class CoreMovement:
         if self._static is None:
             self._static = self.max_period == 0
         return self._static
+
+
+class CoreUnsteadyProblem:
+    """A core class used to contain the shared foundation of UnsteadyProblem and its
+    feature variant siblings.
+
+    See UnsteadyProblem for full documentation of the shared interface.
+
+    CoreUnsteadyProblem holds the time stepping parameters, wake truncation setting,
+    result storage mode, and the mutable load result lists that the solver populates.
+    Unlike UnsteadyProblem, it does not take a Movement or pre create SteadyProblems.
+    Feature variants (FreeFlightUnsteadyProblem, AeroelasticUnsteadyProblem) extend this
+    class and provide SteadyProblems dynamically at each time step.
+    """
+
+    __slots__ = (
+        "_only_final_results",
+        "_num_steps",
+        "_delta_time",
+        "_max_wake_rows",
+        "_first_averaging_step",
+        "_first_results_step",
+        "finalForces_W",
+        "finalForceCoefficients_W",
+        "finalMoments_W_CgP1",
+        "finalMomentCoefficients_W_CgP1",
+        "finalMeanForces_W",
+        "finalMeanForceCoefficients_W",
+        "finalMeanMoments_W_CgP1",
+        "finalMeanMomentCoefficients_W_CgP1",
+        "finalRmsForces_W",
+        "finalRmsForceCoefficients_W",
+        "finalRmsMoments_W_CgP1",
+        "finalRmsMomentCoefficients_W_CgP1",
+    )
+
+    def __init__(
+        self,
+        only_final_results: bool | np.bool_,
+        delta_time: float | int,
+        num_steps: int,
+        max_wake_rows: int | None,
+        lcm_period: float | int,
+    ) -> None:
+        """The initialization method.
+
+        See UnsteadyProblem's initialization method for full parameter descriptions.
+
+        :param only_final_results: Determines whether the solver will only calculate
+            loads for the final time step or final cycle.
+        :param delta_time: The time step size in seconds. Must be positive.
+        :param num_steps: The number of time steps. Must be a positive int.
+        :param max_wake_rows: The maximum chordwise wake rows per Wing. None means no
+            truncation.
+        :param lcm_period: The least common multiple of all motion periods in seconds.
+            Used to compute the first averaging step. Must be non negative. A value of
+            0.0 indicates static motion.
+        :return: None
+        """
+        # Validate and store immutable attributes.
+        self._only_final_results: bool = _parameter_validation.boolLike_return_bool(
+            only_final_results, "only_final_results"
+        )
+
+        self._delta_time: float = _parameter_validation.number_in_range_return_float(
+            delta_time, "delta_time", min_val=0.0, min_inclusive=False
+        )
+
+        self._num_steps: int = _parameter_validation.int_in_range_return_int(
+            num_steps, "num_steps", min_val=1, min_inclusive=True
+        )
+
+        if max_wake_rows is not None:
+            max_wake_rows = _parameter_validation.int_in_range_return_int(
+                max_wake_rows,
+                "max_wake_rows",
+                min_val=1,
+                min_inclusive=True,
+            )
+        self._max_wake_rows: int | None = max_wake_rows
+
+        lcm_period = _parameter_validation.number_in_range_return_float(
+            lcm_period, "lcm_period", min_val=0.0, min_inclusive=True
+        )
+
+        # For CoreUnsteadyProblems with a static CoreMovement, we are typically
+        # interested in the final time step's forces and moments, which, assuming
+        # convergence, will be the most accurate. For CoreUnsteadyProblems with cyclic
+        # movement (e.g., flapping wings), we are typically interested in the forces
+        # and moments averaged over the last cycle simulated. Use the LCM of all motion
+        # periods to ensure we average over a complete cycle of all motions.
+        self._first_averaging_step: int
+        if lcm_period == 0:
+            self._first_averaging_step = self._num_steps - 1
+        else:
+            self._first_averaging_step = max(
+                0,
+                math.floor(self._num_steps - (lcm_period / self._delta_time)),
+            )
+
+        # If we only want to calculate forces and moments for the final cycle (for
+        # cyclic motion) or for the final time step (for static motion), set the first
+        # step to calculate results to the first averaging step. Otherwise, set it to
+        # zero, which is the first time step.
+        self._first_results_step: int
+        if self._only_final_results:
+            self._first_results_step = self._first_averaging_step
+        else:
+            self._first_results_step = 0
+
+        # Initialize empty lists to hold the final loads and load coefficients each
+        # Airplane experiences. These will only be populated if this
+        # CoreUnsteadyProblem's motion is static. These are mutable and populated by
+        # the solver.
+        self.finalForces_W: list[np.ndarray] = []
+        self.finalForceCoefficients_W: list[np.ndarray] = []
+        self.finalMoments_W_CgP1: list[np.ndarray] = []
+        self.finalMomentCoefficients_W_CgP1: list[np.ndarray] = []
+
+        # Initialize empty lists to hold the final cycle averaged loads and load
+        # coefficients each Airplane experiences. These will only be populated if this
+        # CoreUnsteadyProblem's motion is cyclic. These are mutable and populated by
+        # the solver.
+        self.finalMeanForces_W: list[np.ndarray] = []
+        self.finalMeanForceCoefficients_W: list[np.ndarray] = []
+        self.finalMeanMoments_W_CgP1: list[np.ndarray] = []
+        self.finalMeanMomentCoefficients_W_CgP1: list[np.ndarray] = []
+
+        # Initialize empty lists to hold the final cycle root mean squared loads and
+        # load coefficients each Airplane experiences. These will only be populated for
+        # variable geometry problems. These are mutable and populated by the solver.
+        self.finalRmsForces_W: list[np.ndarray] = []
+        self.finalRmsForceCoefficients_W: list[np.ndarray] = []
+        self.finalRmsMoments_W_CgP1: list[np.ndarray] = []
+        self.finalRmsMomentCoefficients_W_CgP1: list[np.ndarray] = []
+
+    # --- Immutable: read only properties ---
+    @property
+    def only_final_results(self) -> bool:
+        return self._only_final_results
+
+    @property
+    def num_steps(self) -> int:
+        return self._num_steps
+
+    @property
+    def delta_time(self) -> float:
+        return self._delta_time
+
+    @property
+    def first_averaging_step(self) -> int:
+        return self._first_averaging_step
+
+    @property
+    def first_results_step(self) -> int:
+        return self._first_results_step
+
+    @property
+    def max_wake_rows(self) -> int | None:
+        return self._max_wake_rows
