@@ -367,10 +367,11 @@ class Movement(_core.CoreMovement):
 
         # Pre-populate the lazy caches with values already computed above so
         # that accessing the inherited properties does not redundantly
-        # recompute them. Only _max_period and _static are set here because
-        # they are always needed during __init__ (via the static check).
-        # _lcm_period and _min_period remain lazy.
+        # recompute them. _max_period, _lcm_period, and _static are set here
+        # because they are always needed during __init__ (via the static
+        # check). _min_period remains lazy.
         self._max_period = _max_period
+        self._lcm_period = _lcm_period
         self._static = _static
 
         # --- Store Movement only attributes ---
