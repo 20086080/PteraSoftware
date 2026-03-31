@@ -9,6 +9,12 @@ import numpy as np
 import numpy.testing as npt
 
 # noinspection PyProtectedMember
+from pterasoftware._oscillation import (
+    oscillating_lin_at_time,
+    oscillating_sin_at_time,
+)
+
+# noinspection PyProtectedMember
 from pterasoftware._panel import Panel
 
 # noinspection PyProtectedMember
@@ -36,12 +42,6 @@ from pterasoftware.geometry.airfoil import Airfoil
 from pterasoftware.geometry.airplane import Airplane
 from pterasoftware.geometry.wing import Wing
 from pterasoftware.geometry.wing_cross_section import WingCrossSection
-
-# noinspection PyProtectedMember
-from pterasoftware.movements._functions import (
-    oscillating_lin_at_time,
-    oscillating_sin_at_time,
-)
 from pterasoftware.movements.airplane_movement import AirplaneMovement
 from pterasoftware.movements.movement import Movement
 from pterasoftware.movements.operating_point_movement import OperatingPointMovement

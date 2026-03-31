@@ -217,7 +217,7 @@ class Movement(_core.CoreMovement):
             for airplane_movement in airplane_movements:
                 _all_periods.extend(airplane_movement.all_periods)
             _all_periods.append(operating_point_movement.max_period)
-            _lcm_period = _core._lcm_multiple(_all_periods)
+            _lcm_period = _core.lcm_multiple(_all_periods)
 
         # --- Resolve num_steps ---
         if num_steps is None:
@@ -662,7 +662,7 @@ def _optimize_delta_time(
         )
     else:
         # Non static case: brute force search over integer num_steps_per_lcm_cycle.
-        lcm_period = _core._lcm_multiple(non_zero_periods)
+        lcm_period = _core.lcm_multiple(non_zero_periods)
         return _optimize_delta_time_non_static(
             airplane_movements=airplane_movements,
             operating_point_movement=operating_point_movement,
@@ -908,7 +908,7 @@ def _analytically_optimize_delta_time(
 
     min_period = min(non_zero_periods)
 
-    lcm_period = _core._lcm_multiple(non_zero_periods)
+    lcm_period = _core.lcm_multiple(non_zero_periods)
 
     # Step 1: Compute a preliminary delta_time that divides the LCM period into roughly
     # min_period / 100 sized steps. Cap at 1000 steps to prevent excessive computation

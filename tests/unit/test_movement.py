@@ -1664,7 +1664,7 @@ class TestOptimizeDeltaTimeNonStatic(unittest.TestCase):
 
     def test_returns_positive_float(self):
         """Test that _optimize_delta_time_non_static returns a positive float."""
-        from pterasoftware._core import _lcm_multiple
+        from pterasoftware._core import lcm_multiple
         from pterasoftware.movements.movement import (
             _optimize_delta_time_non_static,
         )
@@ -1680,7 +1680,7 @@ class TestOptimizeDeltaTimeNonStatic(unittest.TestCase):
         all_periods = []
         for airplane_movement in airplane_movements:
             all_periods.extend(airplane_movement.all_periods)
-        lcm_period = _lcm_multiple(all_periods)
+        lcm_period = lcm_multiple(all_periods)
 
         # Use a larger initial_delta_time to reduce the brute force search range.
         initial_delta_time = 0.1
@@ -1697,7 +1697,7 @@ class TestOptimizeDeltaTimeNonStatic(unittest.TestCase):
 
     def test_result_divides_lcm_period_evenly(self):
         """Test that _optimize_delta_time_non_static result divides LCM period evenly."""
-        from pterasoftware._core import _lcm_multiple
+        from pterasoftware._core import lcm_multiple
         from pterasoftware.movements.movement import (
             _optimize_delta_time_non_static,
         )
@@ -1713,7 +1713,7 @@ class TestOptimizeDeltaTimeNonStatic(unittest.TestCase):
         all_periods = []
         for airplane_movement in airplane_movements:
             all_periods.extend(airplane_movement.all_periods)
-        lcm_period = _lcm_multiple(all_periods)
+        lcm_period = lcm_multiple(all_periods)
 
         initial_delta_time = 0.1
 

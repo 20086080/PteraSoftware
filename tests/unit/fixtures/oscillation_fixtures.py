@@ -1,4 +1,4 @@
-"""This module contains functions to create fixtures for movements functions tests."""
+"""This module contains functions to create fixtures for oscillation tests."""
 
 import numpy as np
 

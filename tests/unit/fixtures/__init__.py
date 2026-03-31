@@ -27,14 +27,14 @@ This package contains the following modules:
     movement_fixtures.py: This module contains functions to create Movements for use
     in tests.
 
-    movements_functions_fixtures.py: This module contains functions to create
-    fixtures for movements functions tests.
-
     operating_point_fixtures.py: This module contains functions to create
     OperatingPoints for use in tests.
 
     operating_point_movement_fixtures.py: This module contains functions to create
     OperatingPointMovements for use in tests.
+
+    oscillation_fixtures.py: This module contains functions to create fixtures for
+    oscillation tests.
 
     panel_fixtures.py: This module contains functions to create Panels for use in
     tests.
@@ -67,9 +67,9 @@ import tests.unit.fixtures.geometry_fixtures
 import tests.unit.fixtures.horseshoe_vortex_fixtures
 import tests.unit.fixtures.line_vortex_fixtures
 import tests.unit.fixtures.movement_fixtures
-import tests.unit.fixtures.movements_functions_fixtures
 import tests.unit.fixtures.operating_point_fixtures
 import tests.unit.fixtures.operating_point_movement_fixtures
+import tests.unit.fixtures.oscillation_fixtures
 import tests.unit.fixtures.panel_fixtures
 import tests.unit.fixtures.parameter_validation_fixtures
 import tests.unit.fixtures.problem_fixtures

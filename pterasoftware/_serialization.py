@@ -14,6 +14,7 @@ from typing import Any
 import numpy as np
 
 from . import _logging
+from ._oscillation import oscillating_lin_at_time, oscillating_sin_at_time
 
 # This module is inherently coupled to the internals of every class in the package
 # (it reads __slots__, knows class structure, and imports all classes into its
@@ -31,9 +32,6 @@ from .geometry.airfoil import Airfoil
 from .geometry.airplane import Airplane
 from .geometry.wing import Wing
 from .geometry.wing_cross_section import WingCrossSection
-
-# noinspection PyProtectedMember
-from .movements._functions import oscillating_lin_at_time, oscillating_sin_at_time
 from .movements.airplane_movement import AirplaneMovement
 from .movements.movement import Movement
 from .movements.operating_point_movement import OperatingPointMovement

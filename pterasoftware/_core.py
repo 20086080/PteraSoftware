@@ -8,12 +8,11 @@ from collections.abc import Callable, Sequence
 
 import numpy as np
 
-from . import _parameter_validation, _transformations, geometry
+from . import _oscillation, _parameter_validation, _transformations, geometry
 from . import operating_point as operating_point_mod
-from .movements import _functions
 
 
-def _lcm(a: float, b: float) -> float:
+def lcm(a: float, b: float) -> float:
     """Calculates the least common multiple of two numbers.
 
     :param a: First number (period in seconds).
@@ -31,7 +30,7 @@ def _lcm(a: float, b: float) -> float:
     return lcm_int / multiplier
 
 
-def _lcm_multiple(periods: list[float]) -> float:
+def lcm_multiple(periods: list[float]) -> float:
     """Calculates the least common multiple of multiple periods.
 
     :param periods: A list of periods in seconds.
@@ -44,7 +43,7 @@ def _lcm_multiple(periods: list[float]) -> float:
         return 0.0
     result = non_zero_periods[0]
     for period in non_zero_periods[1:]:
-        result = _lcm(result, period)
+        result = lcm(result, period)
     return result
 
 
@@ -178,7 +177,7 @@ class CoreOperatingPointMovement:
 
         # Evaluate the oscillating function for VCg__E.
         if self._spacingVCg__E == "sine":
-            this_vCg__E = _functions.oscillating_sin_at_time(
+            this_vCg__E = _oscillation.oscillating_sin_at_time(
                 amp=self._ampVCg__E,
                 period=self._periodVCg__E,
                 phase=self._phaseVCg__E,
@@ -186,7 +185,7 @@ class CoreOperatingPointMovement:
                 time=time,
             )
         elif self._spacingVCg__E == "uniform":
-            this_vCg__E = _functions.oscillating_lin_at_time(
+            this_vCg__E = _oscillation.oscillating_lin_at_time(
                 amp=self._ampVCg__E,
                 period=self._periodVCg__E,
                 phase=self._phaseVCg__E,
@@ -194,7 +193,7 @@ class CoreOperatingPointMovement:
                 time=time,
             )
         elif callable(self._spacingVCg__E):
-            this_vCg__E = _functions.oscillating_custom_at_time(
+            this_vCg__E = _oscillation.oscillating_custom_at_time(
                 amp=self._ampVCg__E,
                 period=self._periodVCg__E,
                 phase=self._phaseVCg__E,
@@ -639,7 +638,7 @@ class CoreWingCrossSectionMovement:
             this_base = self._base_wing_cross_section.Lp_Wcsp_Lpp[dim]
 
             if this_spacing == "sine":
-                thisLp_Wcsp_Lpp[dim] = _functions.oscillating_sin_at_time(
+                thisLp_Wcsp_Lpp[dim] = _oscillation.oscillating_sin_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -647,7 +646,7 @@ class CoreWingCrossSectionMovement:
                     time=time,
                 )
             elif this_spacing == "uniform":
-                thisLp_Wcsp_Lpp[dim] = _functions.oscillating_lin_at_time(
+                thisLp_Wcsp_Lpp[dim] = _oscillation.oscillating_lin_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -655,7 +654,7 @@ class CoreWingCrossSectionMovement:
                     time=time,
                 )
             elif callable(this_spacing):
-                thisLp_Wcsp_Lpp[dim] = _functions.oscillating_custom_at_time(
+                thisLp_Wcsp_Lpp[dim] = _oscillation.oscillating_custom_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -677,24 +676,28 @@ class CoreWingCrossSectionMovement:
             this_base = self._base_wing_cross_section.angles_Wcsp_to_Wcs_ixyz[dim]
 
             if this_spacing == "sine":
-                theseAngles_Wcsp_to_Wcs_ixyz[dim] = _functions.oscillating_sin_at_time(
-                    amp=this_amp,
-                    period=this_period,
-                    phase=this_phase,
-                    base=this_base,
-                    time=time,
+                theseAngles_Wcsp_to_Wcs_ixyz[dim] = (
+                    _oscillation.oscillating_sin_at_time(
+                        amp=this_amp,
+                        period=this_period,
+                        phase=this_phase,
+                        base=this_base,
+                        time=time,
+                    )
                 )
             elif this_spacing == "uniform":
-                theseAngles_Wcsp_to_Wcs_ixyz[dim] = _functions.oscillating_lin_at_time(
-                    amp=this_amp,
-                    period=this_period,
-                    phase=this_phase,
-                    base=this_base,
-                    time=time,
+                theseAngles_Wcsp_to_Wcs_ixyz[dim] = (
+                    _oscillation.oscillating_lin_at_time(
+                        amp=this_amp,
+                        period=this_period,
+                        phase=this_phase,
+                        base=this_base,
+                        time=time,
+                    )
                 )
             elif callable(this_spacing):
                 theseAngles_Wcsp_to_Wcs_ixyz[dim] = (
-                    _functions.oscillating_custom_at_time(
+                    _oscillation.oscillating_custom_at_time(
                         amp=this_amp,
                         period=this_period,
                         phase=this_phase,
@@ -708,7 +711,7 @@ class CoreWingCrossSectionMovement:
 
         return geometry.wing_cross_section.WingCrossSection(
             airfoil=self._base_wing_cross_section.airfoil,
-            num_spanwise_panels=(self._base_wing_cross_section.num_spanwise_panels),
+            num_spanwise_panels=self._base_wing_cross_section.num_spanwise_panels,
             chord=self._base_wing_cross_section.chord,
             Lp_Wcsp_Lpp=thisLp_Wcsp_Lpp,
             angles_Wcsp_to_Wcs_ixyz=theseAngles_Wcsp_to_Wcs_ixyz,
@@ -721,7 +724,7 @@ class CoreWingCrossSectionMovement:
             control_surface_deflection=(
                 self._base_wing_cross_section.control_surface_deflection
             ),
-            spanwise_spacing=(self._base_wing_cross_section.spanwise_spacing),
+            spanwise_spacing=self._base_wing_cross_section.spanwise_spacing,
         )
 
     def generate_wing_cross_sections(
@@ -1034,7 +1037,7 @@ class CoreWingMovement:
         # Deep copy the WingCrossSectionMovements and store as tuple.
         new_movement._wing_cross_section_movements = tuple(
             copy.deepcopy(wing_cross_section_movement, memo)
-            for wing_cross_section_movement in (self._wing_cross_section_movements)
+            for wing_cross_section_movement in self._wing_cross_section_movements
         )
 
         # Copy numpy arrays and make them read only.
@@ -1207,7 +1210,7 @@ class CoreWingMovement:
             this_base = self._base_wing.Ler_Gs_Cgs[dim]
 
             if this_spacing == "sine":
-                thisLer_Gs_Cgs[dim] = _functions.oscillating_sin_at_time(
+                thisLer_Gs_Cgs[dim] = _oscillation.oscillating_sin_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -1215,7 +1218,7 @@ class CoreWingMovement:
                     time=time,
                 )
             elif this_spacing == "uniform":
-                thisLer_Gs_Cgs[dim] = _functions.oscillating_lin_at_time(
+                thisLer_Gs_Cgs[dim] = _oscillation.oscillating_lin_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -1223,7 +1226,7 @@ class CoreWingMovement:
                     time=time,
                 )
             elif callable(this_spacing):
-                thisLer_Gs_Cgs[dim] = _functions.oscillating_custom_at_time(
+                thisLer_Gs_Cgs[dim] = _oscillation.oscillating_custom_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -1245,7 +1248,7 @@ class CoreWingMovement:
             this_base = self._base_wing.angles_Gs_to_Wn_ixyz[dim]
 
             if this_spacing == "sine":
-                theseAngles_Gs_to_Wn_ixyz[dim] = _functions.oscillating_sin_at_time(
+                theseAngles_Gs_to_Wn_ixyz[dim] = _oscillation.oscillating_sin_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -1253,7 +1256,7 @@ class CoreWingMovement:
                     time=time,
                 )
             elif this_spacing == "uniform":
-                theseAngles_Gs_to_Wn_ixyz[dim] = _functions.oscillating_lin_at_time(
+                theseAngles_Gs_to_Wn_ixyz[dim] = _oscillation.oscillating_lin_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -1261,13 +1264,15 @@ class CoreWingMovement:
                     time=time,
                 )
             elif callable(this_spacing):
-                theseAngles_Gs_to_Wn_ixyz[dim] = _functions.oscillating_custom_at_time(
-                    amp=this_amp,
-                    period=this_period,
-                    phase=this_phase,
-                    base=this_base,
-                    time=time,
-                    custom_function=this_spacing,
+                theseAngles_Gs_to_Wn_ixyz[dim] = (
+                    _oscillation.oscillating_custom_at_time(
+                        amp=this_amp,
+                        period=this_period,
+                        phase=this_phase,
+                        base=this_base,
+                        time=time,
+                        custom_function=this_spacing,
+                    )
                 )
             else:
                 raise ValueError(f"Invalid spacing value: {this_spacing}")
@@ -1626,7 +1631,7 @@ class CoreAirplaneMovement:
             this_base = self._base_airplane.Cg_GP1_CgP1[dim]
 
             if this_spacing == "sine":
-                thisCg_GP1_CgP1[dim] = _functions.oscillating_sin_at_time(
+                thisCg_GP1_CgP1[dim] = _oscillation.oscillating_sin_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -1634,7 +1639,7 @@ class CoreAirplaneMovement:
                     time=time,
                 )
             elif this_spacing == "uniform":
-                thisCg_GP1_CgP1[dim] = _functions.oscillating_lin_at_time(
+                thisCg_GP1_CgP1[dim] = _oscillation.oscillating_lin_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -1642,7 +1647,7 @@ class CoreAirplaneMovement:
                     time=time,
                 )
             elif callable(this_spacing):
-                thisCg_GP1_CgP1[dim] = _functions.oscillating_custom_at_time(
+                thisCg_GP1_CgP1[dim] = _oscillation.oscillating_custom_at_time(
                     amp=this_amp,
                     period=this_period,
                     phase=this_phase,
@@ -1737,7 +1742,7 @@ class CoreAirplaneMovement:
                 this_base = self._base_airplane.Cg_GP1_CgP1[dim]
 
                 if this_spacing == "sine":
-                    thisCg_GP1_CgP1[dim] = _functions.oscillating_sin_at_time(
+                    thisCg_GP1_CgP1[dim] = _oscillation.oscillating_sin_at_time(
                         amp=this_amp,
                         period=this_period,
                         phase=this_phase,
@@ -1745,7 +1750,7 @@ class CoreAirplaneMovement:
                         time=time,
                     )
                 elif this_spacing == "uniform":
-                    thisCg_GP1_CgP1[dim] = _functions.oscillating_lin_at_time(
+                    thisCg_GP1_CgP1[dim] = _oscillation.oscillating_lin_at_time(
                         amp=this_amp,
                         period=this_period,
                         phase=this_phase,
@@ -1753,7 +1758,7 @@ class CoreAirplaneMovement:
                         time=time,
                     )
                 elif callable(this_spacing):
-                    thisCg_GP1_CgP1[dim] = _functions.oscillating_custom_at_time(
+                    thisCg_GP1_CgP1[dim] = _oscillation.oscillating_custom_at_time(
                         amp=this_amp,
                         period=this_period,
                         phase=this_phase,
@@ -1849,7 +1854,7 @@ class CoreAirplaneMovement:
                 this_base = self._base_airplane.Cg_GP1_CgP1[dim]
 
                 if this_spacing == "sine":
-                    thisCg_GP1_CgP1[dim] = _functions.oscillating_sin_at_time(
+                    thisCg_GP1_CgP1[dim] = _oscillation.oscillating_sin_at_time(
                         amp=this_amp,
                         period=this_period,
                         phase=this_phase,
@@ -1857,7 +1862,7 @@ class CoreAirplaneMovement:
                         time=time,
                     )
                 elif this_spacing == "uniform":
-                    thisCg_GP1_CgP1[dim] = _functions.oscillating_lin_at_time(
+                    thisCg_GP1_CgP1[dim] = _oscillation.oscillating_lin_at_time(
                         amp=this_amp,
                         period=this_period,
                         phase=this_phase,
@@ -1865,7 +1870,7 @@ class CoreAirplaneMovement:
                         time=time,
                     )
                 elif callable(this_spacing):
-                    thisCg_GP1_CgP1[dim] = _functions.oscillating_custom_at_time(
+                    thisCg_GP1_CgP1[dim] = _oscillation.oscillating_custom_at_time(
                         amp=this_amp,
                         period=this_period,
                         phase=this_phase,
@@ -1909,7 +1914,7 @@ class CoreAirplaneMovement:
         :return: The LCM of all geometry related periods in seconds. Returns 0.0 if all
             geometry is static.
         """
-        return _lcm_multiple(list(self.all_periods))
+        return lcm_multiple(list(self.all_periods))
 
     @staticmethod
     def _geometry_matches(
@@ -2143,7 +2148,7 @@ class CoreMovement:
             # Add the OperatingPointMovement period.
             all_periods.append(self._operating_point_movement.max_period)
 
-            self._lcm_period = _lcm_multiple(all_periods)
+            self._lcm_period = lcm_multiple(all_periods)
         return self._lcm_period
 
     @property

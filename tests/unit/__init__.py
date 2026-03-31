@@ -27,13 +27,12 @@ This package contains the following modules:
     test_movement.py: This module contains classes to test Movements and related
     functions.
 
-    test_movements_functions.py: This module contains a class to test movements
-    functions.
-
     test_operating_point.py: This module contains a class to test OperatingPoints.
 
     test_operating_point_movement.py: This module contains classes to test
     OperatingPointMovements.
+
+    test_oscillation.py: This module contains a class to test oscillation functions.
 
     test_package_init.py: This module contains tests for the pterasoftware package
     __init__.py.
@@ -75,9 +74,9 @@ import tests.unit.test_core
 import tests.unit.test_horseshoe_vortex
 import tests.unit.test_line_vortex
 import tests.unit.test_movement
-import tests.unit.test_movements_functions
 import tests.unit.test_operating_point
 import tests.unit.test_operating_point_movement
+import tests.unit.test_oscillation
 import tests.unit.test_package_init
 import tests.unit.test_panel
 import tests.unit.test_parameter_validation
