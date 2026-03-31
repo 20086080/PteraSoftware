@@ -368,9 +368,6 @@ class TestCoreMovementImmutability(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Set up test fixtures once for all immutability tests."""
-        cls.static_core_movement = (
-            core_movement_fixtures.make_static_core_movement_fixture()
-        )
         cls.basic_core_movement = (
             core_movement_fixtures.make_basic_core_movement_fixture()
         )

@@ -70,9 +70,6 @@ class TestCoreWingMovement(unittest.TestCase):
         cls.custom_spacing_angles_wing_movement = (
             core_wing_movement_fixtures.make_custom_spacing_angles_core_wing_movement_fixture()
         )
-        cls.mixed_custom_and_standard_spacing_wing_movement = (
-            core_wing_movement_fixtures.make_mixed_custom_and_standard_spacing_core_wing_movement_fixture()
-        )
         cls.rotation_point_offset_wing_movement = (
             core_wing_movement_fixtures.make_rotation_point_offset_core_wing_movement_fixture()
         )

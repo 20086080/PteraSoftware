@@ -45,9 +45,6 @@ class TestCoreAirplaneMovement(unittest.TestCase):
         cls.phase_offset_Cg_airplane_movement = (
             core_airplane_movement_fixtures.make_phase_offset_Cg_core_airplane_movement_fixture()
         )
-        cls.multiple_periods_airplane_movement = (
-            core_airplane_movement_fixtures.make_multiple_periods_core_airplane_movement_fixture()
-        )
         cls.custom_spacing_Cg_airplane_movement = (
             core_airplane_movement_fixtures.make_custom_spacing_Cg_core_airplane_movement_fixture()
         )

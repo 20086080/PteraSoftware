@@ -269,12 +269,6 @@ class TestUnsteadyProblem(unittest.TestCase):
         cls.only_final_results_unsteady_problem = (
             problem_fixtures.make_only_final_results_unsteady_problem_fixture()
         )
-        cls.static_unsteady_problem = (
-            problem_fixtures.make_static_unsteady_problem_fixture()
-        )
-        cls.cyclic_unsteady_problem = (
-            problem_fixtures.make_cyclic_unsteady_problem_fixture()
-        )
         cls.multi_airplane_unsteady_problem = (
             problem_fixtures.make_multi_airplane_unsteady_problem_fixture()
         )
