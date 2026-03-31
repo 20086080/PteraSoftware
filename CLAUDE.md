@@ -147,6 +147,7 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_core_airplane_movement.py`
         - `test_core_movement.py`
         - `test_core_operating_point_movement.py`
+        - `test_core_unsteady_problem.py`
         - `test_core_wing_cross_section_movement.py`
         - `test_core_wing_movement.py`
         - `test_horseshoe_vortex.py`

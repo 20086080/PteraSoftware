@@ -28,6 +28,9 @@ This package contains the following modules:
     test_core_operating_point_movement.py: This module contains classes to test
     CoreOperatingPointMovements.
 
+    test_core_unsteady_problem.py: This module contains classes to test
+    CoreUnsteadyProblems.
+
     test_core_wing_cross_section_movement.py: This module contains classes to test
     CoreWingCrossSectionMovements.
 
@@ -88,6 +91,7 @@ import tests.unit.test_core
 import tests.unit.test_core_airplane_movement
 import tests.unit.test_core_movement
 import tests.unit.test_core_operating_point_movement
+import tests.unit.test_core_unsteady_problem
 import tests.unit.test_core_wing_cross_section_movement
 import tests.unit.test_core_wing_movement
 import tests.unit.test_horseshoe_vortex
