@@ -151,7 +151,7 @@ class CoreOperatingPointMovement:
     # --- Immutable derived: manual lazy caching ---
     @property
     def max_period(self) -> float:
-        """CoreOperatingPointMovement's longest period of motion.
+        """The longest period of this OperatingPoint's motion.
 
         :return: The longest period in seconds. If the motion is static, this will be
             0.0.
@@ -165,8 +165,6 @@ class CoreOperatingPointMovement:
         self, step: int, delta_time: float | int
     ) -> operating_point_mod.OperatingPoint:
         """Creates the OperatingPoint at a single time step.
-
-        See OperatingPointMovement for full documentation.
 
         :param step: The time step index. Must be a non negative int.
         :param delta_time: The time between each time step in seconds. Must be a
@@ -572,9 +570,7 @@ class CoreWingCrossSectionMovement:
     # --- Immutable derived: manual lazy caching ---
     @property
     def all_periods(self) -> tuple[float, ...]:
-        """All unique non zero periods from this CoreWingCrossSectionMovement.
-
-        See WingCrossSectionMovement for full documentation.
+        """All unique non zero periods of this WingCrossSection's motion.
 
         :return: A tuple of all unique non zero periods in seconds. If the motion is
             static, this will be an empty tuple.
@@ -597,9 +593,7 @@ class CoreWingCrossSectionMovement:
 
     @property
     def max_period(self) -> float:
-        """CoreWingCrossSectionMovement's longest period of motion.
-
-        See WingCrossSectionMovement for full documentation.
+        """The longest period of this WingCrossSection's motion.
 
         :return: The longest period in seconds. If the motion is static, this will be
             0.0.
@@ -618,8 +612,6 @@ class CoreWingCrossSectionMovement:
         self, step: int, delta_time: float | int
     ) -> geometry.wing_cross_section.WingCrossSection:
         """Creates the WingCrossSection at a single time step.
-
-        See WingCrossSectionMovement for full documentation.
 
         :param step: The time step index. Must be a non negative int.
         :param delta_time: The time between each time step in seconds. Must be a
@@ -1131,10 +1123,8 @@ class CoreWingMovement:
     # --- Immutable derived: manual lazy caching ---
     @property
     def all_periods(self) -> tuple[float, ...]:
-        """All unique non zero periods from this CoreWingMovement and its
-        CoreWingCrossSectionMovements.
-
-        See WingMovement for full documentation.
+        """All unique non zero periods of motion from this Wing and each
+        WingCrossSection's movement class.
 
         :return: A tuple of all unique non zero periods in seconds. If all motion is
             static, this will be an empty tuple.
@@ -1159,9 +1149,8 @@ class CoreWingMovement:
 
     @property
     def max_period(self) -> float:
-        """CoreWingMovement's longest period of motion.
-
-        See WingMovement for full documentation.
+        """The longest period of motion across this Wing and each WingCrossSection's
+        movement class.
 
         :return: The longest period in seconds. If all the motion is static, this will
             be 0.0.
@@ -1190,8 +1179,6 @@ class CoreWingMovement:
         self, step: int, delta_time: float | int
     ) -> geometry.wing.Wing:
         """Creates the Wing at a single time step.
-
-        See WingMovement for full documentation.
 
         :param step: The time step index. Must be a non negative int.
         :param delta_time: The time between each time step in seconds. Must be a
@@ -1560,10 +1547,8 @@ class CoreAirplaneMovement:
     # --- Immutable derived: manual lazy caching ---
     @property
     def all_periods(self) -> tuple[float, ...]:
-        """All unique non zero periods from this CoreAirplaneMovement, its
-        CoreWingMovement(s), and their CoreWingCrossSectionMovements.
-
-        See AirplaneMovement for full documentation.
+        """All unique non zero periods of motion from this Airplane, each Wing's
+        movement class, and each WingCrossSection's movement class.
 
         :return: A tuple of all unique non zero periods in seconds. If all motion is
             static, this will be an empty tuple.
@@ -1585,9 +1570,8 @@ class CoreAirplaneMovement:
 
     @property
     def max_period(self) -> float:
-        """CoreAirplaneMovement's longest period of motion.
-
-        See AirplaneMovement for full documentation.
+        """The longest period of motion across this Airplane, each Wing's movement
+        class, and each WingCrossSection's movement class.
 
         :return: The longest period in seconds. If all the motion is static, this will
             be 0.0.
@@ -1611,8 +1595,6 @@ class CoreAirplaneMovement:
         self, step: int, delta_time: float | int
     ) -> geometry.airplane.Airplane:
         """Creates the Airplane at a single time step.
-
-        See AirplaneMovement for full documentation.
 
         :param step: The time step index. Must be a non negative int.
         :param delta_time: The time between each time step in seconds. Must be a
@@ -2153,9 +2135,9 @@ class CoreMovement:
 
     @property
     def max_period(self) -> float:
-        """The longest period of motion of CoreMovement's sub movement objects, the
-        motion(s) of its sub sub movement object(s), and the motions of its sub sub sub
-        movement objects.
+        """The longest period of motion across each Airplane's movement class, each
+        Wing's movement class, each WingCrossSection's movement class, and the
+        OperatingPoint's movement class.
 
         For cycle averaging calculations, lcm_period should be used instead of
         max_period to ensure all motions complete an integer number of cycles.
@@ -2182,9 +2164,9 @@ class CoreMovement:
 
     @property
     def min_period(self) -> float:
-        """The shortest non zero period of motion of CoreMovement's sub movement
-        objects, the motion(s) of its sub sub movement object(s), and the motions of its
-        sub sub sub movement objects.
+        """The shortest non zero period of motion across each Airplane's movement class,
+        each Wing's movement class, each WingCrossSection's movement class, and the
+        OperatingPoint's movement class.
 
         :return: The shortest non zero period in seconds. If all the motion is static,
             this will be 0.0.
@@ -2210,12 +2192,11 @@ class CoreMovement:
 
     @property
     def static(self) -> bool:
-        """Flags if CoreMovement's sub movement objects, its sub sub movement object(s),
-        and its sub sub sub movement objects all represent no motion.
+        """Flags if all motion across each Airplane's movement class, each Wing's
+        movement class, each WingCrossSection's movement class, and the OperatingPoint's
+        movement class is static.
 
-        :return: True if CoreMovement's sub movement objects, its sub sub movement
-            object(s), and its sub sub sub movement objects all represent no motion.
-            False otherwise.
+        :return: True if all motion is static. False otherwise.
         """
         if self._static is None:
             self._static = self.max_period == 0

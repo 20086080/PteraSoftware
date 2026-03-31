@@ -420,13 +420,13 @@ def __init__(
 
 ### Public Subclasses of Private Parents
 
-When a public class inherits from a private parent (a class in an underscore prefixed module like `_core.py`), the conventions above are inverted. The public child keeps a self-contained docstring that documents inherited methods and parameters as its own. The private parent uses a minimal docstring that references the public child.
+When a public class inherits from a private parent (a class in an underscore prefixed module like `_core.py`), the conventions above are inverted. The public child keeps a self-contained docstring that documents inherited methods and parameters as its own. The private parent's class docstring and `__init__` docstring use minimal descriptions that reference the public child. However, public methods and properties on the private parent must have self-contained docstrings because they appear on the public child's RTD page via inheritance (see "Private Parent Method and Property Docstrings" below).
 
 This is because:
 
-1. The ReadTheDocs site is purely public API. Private parents are excluded from the generated documentation, so inherited methods would not appear on the public child's page unless the child documents them itself.
+1. The ReadTheDocs site is purely public API. Private parents are excluded from the generated documentation, but inherited public methods and properties DO appear on the public child's page.
 2. Users should never need to navigate to a private module to understand the public API.
-3. Contributors reading the private parent's source code can easily navigate to the public child for full documentation.
+3. Contributors reading the private parent's source code can easily navigate to the public child for full documentation of the class and `__init__`.
 
 #### Private Parent Class Docstring Template
 
@@ -518,6 +518,49 @@ def __init__(
 
 - Document all parameters fully (inherited and new)
 - Do not reference the private parent
+
+#### Private Parent Method and Property Docstrings
+
+Public methods and properties defined on a private parent are inherited by all public children and appear on their RTD pages. Their docstrings must therefore be self-contained and written for a public audience, unlike the class and `__init__` docstrings which can defer to the public child.
+
+**Rules:**
+
+1. **No deferral language.** Do not write "see child class for full details" or similar, since the docstring IS the documentation the user sees on the child's page.
+2. **No references to specific sibling types.** A `CoreWingMovement` method docstring must not mention `WingCrossSectionMovement` or `FreeFlightWingCrossSectionMovement`, because the docstring appears on all siblings' RTD pages. Instead, reference the universal geometry class that the movement class manages (e.g., `WingCrossSection`), since geometry classes have no feature subclasses and are always correct.
+3. **Use "each X's movement class" framing** when referring to child movement objects. For example, write "each `WingCrossSection`'s movement class" rather than "its `WingCrossSection`s' movement classes". This avoids implying that a movement class owns geometry objects (movement classes own other movement classes; geometry classes own geometry classes).
+
+**Example (correct):**
+
+```python
+# On CoreWingMovement
+@property
+def wing_cross_section_movements(self) -> tuple:
+    """The movement classes for each of this Wing's WingCrossSections.
+
+    :return: A tuple of movement classes, one per WingCrossSection.
+    """
+```
+
+**Example (incorrect):**
+
+```python
+# References a specific sibling type
+@property
+def wing_cross_section_movements(self) -> tuple:
+    """The WingCrossSectionMovements for this WingMovement.
+    ...
+    """
+
+# Uses deferral language
+def generate_wing_at_time_step(self, ...) -> Wing:
+    """Generates a Wing at a single time step.
+
+    See WingMovement for full details.
+    ...
+    """
+```
+
+**Scope:** This rule applies only to public methods and properties on core classes (those that will be inherited and displayed on RTD). Private helper methods (underscore prefixed) on core classes are internal and can use any convenient wording.
 
 #### Multiple Public Siblings
 
