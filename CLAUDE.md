@@ -131,6 +131,7 @@ Requires Python 3.11, but active development is done in 3.13
             - `operating_point_fixtures.py`
             - `operating_point_movement_fixtures.py`
             - `problem_fixtures.py`
+            - `core_airplane_movement_fixtures.py`
             - `core_wing_cross_section_movement_fixtures.py`
             - `core_wing_movement_fixtures.py`
             - `ring_vortex_fixtures.py`
@@ -153,6 +154,7 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_serialization.py`
         - `test_slots.py`
         - `test_transformations.py`
+        - `test_core_airplane_movement.py`
         - `test_core_wing_cross_section_movement.py`
         - `test_core_wing_movement.py`
         - `test_wing.py`

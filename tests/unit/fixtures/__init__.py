@@ -15,6 +15,9 @@ This package contains the following modules:
     airplane_movement_fixtures.py: This module contains functions to create
     AirplaneMovements for use in tests.
 
+    core_airplane_movement_fixtures.py: This module contains functions to create
+    CoreAirplaneMovements for use in tests.
+
     core_wing_cross_section_movement_fixtures.py: This module contains functions to
     create CoreWingCrossSectionMovements for use in tests.
 
@@ -69,6 +72,7 @@ This package contains the following modules:
 
 import tests.unit.fixtures.aerodynamics_functions_fixtures
 import tests.unit.fixtures.airplane_movement_fixtures
+import tests.unit.fixtures.core_airplane_movement_fixtures
 import tests.unit.fixtures.core_wing_cross_section_movement_fixtures
 import tests.unit.fixtures.core_wing_movement_fixtures
 import tests.unit.fixtures.geometry_fixtures
