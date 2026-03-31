@@ -38,6 +38,9 @@ This package contains the following modules:
 
     test_operating_point.py: This module contains a class to test OperatingPoints.
 
+    test_core_operating_point_movement.py: This module contains classes to test
+    CoreOperatingPointMovements.
+
     test_operating_point_movement.py: This module contains classes to test
     OperatingPointMovements.
 
@@ -81,6 +84,7 @@ import tests.unit.test_airplane
 import tests.unit.test_airplane_movement
 import tests.unit.test_core
 import tests.unit.test_core_airplane_movement
+import tests.unit.test_core_operating_point_movement
 import tests.unit.test_core_wing_cross_section_movement
 import tests.unit.test_core_wing_movement
 import tests.unit.test_horseshoe_vortex

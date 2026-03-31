@@ -39,6 +39,9 @@ This package contains the following modules:
     operating_point_fixtures.py: This module contains functions to create
     OperatingPoints for use in tests.
 
+    core_operating_point_movement_fixtures.py: This module contains functions to
+    create CoreOperatingPointMovements for use in tests.
+
     operating_point_movement_fixtures.py: This module contains functions to create
     OperatingPointMovements for use in tests.
 
@@ -73,6 +76,7 @@ This package contains the following modules:
 import tests.unit.fixtures.aerodynamics_functions_fixtures
 import tests.unit.fixtures.airplane_movement_fixtures
 import tests.unit.fixtures.core_airplane_movement_fixtures
+import tests.unit.fixtures.core_operating_point_movement_fixtures
 import tests.unit.fixtures.core_wing_cross_section_movement_fixtures
 import tests.unit.fixtures.core_wing_movement_fixtures
 import tests.unit.fixtures.geometry_fixtures

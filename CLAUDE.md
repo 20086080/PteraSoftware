@@ -129,6 +129,7 @@ Requires Python 3.11, but active development is done in 3.13
             - `movement_fixtures.py`
             - `movement_function_fixtures.py`
             - `operating_point_fixtures.py`
+            - `core_operating_point_movement_fixtures.py`
             - `operating_point_movement_fixtures.py`
             - `problem_fixtures.py`
             - `core_airplane_movement_fixtures.py`
@@ -146,6 +147,7 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_movement.py`
         - `test_movement_functions.py`
         - `test_operating_point.py`
+        - `test_core_operating_point_movement.py`
         - `test_operating_point_movement.py`
         - `test_package_init.py`
         - `test_panel.py`
