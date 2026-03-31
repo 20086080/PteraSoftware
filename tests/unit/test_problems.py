@@ -1,6 +1,5 @@
 """This module contains classes to test SteadyProblems and UnsteadyProblems."""
 
-import math
 import unittest
 
 import numpy as np

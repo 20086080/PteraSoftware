@@ -2,7 +2,8 @@
 
 import numpy as np
 
-import pterasoftware as ps
+# noinspection PyProtectedMember
+from pterasoftware._core import CoreAirplaneMovement
 
 from . import core_wing_movement_fixtures, geometry_fixtures
 
@@ -21,7 +22,7 @@ def make_static_core_airplane_movement_fixture():
     ]
 
     # Create the static CoreAirplaneMovement.
-    static_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    static_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.0, 0.0, 0.0),
@@ -48,7 +49,7 @@ def make_basic_core_airplane_movement_fixture():
     ]
 
     # Create the basic CoreAirplaneMovement.
-    basic_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    basic_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.0, 0.0, 0.0),
@@ -75,7 +76,7 @@ def make_sine_spacing_Cg_core_airplane_movement_fixture():
     ]
 
     # Create the CoreAirplaneMovement with sine spacing for Cg_GP1_CgP1.
-    sine_spacing_Cg_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    sine_spacing_Cg_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.1, 0.0, 0.0),
@@ -102,7 +103,7 @@ def make_uniform_spacing_Cg_core_airplane_movement_fixture():
     ]
 
     # Create the CoreAirplaneMovement with uniform spacing for Cg_GP1_CgP1.
-    uniform_spacing_Cg_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    uniform_spacing_Cg_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.1, 0.0, 0.0),
@@ -129,7 +130,7 @@ def make_mixed_spacing_Cg_core_airplane_movement_fixture():
     ]
 
     # Create the CoreAirplaneMovement with mixed spacing for Cg_GP1_CgP1.
-    mixed_spacing_Cg_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    mixed_spacing_Cg_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.1, 0.08, 0.06),
@@ -155,7 +156,7 @@ def make_Cg_core_airplane_movement_fixture():
     ]
 
     # Create the moving Cg CoreAirplaneMovement.
-    Cg_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    Cg_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.08, 0.06, 0.05),
@@ -182,7 +183,7 @@ def make_phase_offset_Cg_core_airplane_movement_fixture():
     ]
 
     # Create the phase-offset CoreAirplaneMovement.
-    phase_offset_Cg_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    phase_offset_Cg_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.08, 0.06, 0.05),
@@ -209,7 +210,7 @@ def make_multiple_periods_core_airplane_movement_fixture():
     ]
 
     # Create the multiple-periods CoreAirplaneMovement.
-    multiple_periods_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    multiple_periods_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.06, 0.05, 0.04),
@@ -252,8 +253,8 @@ def make_custom_spacing_Cg_core_airplane_movement_fixture():
             np.sin(x) + (1.0 / 3.0) * np.sin(3.0 * x)
         )
 
-    # Create the custom-spacing CoreAirplaneMovement.
-    custom_spacing_Cg_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    # Create the custom spacing CoreAirplaneMovement.
+    custom_spacing_Cg_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.08, 0.0, 0.0),
@@ -295,7 +296,7 @@ def make_mixed_custom_and_standard_spacing_core_airplane_movement_fixture():
 
     # Create the mixed-spacing CoreAirplaneMovement.
     mixed_custom_and_standard_spacing_core_airplane_movement_fixture = (
-        ps._core.CoreAirplaneMovement(
+        CoreAirplaneMovement(
             base_airplane=base_airplane,
             wing_movements=wing_movements,
             ampCg_GP1_CgP1=(0.06, 0.05, 0.04),
@@ -326,7 +327,7 @@ def make_periodic_geometry_core_airplane_movement_fixture():
     ]
 
     # Create the periodic geometry CoreAirplaneMovement.
-    periodic_geometry_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    periodic_geometry_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.0, 0.0, 0.0),
@@ -356,7 +357,7 @@ def make_angles_only_core_airplane_movement_fixture():
     ]
 
     # Create the angles-only CoreAirplaneMovement.
-    angles_only_core_airplane_movement_fixture = ps._core.CoreAirplaneMovement(
+    angles_only_core_airplane_movement_fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.0, 0.0, 0.0),
@@ -384,7 +385,7 @@ def make_2_chordwise_panels_core_airplane_movement_fixture():
     ]
 
     # Create the CoreAirplaneMovement.
-    fixture = ps._core.CoreAirplaneMovement(
+    fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.0, 0.0, 0.0),
@@ -411,7 +412,7 @@ def make_3_chordwise_panels_core_airplane_movement_fixture():
     ]
 
     # Create the CoreAirplaneMovement.
-    fixture = ps._core.CoreAirplaneMovement(
+    fixture = CoreAirplaneMovement(
         base_airplane=base_airplane,
         wing_movements=wing_movements,
         ampCg_GP1_CgP1=(0.0, 0.0, 0.0),

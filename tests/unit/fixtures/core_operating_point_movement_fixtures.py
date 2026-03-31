@@ -3,7 +3,8 @@ tests."""
 
 import numpy as np
 
-import pterasoftware as ps
+# noinspection PyProtectedMember
+from pterasoftware._core import CoreOperatingPointMovement
 
 from . import operating_point_fixtures
 
@@ -19,7 +20,7 @@ def make_static_core_operating_point_movement_fixture():
     base_operating_point = operating_point_fixtures.make_basic_operating_point_fixture()
 
     # Create the static CoreOperatingPointMovement.
-    static_core_operating_point_movement_fixture = ps._core.CoreOperatingPointMovement(
+    static_core_operating_point_movement_fixture = CoreOperatingPointMovement(
         base_operating_point=base_operating_point,
         ampVCg__E=0.0,
         periodVCg__E=0.0,
@@ -44,14 +45,12 @@ def make_sine_spacing_core_operating_point_movement_fixture():
     )
 
     # Create the sine spacing CoreOperatingPointMovement.
-    sine_spacing_core_operating_point_movement_fixture = (
-        ps._core.CoreOperatingPointMovement(
-            base_operating_point=base_operating_point,
-            ampVCg__E=10.0,
-            periodVCg__E=1.0,
-            spacingVCg__E="sine",
-            phaseVCg__E=0.0,
-        )
+    sine_spacing_core_operating_point_movement_fixture = CoreOperatingPointMovement(
+        base_operating_point=base_operating_point,
+        ampVCg__E=10.0,
+        periodVCg__E=1.0,
+        spacingVCg__E="sine",
+        phaseVCg__E=0.0,
     )
 
     # Return the CoreOperatingPointMovement fixture.
@@ -71,14 +70,12 @@ def make_uniform_spacing_core_operating_point_movement_fixture():
     )
 
     # Create the uniform spacing CoreOperatingPointMovement.
-    uniform_spacing_core_operating_point_movement_fixture = (
-        ps._core.CoreOperatingPointMovement(
-            base_operating_point=base_operating_point,
-            ampVCg__E=10.0,
-            periodVCg__E=1.0,
-            spacingVCg__E="uniform",
-            phaseVCg__E=0.0,
-        )
+    uniform_spacing_core_operating_point_movement_fixture = CoreOperatingPointMovement(
+        base_operating_point=base_operating_point,
+        ampVCg__E=10.0,
+        periodVCg__E=1.0,
+        spacingVCg__E="uniform",
+        phaseVCg__E=0.0,
     )
 
     # Return the CoreOperatingPointMovement fixture.
@@ -98,14 +95,12 @@ def make_phase_offset_core_operating_point_movement_fixture():
     )
 
     # Create the phase offset CoreOperatingPointMovement.
-    phase_offset_core_operating_point_movement_fixture = (
-        ps._core.CoreOperatingPointMovement(
-            base_operating_point=base_operating_point,
-            ampVCg__E=20.0,
-            periodVCg__E=2.0,
-            spacingVCg__E="sine",
-            phaseVCg__E=90.0,
-        )
+    phase_offset_core_operating_point_movement_fixture = CoreOperatingPointMovement(
+        base_operating_point=base_operating_point,
+        ampVCg__E=20.0,
+        periodVCg__E=2.0,
+        spacingVCg__E="sine",
+        phaseVCg__E=90.0,
     )
 
     # Return the CoreOperatingPointMovement fixture.
@@ -142,14 +137,12 @@ def make_custom_spacing_core_operating_point_movement_fixture():
         )
 
     # Create the custom spacing CoreOperatingPointMovement.
-    custom_spacing_core_operating_point_movement_fixture = (
-        ps._core.CoreOperatingPointMovement(
-            base_operating_point=base_operating_point,
-            ampVCg__E=15.0,
-            periodVCg__E=1.5,
-            spacingVCg__E=custom_harmonic,
-            phaseVCg__E=0.0,
-        )
+    custom_spacing_core_operating_point_movement_fixture = CoreOperatingPointMovement(
+        base_operating_point=base_operating_point,
+        ampVCg__E=15.0,
+        periodVCg__E=1.5,
+        spacingVCg__E=custom_harmonic,
+        phaseVCg__E=0.0,
     )
 
     # Return the CoreOperatingPointMovement fixture.
@@ -167,7 +160,7 @@ def make_basic_core_operating_point_movement_fixture():
     base_operating_point = operating_point_fixtures.make_basic_operating_point_fixture()
 
     # Create the basic CoreOperatingPointMovement.
-    basic_core_operating_point_movement_fixture = ps._core.CoreOperatingPointMovement(
+    basic_core_operating_point_movement_fixture = CoreOperatingPointMovement(
         base_operating_point=base_operating_point,
         ampVCg__E=5.0,
         periodVCg__E=2.0,
@@ -192,14 +185,12 @@ def make_large_amplitude_core_operating_point_movement_fixture():
     )
 
     # Create the large amplitude CoreOperatingPointMovement.
-    large_amplitude_core_operating_point_movement_fixture = (
-        ps._core.CoreOperatingPointMovement(
-            base_operating_point=base_operating_point,
-            ampVCg__E=50.0,
-            periodVCg__E=1.0,
-            spacingVCg__E="sine",
-            phaseVCg__E=0.0,
-        )
+    large_amplitude_core_operating_point_movement_fixture = CoreOperatingPointMovement(
+        base_operating_point=base_operating_point,
+        ampVCg__E=50.0,
+        periodVCg__E=1.0,
+        spacingVCg__E="sine",
+        phaseVCg__E=0.0,
     )
 
     # Return the CoreOperatingPointMovement fixture.
@@ -217,14 +208,12 @@ def make_long_period_core_operating_point_movement_fixture():
     base_operating_point = operating_point_fixtures.make_basic_operating_point_fixture()
 
     # Create the long period CoreOperatingPointMovement.
-    long_period_core_operating_point_movement_fixture = (
-        ps._core.CoreOperatingPointMovement(
-            base_operating_point=base_operating_point,
-            ampVCg__E=3.0,
-            periodVCg__E=10.0,
-            spacingVCg__E="sine",
-            phaseVCg__E=0.0,
-        )
+    long_period_core_operating_point_movement_fixture = CoreOperatingPointMovement(
+        base_operating_point=base_operating_point,
+        ampVCg__E=3.0,
+        periodVCg__E=10.0,
+        spacingVCg__E="sine",
+        phaseVCg__E=0.0,
     )
 
     # Return the CoreOperatingPointMovement fixture.

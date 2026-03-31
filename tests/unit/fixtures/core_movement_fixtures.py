@@ -1,6 +1,7 @@
 """This module contains functions to create CoreMovements for use in tests."""
 
-import pterasoftware as ps
+# noinspection PyProtectedMember
+from pterasoftware._core import CoreMovement
 
 from . import core_airplane_movement_fixtures, core_operating_point_movement_fixtures
 
@@ -20,7 +21,7 @@ def make_static_core_movement_fixture():
     )
 
     # Create the static CoreMovement.
-    static_core_movement_fixture = ps._core.CoreMovement(
+    static_core_movement_fixture = CoreMovement(
         airplane_movements=airplane_movements,
         operating_point_movement=operating_point_movement,
         delta_time=0.01,
@@ -46,7 +47,7 @@ def make_basic_core_movement_fixture():
     )
 
     # Create the basic CoreMovement.
-    basic_core_movement_fixture = ps._core.CoreMovement(
+    basic_core_movement_fixture = CoreMovement(
         airplane_movements=airplane_movements,
         operating_point_movement=operating_point_movement,
         delta_time=0.01,

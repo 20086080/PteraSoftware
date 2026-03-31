@@ -3,7 +3,8 @@ tests."""
 
 import numpy as np
 
-import pterasoftware as ps
+# noinspection PyProtectedMember
+from pterasoftware._core import CoreWingCrossSectionMovement
 
 from . import geometry_fixtures
 
@@ -20,7 +21,7 @@ def make_sine_spacing_Lp_core_wing_cross_section_movement_fixture():
 
     # Create the CoreWingCrossSectionMovement with sine spacing.
     sine_spacing_Lp_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampLp_Wcsp_Lpp=(1.0, 0.0, 0.0),
             periodLp_Wcsp_Lpp=(1.0, 0.0, 0.0),
@@ -46,7 +47,7 @@ def make_uniform_spacing_Lp_core_wing_cross_section_movement_fixture():
 
     # Create the CoreWingCrossSectionMovement with uniform spacing.
     uniform_spacing_Lp_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampLp_Wcsp_Lpp=(1.0, 0.0, 0.0),
             periodLp_Wcsp_Lpp=(1.0, 0.0, 0.0),
@@ -72,7 +73,7 @@ def make_mixed_spacing_Lp_core_wing_cross_section_movement_fixture():
 
     # Create the CoreWingCrossSectionMovement with mixed spacing.
     mixed_spacing_Lp_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampLp_Wcsp_Lpp=(1.0, 1.5, 0.5),
             periodLp_Wcsp_Lpp=(1.0, 1.0, 1.0),
@@ -98,7 +99,7 @@ def make_sine_spacing_angles_core_wing_cross_section_movement_fixture():
 
     # Create the CoreWingCrossSectionMovement with sine spacing for angles.
     sine_spacing_angles_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampAngles_Wcsp_to_Wcs_ixyz=(10.0, 0.0, 0.0),
             periodAngles_Wcsp_to_Wcs_ixyz=(1.0, 0.0, 0.0),
@@ -124,7 +125,7 @@ def make_uniform_spacing_angles_core_wing_cross_section_movement_fixture():
 
     # Create the CoreWingCrossSectionMovement with uniform spacing for angles.
     uniform_spacing_angles_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampAngles_Wcsp_to_Wcs_ixyz=(10.0, 0.0, 0.0),
             periodAngles_Wcsp_to_Wcs_ixyz=(1.0, 0.0, 0.0),
@@ -150,7 +151,7 @@ def make_mixed_spacing_angles_core_wing_cross_section_movement_fixture():
 
     # Create the CoreWingCrossSectionMovement with mixed spacing for angles.
     mixed_spacing_angles_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampAngles_Wcsp_to_Wcs_ixyz=(10.0, 20.0, 5.0),
             periodAngles_Wcsp_to_Wcs_ixyz=(1.0, 1.0, 1.0),
@@ -174,18 +175,16 @@ def make_static_core_wing_cross_section_movement_fixture():
     base_wing_cross_section = geometry_fixtures.make_root_wing_cross_section_fixture()
 
     # Create the static CoreWingCrossSectionMovement.
-    static_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
-            base_wing_cross_section=base_wing_cross_section,
-            ampLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            periodLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
-            phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            ampAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-            periodAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-            spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
-            phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-        )
+    static_core_wing_cross_section_movement_fixture = CoreWingCrossSectionMovement(
+        base_wing_cross_section=base_wing_cross_section,
+        ampLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        periodLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
+        phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        ampAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
+        periodAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
+        spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
+        phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
     )
 
     # Return the CoreWingCrossSectionMovement fixture.
@@ -204,18 +203,16 @@ def make_static_tip_core_wing_cross_section_movement_fixture():
     base_wing_cross_section = geometry_fixtures.make_tip_wing_cross_section_fixture()
 
     # Create the static tip CoreWingCrossSectionMovement.
-    static_tip_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
-            base_wing_cross_section=base_wing_cross_section,
-            ampLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            periodLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
-            phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            ampAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-            periodAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-            spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
-            phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-        )
+    static_tip_core_wing_cross_section_movement_fixture = CoreWingCrossSectionMovement(
+        base_wing_cross_section=base_wing_cross_section,
+        ampLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        periodLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
+        phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        ampAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
+        periodAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
+        spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
+        phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
     )
 
     # Return the CoreWingCrossSectionMovement fixture.
@@ -234,18 +231,16 @@ def make_basic_core_wing_cross_section_movement_fixture():
     base_wing_cross_section = geometry_fixtures.make_tip_wing_cross_section_fixture()
 
     # Create the basic CoreWingCrossSectionMovement.
-    basic_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
-            base_wing_cross_section=base_wing_cross_section,
-            ampLp_Wcsp_Lpp=(0.4, 0.3, 0.15),
-            periodLp_Wcsp_Lpp=(2.0, 2.0, 2.0),
-            spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
-            phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            ampAngles_Wcsp_to_Wcs_ixyz=(15.0, 10.0, 5.0),
-            periodAngles_Wcsp_to_Wcs_ixyz=(2.0, 2.0, 2.0),
-            spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
-            phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-        )
+    basic_core_wing_cross_section_movement_fixture = CoreWingCrossSectionMovement(
+        base_wing_cross_section=base_wing_cross_section,
+        ampLp_Wcsp_Lpp=(0.4, 0.3, 0.15),
+        periodLp_Wcsp_Lpp=(2.0, 2.0, 2.0),
+        spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
+        phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        ampAngles_Wcsp_to_Wcs_ixyz=(15.0, 10.0, 5.0),
+        periodAngles_Wcsp_to_Wcs_ixyz=(2.0, 2.0, 2.0),
+        spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
+        phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
     )
 
     # Return the CoreWingCrossSectionMovement fixture.
@@ -264,18 +259,16 @@ def make_Lp_only_core_wing_cross_section_movement_fixture():
     base_wing_cross_section = geometry_fixtures.make_tip_wing_cross_section_fixture()
 
     # Create the Lp-only CoreWingCrossSectionMovement.
-    Lp_only_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
-            base_wing_cross_section=base_wing_cross_section,
-            ampLp_Wcsp_Lpp=(0.4, 0.5, 0.15),
-            periodLp_Wcsp_Lpp=(1.5, 1.5, 1.5),
-            spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
-            phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            ampAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-            periodAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-            spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
-            phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-        )
+    Lp_only_core_wing_cross_section_movement_fixture = CoreWingCrossSectionMovement(
+        base_wing_cross_section=base_wing_cross_section,
+        ampLp_Wcsp_Lpp=(0.4, 0.5, 0.15),
+        periodLp_Wcsp_Lpp=(1.5, 1.5, 1.5),
+        spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
+        phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        ampAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
+        periodAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
+        spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
+        phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
     )
 
     # Return the CoreWingCrossSectionMovement fixture.
@@ -294,18 +287,16 @@ def make_angles_only_core_wing_cross_section_movement_fixture():
     base_wing_cross_section = geometry_fixtures.make_root_wing_cross_section_fixture()
 
     # Create the angles-only CoreWingCrossSectionMovement.
-    angles_only_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
-            base_wing_cross_section=base_wing_cross_section,
-            ampLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            periodLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
-            phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
-            ampAngles_Wcsp_to_Wcs_ixyz=(20.0, 15.0, 10.0),
-            periodAngles_Wcsp_to_Wcs_ixyz=(1.5, 1.5, 1.5),
-            spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
-            phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
-        )
+    angles_only_core_wing_cross_section_movement_fixture = CoreWingCrossSectionMovement(
+        base_wing_cross_section=base_wing_cross_section,
+        ampLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        periodLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        spacingLp_Wcsp_Lpp=("sine", "sine", "sine"),
+        phaseLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+        ampAngles_Wcsp_to_Wcs_ixyz=(20.0, 15.0, 10.0),
+        periodAngles_Wcsp_to_Wcs_ixyz=(1.5, 1.5, 1.5),
+        spacingAngles_Wcsp_to_Wcs_ixyz=("sine", "sine", "sine"),
+        phaseAngles_Wcsp_to_Wcs_ixyz=(0.0, 0.0, 0.0),
     )
 
     # Return the CoreWingCrossSectionMovement fixture.
@@ -325,7 +316,7 @@ def make_phase_offset_Lp_core_wing_cross_section_movement_fixture():
 
     # Create the phase-offset CoreWingCrossSectionMovement.
     phase_offset_Lp_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampLp_Wcsp_Lpp=(0.4, 0.3, 0.15),
             periodLp_Wcsp_Lpp=(1.0, 1.0, 1.0),
@@ -355,7 +346,7 @@ def make_phase_offset_angles_core_wing_cross_section_movement_fixture():
 
     # Create the phase-offset CoreWingCrossSectionMovement.
     phase_offset_angles_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
             periodLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
@@ -385,7 +376,7 @@ def make_multiple_periods_core_wing_cross_section_movement_fixture():
 
     # Create the multiple-periods CoreWingCrossSectionMovement.
     multiple_periods_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampLp_Wcsp_Lpp=(0.4, 0.4, 0.15),
             periodLp_Wcsp_Lpp=(1.0, 2.0, 3.0),
@@ -432,7 +423,7 @@ def make_custom_spacing_Lp_core_wing_cross_section_movement_fixture():
 
     # Create the custom-spacing CoreWingCrossSectionMovement.
     custom_spacing_Lp_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampLp_Wcsp_Lpp=(0.4, 0.0, 0.0),
             periodLp_Wcsp_Lpp=(1.0, 0.0, 0.0),
@@ -479,7 +470,7 @@ def make_custom_spacing_angles_core_wing_cross_section_movement_fixture():
 
     # Create the custom-spacing CoreWingCrossSectionMovement.
     custom_spacing_angles_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
             periodLp_Wcsp_Lpp=(0.0, 0.0, 0.0),
@@ -524,7 +515,7 @@ def make_mixed_custom_and_standard_spacing_core_wing_cross_section_movement_fixt
 
     # Create the mixed-spacing CoreWingCrossSectionMovement.
     mixed_custom_and_standard_spacing_core_wing_cross_section_movement_fixture = (
-        ps._core.CoreWingCrossSectionMovement(
+        CoreWingCrossSectionMovement(
             base_wing_cross_section=base_wing_cross_section,
             ampLp_Wcsp_Lpp=(0.4, 0.3, 0.15),
             periodLp_Wcsp_Lpp=(1.0, 1.0, 1.0),

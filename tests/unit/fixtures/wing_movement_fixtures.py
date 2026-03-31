@@ -1,7 +1,5 @@
 """This module contains functions to create WingMovements for use in tests."""
 
-import numpy as np
-
 import pterasoftware as ps
 
 from . import geometry_fixtures, wing_cross_section_movement_fixtures

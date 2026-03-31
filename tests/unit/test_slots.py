@@ -9,7 +9,6 @@ import numpy.testing as npt
 import pterasoftware as ps
 
 # noinspection PyProtectedMember
-# noinspection PyProtectedMember
 from pterasoftware import _core, _panel
 
 # noinspection PyProtectedMember
@@ -1427,6 +1426,7 @@ class TestCoreUnsteadyProblemSlots(unittest.TestCase):
     def test_dynamic_attribute_raises(self):
         """Test that dynamic attribute assignment raises AttributeError."""
         with self.assertRaises(AttributeError):
+            # noinspection PyDunderSlots
             self.core_unsteady_problem.nonexistent_attribute = 42
 
     def test_property_access(self):

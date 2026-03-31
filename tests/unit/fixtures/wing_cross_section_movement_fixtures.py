@@ -1,8 +1,6 @@
 """This module contains functions to create WingCrossSectionMovements for use in
 tests."""
 
-import numpy as np
-
 import pterasoftware as ps
 
 from . import geometry_fixtures
