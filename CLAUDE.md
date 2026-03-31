@@ -124,17 +124,18 @@ Requires Python 3.11, but active development is done in 3.13
         - `fixtures/`: Fixtures for unit tests
             - `aerodynamics_function_fixtures.py`
             - `airplane_movement_fixtures.py`
+            - `core_airplane_movement_fixtures.py`
+            - `core_movement_fixtures.py`
+            - `core_operating_point_movement_fixtures.py`
+            - `core_wing_cross_section_movement_fixtures.py`
+            - `core_wing_movement_fixtures.py`
             - `geometry_fixtures.py`
             - `horseshoe_fixtures.py`
             - `movement_fixtures.py`
             - `movement_function_fixtures.py`
             - `operating_point_fixtures.py`
-            - `core_operating_point_movement_fixtures.py`
             - `operating_point_movement_fixtures.py`
             - `problem_fixtures.py`
-            - `core_airplane_movement_fixtures.py`
-            - `core_wing_cross_section_movement_fixtures.py`
-            - `core_wing_movement_fixtures.py`
             - `ring_vortex_fixtures.py`
             - `serialization_fixtures.py`
             - `wing_cross_section_movement_fixtures.py`
@@ -143,11 +144,15 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_airfoil.py`
         - `test_airplane.py`
         - `test_airplane_movement.py`
+        - `test_core_airplane_movement.py`
+        - `test_core_movement.py`
+        - `test_core_operating_point_movement.py`
+        - `test_core_wing_cross_section_movement.py`
+        - `test_core_wing_movement.py`
         - `test_horseshoe_vortex.py`
         - `test_movement.py`
         - `test_movement_functions.py`
         - `test_operating_point.py`
-        - `test_core_operating_point_movement.py`
         - `test_operating_point_movement.py`
         - `test_package_init.py`
         - `test_panel.py`
@@ -156,9 +161,6 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_serialization.py`
         - `test_slots.py`
         - `test_transformations.py`
-        - `test_core_airplane_movement.py`
-        - `test_core_wing_cross_section_movement.py`
-        - `test_core_wing_movement.py`
         - `test_wing.py`
         - `test_wing_cross_section.py`
         - `test_wing_cross_section_movement.py`
