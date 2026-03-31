@@ -18,6 +18,9 @@ This package contains the following modules:
     core_wing_cross_section_movement_fixtures.py: This module contains functions to
     create CoreWingCrossSectionMovements for use in tests.
 
+    core_wing_movement_fixtures.py: This module contains functions to create
+    CoreWingMovements for use in tests.
+
     geometry_fixtures.py: This module contains functions to create geometry objects
     for use in tests.
 
@@ -67,6 +70,7 @@ This package contains the following modules:
 import tests.unit.fixtures.aerodynamics_functions_fixtures
 import tests.unit.fixtures.airplane_movement_fixtures
 import tests.unit.fixtures.core_wing_cross_section_movement_fixtures
+import tests.unit.fixtures.core_wing_movement_fixtures
 import tests.unit.fixtures.geometry_fixtures
 import tests.unit.fixtures.horseshoe_vortex_fixtures
 import tests.unit.fixtures.line_vortex_fixtures
