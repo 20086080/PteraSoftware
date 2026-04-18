@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 autodoc_mock_imports = [
     "cmocean",
     "matplotlib",
+    "mujoco",
     "numba",
     "numpy",
     "PySide6",
