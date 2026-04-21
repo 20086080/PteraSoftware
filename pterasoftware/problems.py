@@ -15,8 +15,17 @@ from __future__ import annotations
 
 import numpy as np
 
-from . import _core, _transformations, geometry, movements
+from . import _core, _parameter_validation, _transformations, geometry, movements
 from . import operating_point as operating_point_mod
+
+# TODO: Uncomment this block when adding type hints for
+#  _CoupledUnsteadyProblem.initialize_next_problem().
+# from typing import TYPE_CHECKING
+#
+# if TYPE_CHECKING:
+#     from .coupled_unsteady_ring_vortex_lattice_method import (
+#         CoupledUnsteadyRingVortexLatticeMethodSolver,
+#     )
 
 
 class SteadyProblem:
@@ -229,3 +238,105 @@ class UnsteadyProblem(_core.CoreUnsteadyProblem):
     @property
     def steady_problems(self) -> tuple[SteadyProblem, ...]:
         return self._steady_problems
+
+
+class _CoupledUnsteadyProblem(_core.CoreUnsteadyProblem):
+    """A class for coupled unsteady aerodynamics problems.
+
+    This class extends CoreUnsteadyProblem to manage SteadyProblems for coupled
+    simulations where the geometry at each time step depends on the solver's results
+    from previous time steps.
+
+    **Contains the following methods:**
+
+    movement: The CoreMovement that defines the motion parameters for this problem.
+
+    steady_problems: A tuple of SteadyProblems, one for each time step that has been
+    initialized so far.
+
+    get_steady_problem: Gets the SteadyProblem at a specified time step.
+
+    initialize_next_problem: Initializes the next time step's SteadyProblem. Must be
+    overridden by subclasses.
+    """
+
+    __slots__ = (
+        "_movement",
+        "coupled_steady_problems",
+    )
+
+    def __init__(
+        self,
+        movement: _core.CoreMovement,
+        initial_airplanes: list[geometry.airplane.Airplane],
+        initial_operating_point: operating_point_mod.OperatingPoint,
+    ) -> None:
+        """The initialization method.
+
+        Initializes the coupled unsteady problem with the first time step's geometry and
+        the motion parameters from the provided CoreMovement.
+
+        :param movement: A CoreMovement object that defines the motion parameters
+            (delta_time, num_steps, max_wake_rows, lcm_period) for this problem.
+        :param initial_airplanes: The list of Airplanes at the first time step.
+        :param initial_operating_point: The OperatingPoint at the first time step.
+        :return: None
+        """
+        self._movement = movement
+
+        # Delegate shared initialization (validation, first_averaging_step computation,
+        # load list initialization) to the core class. _CoupledUnsteadyProblems require
+        # per step results to feed the coupling hook, so only_final_results is always
+        # False.
+        super().__init__(
+            only_final_results=False,
+            delta_time=self._movement.delta_time,
+            num_steps=self._movement.num_steps,
+            max_wake_rows=self._movement.max_wake_rows,
+            lcm_period=self._movement.lcm_period,
+        )
+
+        # Coupled-specific state: list of steady problems for each coupled step.
+        # We create an initial SteadyProblem using the provided initial geometry.
+        self.coupled_steady_problems: list[SteadyProblem] = [
+            SteadyProblem(
+                airplanes=initial_airplanes,
+                operating_point=initial_operating_point,
+            )
+        ]
+
+    # --- Immutable: read only properties ---
+    @property
+    def movement(self) -> _core.CoreMovement:
+        return self._movement
+
+    @property
+    def steady_problems(self) -> tuple[SteadyProblem, ...]:
+        return tuple(self.coupled_steady_problems)
+
+    def get_steady_problem(self, step: int) -> SteadyProblem:
+        """Get the SteadyProblem at a given time step.
+
+        :param step: The time step index (zero indexed). Must be greater than or equal
+            to zero and less than the total number of time steps.
+        :return: The SteadyProblem at the specified time step.
+        """
+        step = _parameter_validation.int_in_range_return_int(
+            step, "step", 0, True, len(self.coupled_steady_problems), False
+        )
+
+        return self.coupled_steady_problems[step]
+
+    # TODO: Add a type hint for solver once the
+    #  _CoupledUnsteadyRingVortexLatticeMethodSolver stub is implemented.
+    def initialize_next_problem(self, solver) -> None:
+        """Initialize the next time step's SteadyProblem.
+
+        Must be overridden by subclasses to compute the geometry for the next time step
+        based on the solver's results.
+
+        :param solver: The _CoupledUnsteadyRingVortexLatticeMethodSolver instance
+            providing aerodynamic data from the current time step.
+        :return: None
+        """
+        raise NotImplementedError("Subclasses must implement initialize_next_problem.")

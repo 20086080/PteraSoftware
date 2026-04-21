@@ -21,6 +21,7 @@ from tqdm import tqdm
 
 from . import (
     _aerodynamics_functions,
+    _core,
     _functions,
     _logging,
     _panel,
@@ -127,13 +128,17 @@ class UnsteadyRingVortexLatticeMethodSolver:
         "ran",
     )
 
-    def __init__(self, unsteady_problem: problems.UnsteadyProblem) -> None:
+    def __init__(self, unsteady_problem: _core.CoreUnsteadyProblem) -> None:
         """The initialization method.
 
         :param unsteady_problem: The UnsteadyProblem to be solved.
         :return: None
         """
-        if not isinstance(unsteady_problem, problems.UnsteadyProblem):
+        # Guard direct instantiation of the base solver against coupled problems while
+        # allowing subclasses to pass their own CoreUnsteadyProblem variants via super().
+        if type(self) is UnsteadyRingVortexLatticeMethodSolver and not isinstance(
+            unsteady_problem, problems.UnsteadyProblem
+        ):
             raise TypeError("unsteady_problem must be an UnsteadyProblem.")
         self.unsteady_problem = unsteady_problem
 
@@ -2084,8 +2089,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         num_steps_to_average = self.num_steps - self._first_averaging_step
 
         # Determine if this SteadyProblem's geometry is static or variable.
-        this_movement: movements.movement.Movement = self.unsteady_problem.movement
-        static = this_movement.static
+        static = self.unsteady_problem.movement.static
 
         # Initialize ndarrays to hold each Airplane's loads and load coefficients at
         # each of the time steps that calculated the loads.
