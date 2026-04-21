@@ -39,7 +39,6 @@ _logger = _logging.get_logger("unsteady_ring_vortex_lattice_method")
 
 # REFACTOR: Add unit tests for trapezoid-rule-based averages for the mean and RMS loads
 #  and load coefficients.
-# TEST: Consider adding unit tests for this function.
 # TEST: Assess how comprehensive this function's integration tests are and update or
 #  extend them if needed.
 class UnsteadyRingVortexLatticeMethodSolver:
