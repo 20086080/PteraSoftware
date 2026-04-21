@@ -64,13 +64,13 @@ class TestCoupledUnsteadyRingVortexLatticeMethodSolver(unittest.TestCase):
 
         The parent solver captures steady_problems as a tuple snapshot at
         construction time. The coupled subclass must dispatch through the
-        accessor so appends to coupled_steady_problems are visible at later
-        steps.
+        accessor so appends to the problem's _steady_problems backing list are
+        visible at later steps.
         """
         self.assertEqual(len(self.solver.steady_problems), 1)
 
         next_steady_problem = problem_fixtures.make_basic_steady_problem_fixture()
-        self.problem.coupled_steady_problems.append(next_steady_problem)
+        self.problem._steady_problems.append(next_steady_problem)
 
         self.assertEqual(len(self.solver.steady_problems), 1)
         self.assertIs(self.solver._get_steady_problem_at(1), next_steady_problem)

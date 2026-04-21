@@ -260,7 +260,7 @@ class _CoupledUnsteadyProblem(_core.CoreUnsteadyProblem):
 
     __slots__ = (
         "_movement",
-        "coupled_steady_problems",
+        "_steady_problems",
     )
 
     def __init__(
@@ -294,9 +294,12 @@ class _CoupledUnsteadyProblem(_core.CoreUnsteadyProblem):
             lcm_period=self._movement.lcm_period,
         )
 
-        # Coupled-specific state: list of steady problems for each coupled step.
-        # We create an initial SteadyProblem using the provided initial geometry.
-        self.coupled_steady_problems: list[SteadyProblem] = [
+        # Coupled-specific state: a mutable list of SteadyProblems that grows as the
+        # solver advances. Subclass initialize_next_problem overrides append to this
+        # list; external code reads through the steady_problems tuple-view property to
+        # preserve the read-only contract inherited from UnsteadyProblem. Seed with a
+        # SteadyProblem built from the initial geometry so step zero is always ready.
+        self._steady_problems: list[SteadyProblem] = [
             SteadyProblem(
                 airplanes=initial_airplanes,
                 operating_point=initial_operating_point,
@@ -310,7 +313,7 @@ class _CoupledUnsteadyProblem(_core.CoreUnsteadyProblem):
 
     @property
     def steady_problems(self) -> tuple[SteadyProblem, ...]:
-        return tuple(self.coupled_steady_problems)
+        return tuple(self._steady_problems)
 
     def get_steady_problem(self, step: int) -> SteadyProblem:
         """Get the SteadyProblem at a given time step.
@@ -320,10 +323,10 @@ class _CoupledUnsteadyProblem(_core.CoreUnsteadyProblem):
         :return: The SteadyProblem at the specified time step.
         """
         step = _parameter_validation.int_in_range_return_int(
-            step, "step", 0, True, len(self.coupled_steady_problems), False
+            step, "step", 0, True, len(self._steady_problems), False
         )
 
-        return self.coupled_steady_problems[step]
+        return self._steady_problems[step]
 
     def initialize_next_problem(
         self, solver: CoupledUnsteadyRingVortexLatticeMethodSolver
