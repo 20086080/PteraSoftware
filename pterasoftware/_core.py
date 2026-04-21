@@ -5,11 +5,15 @@ from __future__ import annotations
 import copy
 import math
 from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from . import _oscillation, _parameter_validation, _transformations, geometry
 from . import operating_point as operating_point_mod
+
+if TYPE_CHECKING:
+    from . import problems
 
 
 def lcm(a: float, b: float) -> float:
@@ -2361,3 +2365,22 @@ class CoreUnsteadyProblem:
     @property
     def max_wake_rows(self) -> int | None:
         return self._max_wake_rows
+
+    @property
+    def movement(self) -> CoreMovement:
+        # This stub lets the UnsteadyRingVortexLatticeMethodSolver access movement and
+        # steady_problems on any CoreUnsteadyProblem without knowing the concrete
+        # subclass.
+        raise NotImplementedError(
+            "Subclasses of CoreUnsteadyProblem must override the movement property."
+        )
+
+    @property
+    def steady_problems(self) -> tuple[problems.SteadyProblem, ...]:
+        # This stub lets the UnsteadyRingVortexLatticeMethodSolver access movement and
+        # steady_problems on any CoreUnsteadyProblem without knowing the concrete
+        # subclass.
+        raise NotImplementedError(
+            "Subclasses of CoreUnsteadyProblem must override the steady_problems "
+            "property."
+        )
