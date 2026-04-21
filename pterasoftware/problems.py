@@ -13,19 +13,17 @@ None
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from . import _core, _parameter_validation, _transformations, geometry, movements
 from . import operating_point as operating_point_mod
 
-# TODO: Uncomment this block when adding type hints for
-#  _CoupledUnsteadyProblem.initialize_next_problem().
-# from typing import TYPE_CHECKING
-#
-# if TYPE_CHECKING:
-#     from .coupled_unsteady_ring_vortex_lattice_method import (
-#         CoupledUnsteadyRingVortexLatticeMethodSolver,
-#     )
+if TYPE_CHECKING:
+    from ._coupled_unsteady_ring_vortex_lattice_method import (
+        CoupledUnsteadyRingVortexLatticeMethodSolver,
+    )
 
 
 class SteadyProblem:
@@ -327,15 +325,15 @@ class _CoupledUnsteadyProblem(_core.CoreUnsteadyProblem):
 
         return self.coupled_steady_problems[step]
 
-    # TODO: Add a type hint for solver once the
-    #  _CoupledUnsteadyRingVortexLatticeMethodSolver stub is implemented.
-    def initialize_next_problem(self, solver) -> None:
+    def initialize_next_problem(
+        self, solver: CoupledUnsteadyRingVortexLatticeMethodSolver
+    ) -> None:
         """Initialize the next time step's SteadyProblem.
 
         Must be overridden by subclasses to compute the geometry for the next time step
         based on the solver's results.
 
-        :param solver: The _CoupledUnsteadyRingVortexLatticeMethodSolver instance
+        :param solver: The CoupledUnsteadyRingVortexLatticeMethodSolver instance
             providing aerodynamic data from the current time step.
         :return: None
         """
