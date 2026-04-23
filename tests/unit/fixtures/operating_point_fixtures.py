@@ -456,3 +456,18 @@ def make_with_tilted_surface_operating_point_fixture():
     )
 
     return with_tilted_surface_operating_point_fixture
+
+
+def make_with_body_rates_operating_point_fixture():
+    """This method makes a fixture that is an OperatingPoint with a non zero
+    omegas_BP1__E for testing that non-free-flight solvers reject body rotation.
+
+    :return with_body_rates_operating_point_fixture: OperatingPoint
+        This is the OperatingPoint with a non zero angular velocity of the first
+        Airplane's body axes (observed from the Earth frame).
+    """
+    with_body_rates_operating_point_fixture = ps.operating_point.OperatingPoint(
+        omegas_BP1__E=(0.0, 0.0, 1.0),
+    )
+
+    return with_body_rates_operating_point_fixture

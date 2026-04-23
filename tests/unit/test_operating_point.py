@@ -1649,6 +1649,93 @@ class TestOperatingPoint(unittest.TestCase):
         )
         npt.assert_allclose(reflected, surface_point, atol=1e-12)
 
+    def test_g_E_default(self):
+        """Test that g_E defaults to standard gravity pointing along +z in Earth
+        axes (+z is down).
+        """
+        op = ps.operating_point.OperatingPoint()
+        npt.assert_array_equal(op.g_E, [0.0, 0.0, 9.80665])
+
+    def test_omegas_BP1__E_default(self):
+        """Test that omegas_BP1__E defaults to the zero vector."""
+        op = ps.operating_point.OperatingPoint()
+        npt.assert_array_equal(op.omegas_BP1__E, [0.0, 0.0, 0.0])
+
+    def test_g_E_accepts_custom_value(self):
+        """Test that a non default g_E is stored as a ndarray of floats."""
+        op = ps.operating_point.OperatingPoint(g_E=(1.0, -2.0, 3.5))
+        self.assertIsInstance(op.g_E, np.ndarray)
+        self.assertEqual(op.g_E.dtype, float)
+        npt.assert_array_equal(op.g_E, [1.0, -2.0, 3.5])
+
+    def test_omegas_BP1__E_accepts_custom_value(self):
+        """Test that a non default omegas_BP1__E is stored as a ndarray of floats."""
+        op = ps.operating_point.OperatingPoint(omegas_BP1__E=(0.1, -0.2, 0.3))
+        self.assertIsInstance(op.omegas_BP1__E, np.ndarray)
+        self.assertEqual(op.omegas_BP1__E.dtype, float)
+        npt.assert_array_equal(op.omegas_BP1__E, [0.1, -0.2, 0.3])
+
+    def test_g_E_accepts_zero(self):
+        """Test that an all zero g_E is valid (for zero gravity simulations)."""
+        op = ps.operating_point.OperatingPoint(g_E=(0.0, 0.0, 0.0))
+        npt.assert_array_equal(op.g_E, [0.0, 0.0, 0.0])
+
+    def test_g_E_and_omegas_BP1__E_accept_various_array_likes(self):
+        """Test that both parameters accept tuples, lists, and ndarrays."""
+        for g, omegas in [
+            ((1.0, 2.0, 3.0), (0.1, 0.2, 0.3)),
+            ([1.0, 2.0, 3.0], [0.1, 0.2, 0.3]),
+            (np.array([1.0, 2.0, 3.0]), np.array([0.1, 0.2, 0.3])),
+        ]:
+            with self.subTest(input_type=type(g).__name__):
+                op = ps.operating_point.OperatingPoint(g_E=g, omegas_BP1__E=omegas)
+                npt.assert_array_equal(op.g_E, [1.0, 2.0, 3.0])
+                npt.assert_array_equal(op.omegas_BP1__E, [0.1, 0.2, 0.3])
+
+    def test_g_E_validation_invalid(self):
+        """Test g_E validation with invalid values."""
+        with self.assertRaises(ValueError):
+            ps.operating_point.OperatingPoint(g_E=(0.0, 0.0))
+        with self.assertRaises(ValueError):
+            ps.operating_point.OperatingPoint(g_E=(0.0, 0.0, float("nan")))
+        with self.assertRaises(TypeError):
+            ps.operating_point.OperatingPoint(g_E="invalid")
+
+    def test_omegas_BP1__E_validation_invalid(self):
+        """Test omegas_BP1__E validation with invalid values."""
+        with self.assertRaises(ValueError):
+            ps.operating_point.OperatingPoint(omegas_BP1__E=(0.0, 0.0))
+        with self.assertRaises(ValueError):
+            ps.operating_point.OperatingPoint(omegas_BP1__E=(0.0, 0.0, float("inf")))
+        with self.assertRaises(TypeError):
+            ps.operating_point.OperatingPoint(omegas_BP1__E="invalid")
+
+    def test_g_E_immutable(self):
+        """Test that g_E is read only at both the property and array level."""
+        op = self.basic_op
+        with self.assertRaises(AttributeError):
+            op.g_E = np.array([1.0, 0.0, 0.0])
+        with self.assertRaises(ValueError):
+            op.g_E[0] = 999.0
+
+    def test_omegas_BP1__E_immutable(self):
+        """Test that omegas_BP1__E is read only at both the property and array level."""
+        op = self.basic_op
+        with self.assertRaises(AttributeError):
+            op.omegas_BP1__E = np.array([1.0, 0.0, 0.0])
+        with self.assertRaises(ValueError):
+            op.omegas_BP1__E[0] = 999.0
+
+    def test_g_E_converts_integers_to_float(self):
+        """Test that integer inputs for g_E are converted to floats."""
+        op = ps.operating_point.OperatingPoint(g_E=(1, -2, 3))
+        self.assertEqual(op.g_E.dtype, float)
+
+    def test_omegas_BP1__E_converts_integers_to_float(self):
+        """Test that integer inputs for omegas_BP1__E are converted to floats."""
+        op = ps.operating_point.OperatingPoint(omegas_BP1__E=(1, -2, 3))
+        self.assertEqual(op.omegas_BP1__E.dtype, float)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -61,6 +61,8 @@ class OperatingPoint:
         "_surfacePoint_E_Eo",
         "_externalFX_W",
         "_nu",
+        "_g_E",
+        "_omegas_BP1__E",
         "_qInf__E",
         "_T_pas_GP1_CgP1_to_BP1_CgP1",
         "_T_pas_BP1_CgP1_to_GP1_CgP1",
@@ -91,6 +93,8 @@ class OperatingPoint:
         surfacePoint_E_Eo: None | np.ndarray | Sequence[float | int] = None,
         externalFX_W: float | int = 0.0,
         nu: float | int = 15.06e-6,
+        g_E: np.ndarray | Sequence[float | int] = (0.0, 0.0, 9.80665),
+        omegas_BP1__E: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
     ) -> None:
         """The initialization method.
 
@@ -154,6 +158,19 @@ class OperatingPoint:
             converted internally to a float. Its units are in meters squared per second.
             The default is 15.06e-6, which corresponds to air's kinematic viscosity at
             20 degrees Celsius [source: https://www.engineeringtoolbox.com].
+        :param g_E: An array-like of 3 numbers (int or float) representing the
+            gravitational acceleration vector (in Earth axes). Can be a tuple, list, or
+            ndarray. Values are converted to floats internally. The units are in meters
+            per second squared. The default is (0.0, 0.0, 9.80665), which corresponds to
+            standard gravity pointing along +z in Earth axes. This parameter is only
+            used by the free-flight solver; other solvers ignore it.
+        :param omegas_BP1__E: An array-like of 3 numbers (int or float) representing the
+            angular velocity of the first Airplane's body axes (observed from the Earth
+            frame, expressed in the first Airplane's body axes). Can be a tuple, list,
+            or ndarray. Values are converted to floats internally. The units are in
+            degrees per second. The default is (0.0, 0.0, 0.0). Only the free-flight
+            solver accepts non-zero values; other solvers raise if any component is non-
+            zero because they do not model body rotation.
         :return: None
         """
         # Initialize the immutable attributes.
@@ -238,6 +255,16 @@ class OperatingPoint:
         self._nu = _parameter_validation.number_in_range_return_float(
             nu, "nu", min_val=0.0, min_inclusive=False
         )
+        self._g_E = _parameter_validation.threeD_number_vectorLike_return_float(
+            g_E, "g_E"
+        )
+        self._g_E.flags.writeable = False
+        self._omegas_BP1__E = (
+            _parameter_validation.threeD_number_vectorLike_return_float(
+                omegas_BP1__E, "omegas_BP1__E"
+            )
+        )
+        self._omegas_BP1__E.flags.writeable = False
 
         # Initialize the caches for the properties derived from the immutable
         # attributes.
@@ -298,6 +325,14 @@ class OperatingPoint:
     @property
     def nu(self) -> float:
         return self._nu
+
+    @property
+    def g_E(self) -> np.ndarray:
+        return self._g_E
+
+    @property
+    def omegas_BP1__E(self) -> np.ndarray:
+        return self._omegas_BP1__E
 
     # --- Immutable derived: manual lazy caching ---
     @property

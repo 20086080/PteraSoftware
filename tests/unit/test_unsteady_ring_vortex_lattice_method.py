@@ -39,6 +39,19 @@ class TestUnsteadyRingVortexLatticeMethodSolver(unittest.TestCase):
                         invalid
                     )
 
+    def test_initialization_rejects_non_zero_body_rates(self):
+        """Test that initialization raises when any per-step operating point
+        carries a non-zero body angular velocity, which the base solver does
+        not model.
+        """
+        rotating_problem = (
+            problem_fixtures.make_with_body_rates_unsteady_problem_fixture()
+        )
+        with self.assertRaises(ValueError):
+            ps.unsteady_ring_vortex_lattice_method.UnsteadyRingVortexLatticeMethodSolver(
+                rotating_problem
+            )
+
 
 class TestUnsteadyRingVortexLatticeMethodSolverHookDefaults(unittest.TestCase):
     """Tests for the default implementations of the three solver extension hooks

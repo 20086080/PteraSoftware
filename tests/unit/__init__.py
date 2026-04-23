@@ -76,6 +76,12 @@ This package contains the following modules:
     test_slots.py: This module contains classes to test __slots__ enforcement on
     slotted classes.
 
+    test_steady_horseshoe_vortex_lattice_method.py: This module contains classes
+    to test SteadyHorseshoeVortexLatticeMethodSolvers.
+
+    test_steady_ring_vortex_lattice_method.py: This module contains classes to
+    test SteadyRingVortexLatticeMethodSolvers.
+
     test_transformations.py: This module contains classes to test functions in the
     transformations module.
 
@@ -118,6 +124,8 @@ import tests.unit.test_problems
 import tests.unit.test_ring_vortex
 import tests.unit.test_serialization
 import tests.unit.test_slots
+import tests.unit.test_steady_horseshoe_vortex_lattice_method
+import tests.unit.test_steady_ring_vortex_lattice_method
 import tests.unit.test_transformations
 import tests.unit.test_unsteady_ring_vortex_lattice_method
 import tests.unit.test_wing

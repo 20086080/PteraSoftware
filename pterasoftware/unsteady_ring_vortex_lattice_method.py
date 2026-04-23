@@ -139,6 +139,13 @@ class UnsteadyRingVortexLatticeMethodSolver:
             unsteady_problem, problems.UnsteadyProblem
         ):
             raise TypeError("unsteady_problem must be an UnsteadyProblem.")
+        if type(self) is UnsteadyRingVortexLatticeMethodSolver:
+            for step, steady_problem in enumerate(unsteady_problem.steady_problems):
+                if np.any(steady_problem.operating_point.omegas_BP1__E != 0.0):
+                    raise ValueError(
+                        f"operating_point.omegas_BP1__E must be all zeros for the "
+                        f"unsteady ring vortex lattice method solver (step {step})."
+                    )
         self.unsteady_problem = unsteady_problem
 
         self._max_wake_rows = self.unsteady_problem.max_wake_rows

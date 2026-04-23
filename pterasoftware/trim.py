@@ -229,6 +229,8 @@ def analyze_steady_trim(
     base_CgP1_E_Eo = problem.operating_point.CgP1_E_Eo
     base_surfaceNormal_E = problem.operating_point.surfaceNormal_E
     base_surfacePoint_E_Eo = problem.operating_point.surfacePoint_E_Eo
+    base_g_E = problem.operating_point.g_E
+    base_omegas_BP1__E = problem.operating_point.omegas_BP1__E
 
     def objective_function(arguments: np.ndarray) -> float:
         """Computes the trim objective function for a given set of OperatingPoint
@@ -265,6 +267,8 @@ def analyze_steady_trim(
             CgP1_E_Eo=base_CgP1_E_Eo,
             surfaceNormal_E=base_surfaceNormal_E,
             surfacePoint_E_Eo=base_surfacePoint_E_Eo,
+            g_E=base_g_E,
+            omegas_BP1__E=base_omegas_BP1__E,
         )
 
         qInf__E = trial_operating_point.qInf__E
@@ -612,6 +616,8 @@ def analyze_unsteady_trim(
     base_CgP1_E_Eo = base_operating_point.CgP1_E_Eo
     base_surfaceNormal_E = base_operating_point.surfaceNormal_E
     base_surfacePoint_E_Eo = base_operating_point.surfacePoint_E_Eo
+    base_g_E = base_operating_point.g_E
+    base_omegas_BP1__E = base_operating_point.omegas_BP1__E
 
     def objective_function(arguments: np.ndarray) -> float:
         """Computes the trim objective function for a given set of OperatingPoint
@@ -648,6 +654,8 @@ def analyze_unsteady_trim(
             CgP1_E_Eo=base_CgP1_E_Eo,
             surfaceNormal_E=base_surfaceNormal_E,
             surfacePoint_E_Eo=base_surfacePoint_E_Eo,
+            g_E=base_g_E,
+            omegas_BP1__E=base_omegas_BP1__E,
         )
 
         qInf__E = trial_operating_point.qInf__E

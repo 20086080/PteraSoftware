@@ -99,6 +99,11 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
         self.operating_point: operating_point.OperatingPoint = (
             self._steady_problem.operating_point
         )
+        if np.any(self.operating_point.omegas_BP1__E != 0.0):
+            raise ValueError(
+                "operating_point.omegas_BP1__E must be all zeros for the steady "
+                "horseshoe vortex lattice method solver."
+            )
         self.reynolds_numbers = self._steady_problem.reynolds_numbers
         self.num_airplanes = len(self.airplanes)
 

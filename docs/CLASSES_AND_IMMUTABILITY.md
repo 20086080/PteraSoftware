@@ -313,6 +313,8 @@ All `CoreUnsteadyProblem` attributes (documented in the section above) are inher
 | `surfacePoint_E_Eo`    | `np.ndarray \| None` | Image surface point       |
 | `externalFX_W`         | `float`              | External force            |
 | `nu`                   | `float`              | Kinematic viscosity       |
+| `g_E`                  | `np.ndarray`         | Gravity in Earth axes     |
+| `omegas_BP1__E`        | `np.ndarray`         | Body angular velocity     |
 
 #### Derived from Immutable (use manual lazy caching)
 

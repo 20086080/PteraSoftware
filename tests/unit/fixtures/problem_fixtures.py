@@ -3,6 +3,7 @@
 import pterasoftware as ps
 
 from . import (
+    airplane_movement_fixtures,
     core_movement_fixtures,
     geometry_fixtures,
     movement_fixtures,
@@ -110,6 +111,46 @@ def make_multi_airplane_unsteady_problem_fixture():
     )
 
     return multi_airplane_unsteady_problem_fixture
+
+
+def make_with_body_rates_steady_problem_fixture():
+    """This method makes a fixture that is a SteadyProblem with a non zero
+    omegas_BP1__E for testing that the steady solvers reject body rotation.
+
+    :return with_body_rates_steady_problem_fixture: SteadyProblem
+        This is the SteadyProblem whose OperatingPoint has a non zero body
+        angular velocity.
+    """
+    return ps.problems.SteadyProblem(
+        airplanes=[geometry_fixtures.make_first_airplane_fixture()],
+        operating_point=operating_point_fixtures.make_with_body_rates_operating_point_fixture(),
+    )
+
+
+def make_with_body_rates_unsteady_problem_fixture():
+    """This method makes a fixture that is an UnsteadyProblem whose Movement
+    carries a non zero omegas_BP1__E on its base OperatingPoint, for testing
+    that the unsteady solver rejects body rotation.
+
+    :return with_body_rates_unsteady_problem_fixture: UnsteadyProblem
+        This is the UnsteadyProblem whose generated per-step OperatingPoints
+        all carry a non zero body angular velocity.
+    """
+    airplane_movement = (
+        airplane_movement_fixtures.make_basic_airplane_movement_fixture()
+    )
+    operating_point_movement = ps.movements.operating_point_movement.OperatingPointMovement(
+        base_operating_point=operating_point_fixtures.make_with_body_rates_operating_point_fixture()
+    )
+    movement = ps.movements.movement.Movement(
+        airplane_movements=[airplane_movement],
+        operating_point_movement=operating_point_movement,
+        num_cycles=1,
+    )
+    return ps.problems.UnsteadyProblem(
+        movement=movement,
+        only_final_results=False,
+    )
 
 
 def make_basic_coupled_unsteady_problem_fixture():
