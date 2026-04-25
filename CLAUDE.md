@@ -95,6 +95,7 @@ Requires Python 3.11, but active development is done in 3.13
     - `_core.py`: Core classes for the movement and problem hierarchies
     - `_functions.py`: Shared utility functions
     - `_logging.py`: Contains function for setting up logging
+    - `_mujoco_model.py`: Contains the MuJoCoModel class.
     - `_oscillation.py`: Oscillation functions for movement classes
     - `_panel.py`: Panel class for discretized mesh elements
     - `_parameter_validation.py`: Input validation functions
@@ -147,6 +148,7 @@ Requires Python 3.11, but active development is done in 3.13
             - `horseshoe_vortex_fixtures.py`
             - `line_vortex_fixtures.py`
             - `movement_fixtures.py`
+            - `mujoco_model_fixtures.py`
             - `operating_point_fixtures.py`
             - `operating_point_movement_fixtures.py`
             - `oscillation_fixtures.py`
@@ -173,6 +175,7 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_line_vortex.py`
         - `test_logging.py`
         - `test_movement.py`
+        - `test_mujoco_model.py`
         - `test_operating_point.py`
         - `test_operating_point_movement.py`
         - `test_oscillation.py`

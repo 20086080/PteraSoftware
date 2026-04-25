@@ -47,6 +47,8 @@ This package contains the following modules:
 
     test_line_vortex.py: This module contains classes to test LineVortices.
 
+    test_mujoco_model.py: This module contains classes to test MuJoCoModels.
+
     test_movement.py: This module contains classes to test Movements and related
     functions.
 
@@ -114,6 +116,7 @@ import tests.unit.test_coupled_unsteady_ring_vortex_lattice_method
 import tests.unit.test_horseshoe_vortex
 import tests.unit.test_line_vortex
 import tests.unit.test_movement
+import tests.unit.test_mujoco_model
 import tests.unit.test_operating_point
 import tests.unit.test_operating_point_movement
 import tests.unit.test_oscillation

@@ -36,6 +36,9 @@ This package contains the following modules:
     line_vortex_fixtures.py: This module contains functions to create LineVortices
     for use in tests.
 
+    mujoco_model_fixtures.py: This module contains functions to create MuJoCoModels
+    for use in tests.
+
     movement_fixtures.py: This module contains functions to create Movements for use
     in tests.
 
@@ -87,6 +90,7 @@ import tests.unit.fixtures.geometry_fixtures
 import tests.unit.fixtures.horseshoe_vortex_fixtures
 import tests.unit.fixtures.line_vortex_fixtures
 import tests.unit.fixtures.movement_fixtures
+import tests.unit.fixtures.mujoco_model_fixtures
 import tests.unit.fixtures.operating_point_fixtures
 import tests.unit.fixtures.operating_point_movement_fixtures
 import tests.unit.fixtures.oscillation_fixtures

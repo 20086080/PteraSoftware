@@ -16,6 +16,7 @@ This document describes the consistent pattern of immutability and lazy caching 
 - `WingCrossSection`
 - `Airfoil`
 - `Panel`
+- `MuJoCoModel`
 - `RingVortex`
 - `HorseshoeVortex`
 - `LineVortex`
@@ -666,6 +667,31 @@ Since `LineVortex` is an internal class whose endpoints ARE updated by parent vo
 | Attribute  | Type    | Notes                    |
 |------------|---------|--------------------------|
 | `strength` | `float` | Updated by parent vortex |
+
+---
+
+## MuJoCoModel Class (`_mujoco_model.py`)
+
+`MuJoCoModel` is a private class that wraps MuJoCo's `MjModel` and `MjData` objects. It is constructed by `FreeFlightUnsteadyProblem` and provides methods for applying aerodynamic loads, stepping the rigid body dynamics, and extracting the updated state. Users pass raw scalars and arrays to `FreeFlightUnsteadyProblem` and never interact with `MuJoCoModel` directly.
+
+### Attribute Classification
+
+#### Immutable (set in `__init__`, never modified)
+
+| Attribute              | Type             | Notes                                                 |
+|------------------------|------------------|-------------------------------------------------------|
+| `xml_str`              | `str`            | Generated MuJoCo XML                                  |
+| `model`                | `mujoco.MjModel` | Compiled MuJoCo model                                 |
+| `body_id`              | `int`            | MuJoCo body ID for the Airplane                       |
+| `initial_key_frame_id` | `int`            | MuJoCo key frame ID for initial conditions            |
+| `initial_qpos`         | `np.ndarray`     | Initial generalized positions (computed during init)  |
+| `initial_qvel`         | `np.ndarray`     | Initial generalized velocities (computed during init) |
+
+#### Mutable
+
+| Attribute | Type            | Notes                                                   |
+|-----------|-----------------|---------------------------------------------------------|
+| `data`    | `mujoco.MjData` | Mutated by `apply_loads`, `step`, `reset`, `mj_forward` |
 
 ---
 

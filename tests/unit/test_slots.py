@@ -9,7 +9,7 @@ import numpy.testing as npt
 import pterasoftware as ps
 
 # noinspection PyProtectedMember
-from pterasoftware import _core, _panel
+from pterasoftware import _core, _mujoco_model, _panel
 
 # noinspection PyProtectedMember
 from pterasoftware._vortices import _line_vortex
@@ -24,6 +24,7 @@ from tests.unit.fixtures import (
     horseshoe_vortex_fixtures,
     line_vortex_fixtures,
     movement_fixtures,
+    mujoco_model_fixtures,
     operating_point_fixtures,
     operating_point_movement_fixtures,
     panel_fixtures,
@@ -1663,6 +1664,36 @@ class TestMovementSlots(unittest.TestCase):
             copied.operating_point_movement,
             self.static_movement.operating_point_movement,
         )
+
+
+class TestMuJoCoModelSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on MuJoCoModel."""
+
+    def setUp(self):
+        """Set up test fixtures for MuJoCoModel slots tests."""
+        self.mujoco_model = mujoco_model_fixtures.make_basic_mujoco_model_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on MuJoCoModel."""
+        self.assertTrue(hasattr(_mujoco_model.MuJoCoModel, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that MuJoCoModel instances have no __dict__."""
+        self.assertFalse(hasattr(self.mujoco_model, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.mujoco_model.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties are accessible after adding __slots__."""
+        # Immutable properties.
+        self.assertIsInstance(self.mujoco_model.xml_str, str)
+        self.assertIsInstance(self.mujoco_model.body_id, int)
+        self.assertIsInstance(self.mujoco_model.initial_key_frame_id, int)
+        self.assertEqual(self.mujoco_model.initial_qpos.shape, (7,))
+        self.assertEqual(self.mujoco_model.initial_qvel.shape, (6,))
 
 
 class TestSteadyHorseshoeSolverSlots(unittest.TestCase):
