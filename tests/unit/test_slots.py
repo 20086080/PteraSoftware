@@ -996,6 +996,53 @@ class TestUnsteadyProblemSlots(unittest.TestCase):
         self.assertIsNot(copied.movement, self.unsteady_problem.movement)
 
 
+class TestFreeFlightUnsteadyProblemSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    FreeFlightUnsteadyProblem. Core-owned properties (only_final_results, num_steps,
+    delta_time, first_averaging_step, first_results_step, and the mutable load
+    lists) are tested at the CoreUnsteadyProblem level. Coupled-owned properties
+    (movement, steady_problems, get_steady_problem) are tested at the
+    _CoupledUnsteadyProblem level. This class tests
+    FreeFlightUnsteadyProblem-specific slots.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for FreeFlightUnsteadyProblem slots tests."""
+        self.problem = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on FreeFlightUnsteadyProblem."""
+        self.assertTrue(hasattr(ps.problems.FreeFlightUnsteadyProblem, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that FreeFlightUnsteadyProblem instances have no __dict__."""
+        self.assertFalse(hasattr(self.problem, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.problem.nonexistent_attribute = 42
+
+    def test_subclass(self):
+        """Test that FreeFlightUnsteadyProblem is a subclass of
+        _CoupledUnsteadyProblem.
+        """
+        self.assertIsInstance(self.problem, ps.problems._CoupledUnsteadyProblem)
+
+    def test_property_access(self):
+        """Test that FreeFlightUnsteadyProblem-specific properties are accessible."""
+        self.assertIsInstance(self.problem.I_BP1_CgP1, np.ndarray)
+        self.assertEqual(self.problem.I_BP1_CgP1.shape, (3, 3))
+        self.assertIsNone(self.problem.external_forces_fn)
+        self.assertIsInstance(self.problem.mujoco_model, _mujoco_model.MuJoCoModel)
+        self.assertIsInstance(self.problem.forces_W, list)
+        self.assertIsInstance(self.problem.forceCoefficients_W, list)
+        self.assertIsInstance(self.problem.moments_W_Cg, list)
+        self.assertIsInstance(self.problem.momentCoefficients_W_Cg, list)
+
+
 class TestCoreOperatingPointMovementSlots(unittest.TestCase):
     """This class contains tests to verify __slots__ enforcement on
     CoreOperatingPointMovement.

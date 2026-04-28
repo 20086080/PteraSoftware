@@ -1,5 +1,7 @@
 """This module contains functions to create problem objects for use in tests."""
 
+import numpy as np
+
 import pterasoftware as ps
 
 from . import (
@@ -151,6 +153,69 @@ def make_with_body_rates_unsteady_problem_fixture():
         movement=movement,
         only_final_results=False,
     )
+
+
+def make_basic_free_flight_unsteady_problem_fixture():
+    """This method makes a fixture that is a FreeFlightUnsteadyProblem for general
+    testing.
+
+    :return basic_free_flight_unsteady_problem_fixture: FreeFlightUnsteadyProblem
+        This is the FreeFlightUnsteadyProblem configured for general testing.
+    """
+    # Build the FreeFlightMovement using a static motion configuration.
+    base_airplane = geometry_fixtures.make_first_airplane_fixture()
+    base_wing = base_airplane.wings[0]
+
+    # Create FreeFlightWingCrossSectionMovements (one per WCS in the Wing).
+    wcs_movements = []
+    for wcs in base_wing.wing_cross_sections:
+        wcs_movements.append(
+            ps.movements.free_flight_wing_cross_section_movement.FreeFlightWingCrossSectionMovement(
+                base_wing_cross_section=wcs,
+            )
+        )
+
+    # Create the FreeFlightWingMovement.
+    wing_movement = ps.movements.free_flight_wing_movement.FreeFlightWingMovement(
+        base_wing=base_wing,
+        wing_cross_section_movements=wcs_movements,
+    )
+
+    # Create the FreeFlightAirplaneMovement.
+    airplane_movement = (
+        ps.movements.free_flight_airplane_movement.FreeFlightAirplaneMovement(
+            base_airplane=base_airplane,
+            wing_movements=[wing_movement],
+        )
+    )
+
+    # Create the FreeFlightOperatingPointMovement.
+    basic_operating_point = (
+        operating_point_fixtures.make_basic_operating_point_fixture()
+    )
+    op_movement = ps.movements.free_flight_operating_point_movement.FreeFlightOperatingPointMovement(
+        base_operating_point=basic_operating_point,
+    )
+
+    # Create the FreeFlightMovement.
+    movement = ps.movements.free_flight_movement.FreeFlightMovement(
+        airplane_movements=[airplane_movement],
+        operating_point_movement=op_movement,
+        delta_time=0.01,
+        prescribed_num_steps=3,
+        free_num_steps=2,
+    )
+
+    # Create the FreeFlightUnsteadyProblem. SteadyProblem sets GP1_CgP1 attributes
+    # on each Panel exactly once, so a fresh Airplane is required.
+    basic_free_flight_unsteady_problem_fixture = ps.problems.FreeFlightUnsteadyProblem(
+        movement=movement,
+        initial_airplanes=[geometry_fixtures.make_first_airplane_fixture()],
+        initial_operating_point=operating_point_fixtures.make_basic_operating_point_fixture(),
+        I_BP1_CgP1=np.diag([1.0, 1.0, 1.0]),
+    )
+
+    return basic_free_flight_unsteady_problem_fixture
 
 
 def make_basic_coupled_unsteady_problem_fixture():

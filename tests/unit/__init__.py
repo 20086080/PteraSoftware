@@ -31,17 +31,20 @@ This package contains the following modules:
     test_core_unsteady_problem.py: This module contains classes to test
     CoreUnsteadyProblems.
 
+    test_core_wing_cross_section_movement.py: This module contains classes to test
+    CoreWingCrossSectionMovements.
+
+    test_core_wing_movement.py: This module contains classes to test
+    CoreWingMovements.
+
     test_coupled_unsteady_problem.py: This module contains classes to test
     _CoupledUnsteadyProblems.
 
     test_coupled_unsteady_ring_vortex_lattice_method.py: This module contains
     classes to test CoupledUnsteadyRingVortexLatticeMethodSolvers.
 
-    test_core_wing_cross_section_movement.py: This module contains classes to test
-    CoreWingCrossSectionMovements.
-
-    test_core_wing_movement.py: This module contains classes to test
-    CoreWingMovements.
+    test_free_flight_unsteady_problem.py: This module contains classes to test
+    FreeFlightUnsteadyProblems.
 
     test_horseshoe_vortex.py: This module contains classes to test HorseshoeVortices.
 
@@ -113,6 +116,7 @@ import tests.unit.test_core_wing_cross_section_movement
 import tests.unit.test_core_wing_movement
 import tests.unit.test_coupled_unsteady_problem
 import tests.unit.test_coupled_unsteady_ring_vortex_lattice_method
+import tests.unit.test_free_flight_unsteady_problem
 import tests.unit.test_horseshoe_vortex
 import tests.unit.test_line_vortex
 import tests.unit.test_movement

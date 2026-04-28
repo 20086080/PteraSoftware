@@ -19,7 +19,8 @@ operating_point.py: Contains the OperatingPoint class.
 
 output.py: Contains functions for visualizing geometry and results.
 
-problems.py: Contains the SteadyProblem and UnsteadyProblem classes.
+problems.py: Contains the SteadyProblem, UnsteadyProblem, and FreeFlightUnsteadyProblem
+classes.
 
 steady_horseshoe_vortex_lattice_method.py: Contains the
 SteadyHorseshoeVortexLatticeMethodSolver class.
