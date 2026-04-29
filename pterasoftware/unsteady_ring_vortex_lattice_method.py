@@ -29,7 +29,6 @@ from . import (
     _transformations,
     _vortices,
     geometry,
-    movements,
     operating_point,
     problems,
 )
@@ -1555,11 +1554,6 @@ class UnsteadyRingVortexLatticeMethodSolver:
         """Populates the locations of the next time step's Airplanes' wake RingVortex
         points.
 
-        **Notes:**
-
-        This method is not vectorized but its loops only consume 1.1% of the runtime, so
-        I have kept it as is for increased readability.
-
         :return: None
         """
         # Check that this isn't the last time step.
@@ -1572,11 +1566,6 @@ class UnsteadyRingVortexLatticeMethodSolver:
                 self._current_step + 1
             )
             next_airplanes = next_problem.airplanes
-
-            # Get the current Airplanes' combined number of Wings.
-            num_wings = 0
-            for airplane in self.current_airplanes:
-                num_wings += len(airplane.wings)
 
             # Iterate through this time step's Airplanes' successor objects.
             for airplane_id, next_airplane in enumerate(next_airplanes):
