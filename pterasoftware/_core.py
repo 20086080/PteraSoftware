@@ -1295,8 +1295,14 @@ class CoreWingMovement:
             # Compute the position adjustment due to the offset rotation
             # point.
             offsetRotationPointAdjustment_Gs = (
-                np.eye(3, dtype=float) - rot_R_act
-            ) @ self._rotationPointOffset_Gs_Ler
+                _transformations.compute_offset_rotation_adjustment(
+                    rotation_matrix=rot_R_act,
+                    offset=self._rotationPointOffset_Gs_Ler,
+                )
+            )
+            #            offsetRotationPointAdjustment_Gs = (
+            #                np.eye(3, dtype=float) - rot_R_act
+            #            ) @ self._rotationPointOffset_Gs_Ler
 
             # Apply the position adjustment to the leading edge root.
             thisLer_Gs_Cgs = thisLer_Gs_Cgs + offsetRotationPointAdjustment_Gs
