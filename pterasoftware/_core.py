@@ -1281,8 +1281,6 @@ class CoreWingMovement:
         # to account for rotation about the offset point instead of the
         # leading edge root.
         if not np.allclose(self._rotationPointOffset_Gs_Ler, np.zeros(3, dtype=float)):
-            # TODO: Refactor this procedure for producing offset rotations
-            #  to be a function in _transformations.py.
             # Get the active rotation matrix for this step's angles.
             rot_T_act = _transformations.generate_rot_T(
                 theseAngles_Gs_to_Wn_ixyz,
@@ -1300,9 +1298,6 @@ class CoreWingMovement:
                     offset=self._rotationPointOffset_Gs_Ler,
                 )
             )
-            #            offsetRotationPointAdjustment_Gs = (
-            #                np.eye(3, dtype=float) - rot_R_act
-            #            ) @ self._rotationPointOffset_Gs_Ler
 
             # Apply the position adjustment to the leading edge root.
             thisLer_Gs_Cgs = thisLer_Gs_Cgs + offsetRotationPointAdjustment_Gs
