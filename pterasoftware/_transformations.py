@@ -143,7 +143,7 @@ def compute_offset_rotation_adjustment(
     When a rotation is applied about a point other than the origin, the effective
     position must be adjusted. This function computes that adjustment vector.
 
-    The adjustment is given by:     (I - R) @ offset
+    The adjustment is given by: (I - R) @ offset
 
     where R is the active rotation matrix and offset is the rotation point.
 

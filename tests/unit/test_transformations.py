@@ -1713,7 +1713,7 @@ class TestApplyTToVectors(unittest.TestCase):
 
 
 class TestComputeOffsetRotationAdjustment(unittest.TestCase):
-    """Tests for compute_offset_rotation_adjustment function."""
+    """The Tests for compute_offset_rotation_adjustment function."""
 
     def test_identity_rotation(self):
         """Identity rotation should produce zero adjustment."""
@@ -1734,7 +1734,7 @@ class TestComputeOffsetRotationAdjustment(unittest.TestCase):
         npt.assert_allclose(adjustment, np.zeros(3), atol=1e-14)
 
     def test_known_rotation(self):
-        """Test adjustment for a known rotation (90° about z-axis)."""
+        """Test adjustment for a known rotation (90 deg about z-axis)."""
         angles = np.array([0.0, 0.0, 90.0])
 
         rot_T = _transformations.generate_rot_T(
