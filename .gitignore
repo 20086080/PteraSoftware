@@ -8,7 +8,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
-.idea/
+
 # This is the C extension files to ignore.
 *.so
 
