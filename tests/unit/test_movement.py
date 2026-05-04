@@ -2056,8 +2056,9 @@ class TestOptimizeDeltaTimeNonStaticWarnings(unittest.TestCase):
         bound.
 
         This test uses mocking to avoid running the expensive optimization. We mock
-        _compute_wake_area_mismatch to return decreasing values as num_steps increases,
-        forcing the best value to be at min_num_steps (lower bound).
+        _compute_wake_area_mismatches_cached_non_static to return mismatches that
+        increase with num_steps, forcing the best value to be at min_num_steps (lower
+        bound).
         """
         import logging
 
@@ -2073,18 +2074,23 @@ class TestOptimizeDeltaTimeNonStaticWarnings(unittest.TestCase):
         lcm_period = 2.0  # Fixture has period 2.0.
         initial_delta_time = 0.1  # Results in ~20 steps, search range ~10 to ~41.
 
-        # Mock _compute_wake_area_mismatch to return values that decrease with
-        # increasing delta_time (fewer steps), so the best is at min_num_steps
-        # (lower bound = largest delta_time).
+        # Mock the cached batch evaluator to return mismatches that increase
+        # with num_steps, so the best is at min_num_steps (lower bound = largest
+        # delta_time). Mirrors the original 1.0 / delta_time shape via
+        # delta_time = lcm_period / num_steps.
         # noinspection PyUnusedLocal
-        def mock_mismatch(dt, am, opm):
-            # Mismatch decreases as delta_time increases (fewer steps).
-            return 1.0 / dt
+        def mock_cached_mismatches(
+            airplane_movements,
+            operating_point_movement,
+            lcm_period,
+            num_steps_candidates,
+        ):
+            return {n: float(n) / lcm_period for n in num_steps_candidates}
 
         with (
             patch(
-                "pterasoftware.movements.movement._compute_wake_area_mismatch",
-                side_effect=mock_mismatch,
+                "pterasoftware.movements.movement._compute_wake_area_mismatches_cached_non_static",
+                side_effect=mock_cached_mismatches,
             ),
             self.assertLogs(
                 "pterasoftware.movements.movement", level=logging.WARNING
@@ -2111,8 +2117,9 @@ class TestOptimizeDeltaTimeNonStaticWarnings(unittest.TestCase):
         bound.
 
         This test uses mocking to avoid running the expensive optimization. We mock
-        _compute_wake_area_mismatch to return increasing values as num_steps increases,
-        forcing the best value to be at max_num_steps (upper bound).
+        _compute_wake_area_mismatches_cached_non_static to return mismatches that
+        decrease with num_steps, forcing the best value to be at max_num_steps (upper
+        bound).
         """
         import logging
 
@@ -2128,18 +2135,23 @@ class TestOptimizeDeltaTimeNonStaticWarnings(unittest.TestCase):
         lcm_period = 2.0  # Fixture has period 2.0.
         initial_delta_time = 0.1  # Results in ~20 steps, search range ~10 to ~41.
 
-        # Mock _compute_wake_area_mismatch to return values that decrease with
-        # decreasing delta_time (more steps), so the best is at max_num_steps
-        # (upper bound = smallest delta_time).
+        # Mock the cached batch evaluator to return mismatches that decrease
+        # with num_steps, so the best is at max_num_steps (upper bound =
+        # smallest delta_time). Mirrors the original delta_time * 10.0 shape
+        # via delta_time = lcm_period / num_steps.
         # noinspection PyUnusedLocal
-        def mock_mismatch(dt, am, opm):
-            # Mismatch decreases as delta_time decreases (more steps).
-            return dt * 10.0
+        def mock_cached_mismatches(
+            airplane_movements,
+            operating_point_movement,
+            lcm_period,
+            num_steps_candidates,
+        ):
+            return {n: 10.0 * lcm_period / float(n) for n in num_steps_candidates}
 
         with (
             patch(
-                "pterasoftware.movements.movement._compute_wake_area_mismatch",
-                side_effect=mock_mismatch,
+                "pterasoftware.movements.movement._compute_wake_area_mismatches_cached_non_static",
+                side_effect=mock_cached_mismatches,
             ),
             self.assertLogs(
                 "pterasoftware.movements.movement", level=logging.WARNING
