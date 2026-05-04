@@ -1713,7 +1713,7 @@ class TestApplyTToVectors(unittest.TestCase):
 
 
 class TestComputeOffsetRotationAdjustment(unittest.TestCase):
-    """The Tests for compute_offset_rotation_adjustment function."""
+    """Tests for the compute_offset_rotation_adjustment function."""
 
     def test_identity_rotation(self):
         """Identity rotation should produce zero adjustment."""
