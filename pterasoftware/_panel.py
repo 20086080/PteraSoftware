@@ -6,8 +6,6 @@ from typing import cast
 
 import numpy as np
 
-from . import _vortices
-
 
 class Panel:
     """A class used to contain the panels of a Wing.
@@ -131,8 +129,6 @@ class Panel:
         "_Cpp_GP1_CgP1",
         "_unitNormal_GP1",
         # Mutable
-        "ring_vortex",
-        "horseshoe_vortex",
         "forces_GP1",
         "moments_GP1_CgP1",
         "forces_W",
@@ -233,8 +229,6 @@ class Panel:
 
         # Initialize mutable attributes to hold the Panel's RingVortex and
         # HorseshoeVortex and the loads on this Panel.
-        self.ring_vortex: _vortices.ring_vortex.RingVortex | None = None
-        self.horseshoe_vortex: _vortices.horseshoe_vortex.HorseshoeVortex | None = None
         self.forces_GP1: np.ndarray | None = None
         self.moments_GP1_CgP1: np.ndarray | None = None
         self.forces_W: np.ndarray | None = None
@@ -351,8 +345,6 @@ class Panel:
         new_panel._Flbvp_GP1_CgP1 = None
         new_panel._Cpp_GP1_CgP1 = None
         new_panel._unitNormal_GP1 = None
-        new_panel.ring_vortex = None
-        new_panel.horseshoe_vortex = None
         new_panel.forces_GP1 = None
         new_panel.moments_GP1_CgP1 = None
         new_panel.forces_W = None

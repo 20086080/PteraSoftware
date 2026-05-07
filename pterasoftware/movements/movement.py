@@ -18,7 +18,7 @@ from typing import cast
 import numpy as np
 import scipy.optimize as sp_opt
 
-from .. import _core, _logging, _parameter_validation, _vortices, geometry
+from .. import _core, _logging, _parameter_validation, geometry
 from .. import operating_point as operating_point_mod
 from .. import problems
 from . import airplane_movement as airplane_movement_mod
@@ -549,6 +549,11 @@ def _compute_wake_area_mismatch(
     total_mismatch = 0.0
     num_comparisons = 0
 
+    # Quadrilateral area is half the magnitude of the cross product of the
+    # diagonals.
+    def _quad_area(Fr, Fl, Bl, Br):
+        return 0.5 * float(np.linalg.norm(np.cross(Fr - Bl, Fl - Br)))
+
     # Step through the simulation using geometry only initialization.
     for step in range(num_steps):
         temp_solver.initialize_step_geometry(step)
@@ -556,53 +561,64 @@ def _compute_wake_area_mismatch(
         # At step > 0, compare wake first row RingVortex areas (current step)
         # to bound trailing edge RingVortex areas (previous step).
         if step > 0:
-            # Get the current Airplanes (at step) for wake RingVortices.
-            current_airplanes = temp_solver.steady_problems[step].airplanes
-            # Get the previous Airplanes (at step - 1) for bound RingVortices.
-            previous_airplanes = temp_solver.steady_problems[step - 1].airplanes
+            previous_step = step - 1
 
-            for airplane_id, airplane in enumerate(current_airplanes):
-                previous_airplane = previous_airplanes[airplane_id]
+            # Wake first row corners for the current step. The wake stack at
+            # step S contains min(S, max_wake_rows) chordwise rows, with each
+            # Wing's block contiguous and laid out (chordwise outer, spanwise
+            # inner) within the global stack.
+            wake_Fr = temp_solver.listStackFrwrvp_GP1_CgP1[step]
+            wake_Fl = temp_solver.listStackFlwrvp_GP1_CgP1[step]
+            wake_Bl = temp_solver.listStackBlwrvp_GP1_CgP1[step]
+            wake_Br = temp_solver.listStackBrwrvp_GP1_CgP1[step]
 
-                for wing_id, wing in enumerate(airplane.wings):
-                    previous_wing = previous_airplane.wings[wing_id]
+            # Previous step's bound RingVortex corner stacks.
+            bound_Fr = temp_solver._listStackFrbrvp_GP1_CgP1[previous_step]
+            bound_Fl = temp_solver._listStackFlbrvp_GP1_CgP1[previous_step]
+            bound_Bl = temp_solver._listStackBlbrvp_GP1_CgP1[previous_step]
+            bound_Br = temp_solver._listStackBrbrvp_GP1_CgP1[previous_step]
 
-                    # Get the wake RingVortices (first row, chordwise index 0).
-                    wake_ring_vortices = wing.wake_ring_vortices
+            num_chordwise_wake_rows = step
+            if temp_solver._max_wake_rows is not None:
+                num_chordwise_wake_rows = min(step, temp_solver._max_wake_rows)
 
-                    assert wake_ring_vortices is not None
+            num_airplanes = len(temp_solver._per_wing_panel_offsets)
+            for airplane_id in range(num_airplanes):
+                wing_panel_offsets = temp_solver._per_wing_panel_offsets[airplane_id]
+                wing_chordwise = temp_solver._per_wing_num_chordwise_panels[airplane_id]
+                wing_spanwise = temp_solver._per_wing_num_spanwise_panels[airplane_id]
+                wing_spanwise_cumsum = temp_solver._per_wing_spanwise_cumsum[
+                    airplane_id
+                ]
 
-                    # First row of wake is at chordwise index 0.
-                    num_spanwise = wake_ring_vortices.shape[1]
+                for wing_id in range(len(wing_panel_offsets)):
+                    num_spanwise = wing_spanwise[wing_id]
+                    te_panel_base = (
+                        wing_panel_offsets[wing_id]
+                        + (wing_chordwise[wing_id] - 1) * num_spanwise
+                    )
+                    wing_wake_base = (
+                        num_chordwise_wake_rows * wing_spanwise_cumsum[wing_id]
+                    )
 
-                    # Get the trailing edge bound RingVortices from previous step.
-                    previous_panels = previous_wing.panels
-                    if previous_panels is None:
-                        continue
-
-                    num_chordwise_panels = previous_wing.num_chordwise_panels
-                    trailing_edge_chordwise_index = num_chordwise_panels - 1
-
+                    epsilon = 1e-12
                     for spanwise_id in range(num_spanwise):
-                        # Get wake RingVortex area (first row, current step).
-                        wake_rv: _vortices.ring_vortex.RingVortex = wake_ring_vortices[
-                            0, spanwise_id
-                        ]
-                        wake_area = wake_rv.area
+                        wake_idx = wing_wake_base + spanwise_id
+                        wake_area = _quad_area(
+                            wake_Fr[wake_idx],
+                            wake_Fl[wake_idx],
+                            wake_Bl[wake_idx],
+                            wake_Br[wake_idx],
+                        )
 
-                        # Get bound trailing edge RingVortex area (previous step).
-                        trailing_edge_panel = previous_panels[
-                            trailing_edge_chordwise_index, spanwise_id
-                        ]
-                        _bound_rv = trailing_edge_panel.ring_vortex
+                        bound_idx = te_panel_base + spanwise_id
+                        bound_area = _quad_area(
+                            bound_Fr[bound_idx],
+                            bound_Fl[bound_idx],
+                            bound_Bl[bound_idx],
+                            bound_Br[bound_idx],
+                        )
 
-                        assert _bound_rv is not None
-                        bound_rv: _vortices.ring_vortex.RingVortex = _bound_rv
-
-                        bound_area = bound_rv.area
-
-                        # Accumulate the absolute percent area difference.
-                        epsilon = 1e-12
                         if abs(bound_area) > epsilon:
                             total_mismatch += abs(wake_area - bound_area) / bound_area
                             num_comparisons += 1

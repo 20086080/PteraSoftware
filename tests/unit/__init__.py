@@ -43,10 +43,6 @@ This package contains the following modules:
     test_core_wing_movement.py: This module contains classes to test
     CoreWingMovements.
 
-    test_horseshoe_vortex.py: This module contains classes to test HorseshoeVortices.
-
-    test_line_vortex.py: This module contains classes to test LineVortices.
-
     test_movement.py: This module contains classes to test Movements and related
     functions.
 
@@ -67,8 +63,6 @@ This package contains the following modules:
 
     test_problems.py: This module contains classes to test SteadyProblems and
     UnsteadyProblems.
-
-    test_ring_vortex.py: This module contains classes to test RingVortices.
 
     test_serialization.py: This module contains classes to test functions in the
     serialization module.
@@ -105,8 +99,6 @@ import tests.unit.test_core_wing_cross_section_movement
 import tests.unit.test_core_wing_movement
 import tests.unit.test_coupled_unsteady_problem
 import tests.unit.test_coupled_unsteady_ring_vortex_lattice_method
-import tests.unit.test_horseshoe_vortex
-import tests.unit.test_line_vortex
 import tests.unit.test_movement
 import tests.unit.test_operating_point
 import tests.unit.test_operating_point_movement
@@ -115,7 +107,6 @@ import tests.unit.test_package_init
 import tests.unit.test_panel
 import tests.unit.test_parameter_validation
 import tests.unit.test_problems
-import tests.unit.test_ring_vortex
 import tests.unit.test_serialization
 import tests.unit.test_slots
 import tests.unit.test_transformations
