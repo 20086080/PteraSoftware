@@ -1,3 +1,5 @@
+"""This module contains classes to test shared utility functions."""
+
 import unittest
 
 import numpy as np

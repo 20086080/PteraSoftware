@@ -43,6 +43,8 @@ This package contains the following modules:
     test_core_wing_movement.py: This module contains classes to test
     CoreWingMovements.
 
+    test_functions.py: This module contains classes to test shared utility functions.
+
     test_horseshoe_vortex.py: This module contains classes to test HorseshoeVortices.
 
     test_line_vortex.py: This module contains classes to test LineVortices.
@@ -105,6 +107,7 @@ import tests.unit.test_core_wing_cross_section_movement
 import tests.unit.test_core_wing_movement
 import tests.unit.test_coupled_unsteady_problem
 import tests.unit.test_coupled_unsteady_ring_vortex_lattice_method
+import tests.unit.test_functions
 import tests.unit.test_horseshoe_vortex
 import tests.unit.test_line_vortex
 import tests.unit.test_movement
