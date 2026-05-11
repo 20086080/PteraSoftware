@@ -67,7 +67,6 @@ def log_unexpected_singularity_counts(
     )
 
 
-# TEST: Consider adding unit tests for this function.
 def cosspace(
     minimum: float, maximum: float, n_points: int = 50, endpoint: bool = True
 ) -> np.ndarray:
@@ -98,7 +97,6 @@ def cosspace(
     return mean + amp * np.cos(np.linspace(np.pi, 0, n_points, endpoint=endpoint))
 
 
-# TEST: Consider adding unit tests for this function.
 @njit(cache=True, fastmath=False)
 def numba_centroid_of_quadrilateral(
     frontLeftPoint_A_a: np.ndarray,
@@ -510,7 +508,6 @@ def calculate_steady_freestream_wing_influences(
     )
 
 
-# TEST: Consider adding unit tests for this function.
 @njit(cache=True, fastmath=False)
 def numba_1d_explicit_cross(
     stackVectors1_A: np.ndarray, stackVectors2_A: np.ndarray
@@ -554,7 +551,6 @@ def numba_1d_explicit_cross(
     return stackCrossProducts
 
 
-# TEST: Consider adding unit tests for this function.
 @njit(cache=True, fastmath=False)
 def interp_between_points(
     stackStartPoints_A_a: np.ndarray,
