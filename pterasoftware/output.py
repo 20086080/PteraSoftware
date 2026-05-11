@@ -1730,9 +1730,6 @@ def _get_wake_ring_vortex_surfaces(
             (wake_ring_vortex_faces, wake_ring_vortex_face_to_add)
         )
 
-        # Increment the wake ring vortex counter.
-        wake_ring_vortex_num += 1
-
     # Return the wake ring vortex surfaces.
     return pv.PolyData(wake_ring_vortex_vertices, wake_ring_vortex_faces)
 
