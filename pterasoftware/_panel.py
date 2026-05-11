@@ -227,8 +227,7 @@ class Panel:
         self._Cpp_GP1_CgP1: np.ndarray | None = None
         self._unitNormal_GP1: np.ndarray | None = None
 
-        # Initialize mutable attributes to hold the Panel's ring vortex and
-        # horseshoe vortex and the loads on this Panel.
+        # Initialize mutable attributes to hold the loads on this Panel.
         self.forces_GP1: np.ndarray | None = None
         self.moments_GP1_CgP1: np.ndarray | None = None
         self.forces_W: np.ndarray | None = None
