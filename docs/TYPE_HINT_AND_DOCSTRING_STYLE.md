@@ -108,7 +108,7 @@ Use `cast()` sparingly, only when the type checker cannot infer what you know to
 from typing import cast
 
 # For dtype=object arrays where we know the element type
-panel = cast(_panel.Panel, object_array[i, j], )
+panel = cast(_panel.Panel, object_array[i, j])
 ```
 
 **Use `cast()` when:**
