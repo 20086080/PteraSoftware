@@ -1247,7 +1247,7 @@ class Wing:
         # Calculate the number of panels on this wing.
         self.num_panels = computed_num_spanwise_panels * self.num_chordwise_panels
 
-        # Initialize an empty array to hold this Wing's wake RingVortex points.
+        # Initialize an empty array to hold this Wing's wake ring vortex points.
         self.gridWrvp_GP1_CgP1 = np.empty(
             (0, computed_num_spanwise_panels + 1, 3), dtype=float
         )

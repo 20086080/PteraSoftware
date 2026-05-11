@@ -99,10 +99,9 @@ _CLASS_REGISTRY: dict[str, type] = {
 }
 
 # Classes that can be saved and loaded as top level objects via save() and load().
-# Internal classes (LineVortex, RingVortex, HorseshoeVortex, Panel) are excluded
-# because they are not part of the public API and their structure may change without
-# a format version bump. They are still serializable as nested objects within public
-# classes.
+# Internal classes (e.g., Panel) are excluded because they are not part of the public
+# API and their structure may change without a format version bump. They are still
+# serializable as nested objects within public classes.
 _PUBLIC_SAVEABLE_CLASSES: frozenset[str] = frozenset(
     {
         "Airfoil",
@@ -149,8 +148,8 @@ def save(path: str | Path, obj: object) -> None:
 
     :param path: The file path to save to. Should end with ".json" or ".json.gz".
     :param obj: The Ptera Software object to save. Must be a public Ptera Software class
-        (e.g., Airplane, SteadyProblem, or a solver). Internal classes such as Panel and
-        LineVortex cannot be saved directly.
+        (e.g., Airplane, SteadyProblem, or a solver). Internal classes such as Panel
+        cannot be saved directly.
     :return: None
     """
     path = Path(path)

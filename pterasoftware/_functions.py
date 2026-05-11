@@ -372,7 +372,7 @@ def update_ring_vortex_solvers_panel_attributes(
 ) -> None:
     """Populates a ring vortex solver's attributes with the attributes of a given Panel.
 
-    The four bound RingVortex corner points are passed in directly because, in general,
+    The four bound ring vortex corner points are passed in directly because, in general,
     they cannot be derived from the Panel alone. The caller is expected to have already
     resolved them (using neighboring Panels for non trailing edge Panels and a quarter
     chord projection for trailing edge Panels).
@@ -383,16 +383,16 @@ def update_ring_vortex_solvers_panel_attributes(
     :param panel: The Panel whose attributes will be used to update the solver's
         attributes.
     :param Frrvp_GP1_CgP1: A (3,) ndarray of floats representing the position of this
-        Panel's bound RingVortex's front right point (in the first Airplane's geometry
+        Panel's bound ring vortex's front right point (in the first Airplane's geometry
         axes, relative to the first Airplane's CG). The units are in meters.
     :param Flrvp_GP1_CgP1: A (3,) ndarray of floats representing the position of this
-        Panel's bound RingVortex's front left point (in the first Airplane's geometry
+        Panel's bound ring vortex's front left point (in the first Airplane's geometry
         axes, relative to the first Airplane's CG). The units are in meters.
     :param Blrvp_GP1_CgP1: A (3,) ndarray of floats representing the position of this
-        Panel's bound RingVortex's back left point (in the first Airplane's geometry
+        Panel's bound ring vortex's back left point (in the first Airplane's geometry
         axes, relative to the first Airplane's CG). The units are in meters.
     :param Brrvp_GP1_CgP1: A (3,) ndarray of floats representing the position of this
-        Panel's bound RingVortex's back right point (in the first Airplane's geometry
+        Panel's bound ring vortex's back right point (in the first Airplane's geometry
         axes, relative to the first Airplane's CG). The units are in meters.
     :return: None
     """
@@ -407,7 +407,7 @@ def update_ring_vortex_solvers_panel_attributes(
     assert ring_vortex_solver.stackCpp_GP1_CgP1 is not None
     ring_vortex_solver.stackCpp_GP1_CgP1[global_panel_position, :] = panel.Cpp_GP1_CgP1
 
-    # Bound RingVortex corner points. The right leg goes from the back right corner to
+    # Bound ring vortex corner points. The right leg goes from the back right corner to
     # the front right corner, the front leg from front right to front left, the left
     # leg from front left to back left, and the back leg from back left to back right.
     assert ring_vortex_solver.stackBrbrvp_GP1_CgP1 is not None
@@ -419,7 +419,7 @@ def update_ring_vortex_solvers_panel_attributes(
     assert ring_vortex_solver.stackBlbrvp_GP1_CgP1 is not None
     ring_vortex_solver.stackBlbrvp_GP1_CgP1[global_panel_position, :] = Blrvp_GP1_CgP1
 
-    # Bound LineVortex leg center points and direction vectors, derived from the
+    # Bound line vortex leg center points and direction vectors, derived from the
     # corner points.
     assert ring_vortex_solver.stackCblvpr_GP1_CgP1 is not None
     ring_vortex_solver.stackCblvpr_GP1_CgP1[global_panel_position, :] = 0.5 * (

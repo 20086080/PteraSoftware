@@ -52,7 +52,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
     calculate_solution_velocity: Finds the fluid velocity (in the first Airplane's
     geometry axes, observed from the Earth frame) at one or more points (in the first
     Airplane's geometry axes, relative to the first Airplane's CG) due to the freestream
-    velocity and the induced velocity from every RingVortex.
+    velocity and the induced velocity from every ring vortex.
     """
 
     __slots__ = (
@@ -204,7 +204,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         self._stackLastCpp_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
 
         # The current and last time step's back right, front right, front left,
-        # and back left bound RingVortex points (in the first Airplane's geometry
+        # and back left bound ring vortex points (in the first Airplane's geometry
         # axes, relative to the first Airplane's CG).
         self.stackBrbrvp_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
         self.stackFrbrvp_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
@@ -215,7 +215,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         self._lastStackFlbrvp_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
         self._lastStackBlbrvp_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
 
-        # Per step bound RingVortex corner stacks. Filled by
+        # Per step bound ring vortex corner stacks. Filled by
         # _initialize_panel_vortices_at and read by _collapse_geometry,
         # _populate_next_airplanes_wake_vortex_points, and the last step block
         # of the next step's _collapse_geometry. Pre-allocated in run().
@@ -254,7 +254,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             self._per_wing_spanwise_cumsum.append(airplane_cumsum)
         total_spanwise_panels = cumulative_spanwise
 
-        # Pre-allocate the per step bound RingVortex corner stacks. These are
+        # Pre-allocate the per step bound ring vortex corner stacks. These are
         # filled by _initialize_panel_vortices_at(step) and read by the bound
         # vortex pipeline thereafter.
         self._listStackBrbrvp_GP1_CgP1 = [
@@ -270,7 +270,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             np.zeros((self.num_panels, 3), dtype=float) for _ in range(self.num_steps)
         ]
 
-        # Pre-allocate the per step wake stacks. The number of wake RingVortices
+        # Pre-allocate the per step wake stacks. The number of wake ring vortices
         # at step S is min(S, max_wake_rows) (or S if no truncation) times the
         # total spanwise panel count summed over all wings.
         wake_sizes_per_step = []
@@ -303,7 +303,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             np.zeros(n, dtype=float) for n in wake_sizes_per_step
         ]
 
-        # The current and last time step's center bound LineVortex points for the
+        # The current and last time step's center bound line vortex points for the
         # right, front, left, and back legs (in the first Airplane's geometry axes,
         # relative to the first Airplane's CG).
         self.stackCblvpr_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
@@ -315,7 +315,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         self._lastStackCblvpl_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
         self._lastStackCblvpb_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
 
-        # Right, front, left, and back bound RingVortex vectors (in the first
+        # Right, front, left, and back bound ring vortex vectors (in the first
         # Airplane's geometry axes).
         self.stackRbrv_GP1: np.ndarray = np.empty(0, dtype=float)
         self.stackFbrv_GP1: np.ndarray = np.empty(0, dtype=float)
@@ -335,7 +335,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         self._current_wake_vortex_ages: np.ndarray = np.empty(0, dtype=float)
 
         # The current time step's back right, front right, front left, and back left
-        # wake RingVortex points (in the first Airplane's geometry axes, relative to
+        # wake ring vortex points (in the first Airplane's geometry axes, relative to
         # the first Airplane's CG).
         self._currentStackBrwrvp_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
         self._currentStackFrwrvp_GP1_CgP1: np.ndarray = np.empty(0, dtype=float)
@@ -402,7 +402,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         # progress bar during the simulation initialization.
         approx_times = np.zeros(self.num_steps + 1, dtype=float)
         for step in range(1, self.num_steps):
-            # Calculate the total number of RingVortices analyzed during this step.
+            # Calculate the total number of ring vortices analyzed during this step.
             num_wake_ring_vortices = self.list_num_wake_vortices[step]
             num_ring_vortices = num_wing_panels + num_wake_ring_vortices
 
@@ -441,7 +441,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
                 # Airplane's geometry axes, observed from the Earth frame).
                 self._current_step = step
 
-                # Initialize this step's bound RingVortices. The default does an
+                # Initialize this step's bound ring vortices. The default does an
                 # upfront init for all steps on step 0 and is a no-op thereafter;
                 # coupled subclasses override this hook to init one step at a time.
                 self._initialize_step_vortices(step)
@@ -574,12 +574,12 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
                 # Find the normal velocity (in the first Airplane's geometry axes,
                 # observed from the Earth frame) at every collocation point due
-                # solely to the wake RingVortices.
+                # solely to the wake ring vortices.
                 _logger.debug("Calculating the wake Wing influences.")
                 self._calculate_wake_wing_influences()
 
-                # Solve for each bound RingVortex's strength.
-                _logger.debug("Calculating bound RingVortex strengths.")
+                # Solve for each bound ring vortex's strength.
+                _logger.debug("Calculating bound ring vortex strengths.")
                 self._calculate_vortex_strengths()
 
                 # Solve for the forces (in the first Airplane's geometry axes) and
@@ -594,11 +594,11 @@ class UnsteadyRingVortexLatticeMethodSolver:
                 # from this step's solver results).
                 self._pre_shed_hook(step)
 
-                # Shed RingVortices into the wake.
-                _logger.debug("Shedding RingVortices into the wake.")
+                # Shed ring vortices into the wake.
+                _logger.debug("Shedding ring vortices into the wake.")
                 self._populate_next_airplanes_wake()
 
-                # Snapshot this step's solved bound RingVortex strengths so the
+                # Snapshot this step's solved bound ring vortex strengths so the
                 # next step can use them as the "last" strengths in its
                 # _calculate_loads (for the unsteady force term and the back leg
                 # effective strength). The copy is needed because the next step
@@ -626,7 +626,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
     def initialize_step_geometry(self, step: int) -> None:
         """Initializes geometry for a specific step without solving.
 
-        Sets up bound RingVortices and wake RingVortices for the specified time step,
+        Sets up bound ring vortices and wake ring vortices for the specified time step,
         but does not solve the aerodynamic system. Use this for geometry only analysis
         like delta_time optimization.
 
@@ -641,7 +641,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             step, "step", 0, True, self.num_steps, False
         )
 
-        # Initialize bound RingVortices. The base solver's hook does an upfront init
+        # Initialize bound ring vortices. The base solver's hook does an upfront init
         # for all steps when step is 0 and is a no-op otherwise; coupled subclasses
         # override to initialize only the specified step.
         self._initialize_step_vortices(step)
@@ -659,9 +659,9 @@ class UnsteadyRingVortexLatticeMethodSolver:
             self._populate_next_airplanes_wake_vortices()
 
     def _initialize_step_vortices(self, step: int) -> None:
-        """Initializes this time step's bound RingVortices.
+        """Initializes this time step's bound ring vortices.
 
-        The default implementation initializes bound RingVortices for all time steps
+        The default implementation initializes bound ring vortices for all time steps
         upfront on step 0 and is a no-op on subsequent steps. Coupled subclasses
         override this to initialize only the given step, since their geometry is
         determined dynamically from the solver's results at the previous step.
@@ -670,7 +670,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         :return: None
         """
         if step == 0:
-            _logger.debug("Initializing all Airplanes' bound RingVortices.")
+            _logger.debug("Initializing all Airplanes' bound ring vortices.")
             self._initialize_panel_vortices()
 
     def _reinitialize_step_arrays_hook(self) -> None:
@@ -688,7 +688,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         """Hook for subclasses to inject work between load calculation and wake shed.
 
         Called once per time step in run(), after this step's loads have been calculated
-        and before wake RingVortices are shed. The default implementation is a no op.
+        and before wake ring vortices are shed. The default implementation is a no op.
         Coupled subclasses override this to update the next time step's geometry from
         the current step's solver results.
 
@@ -697,15 +697,15 @@ class UnsteadyRingVortexLatticeMethodSolver:
         """
 
     def _initialize_panel_vortices(self) -> None:
-        """Calculates the locations of the bound RingVortex vertices for all time steps,
-        and then initializes them.
+        """Calculates the locations of the bound ring vortex vertices for all time
+        steps, and then initializes them.
 
-        Every Panel has a RingVortex, which is a quadrangle whose front leg is a
-        LineVortex at the Panel's quarter chord. The left and right legs are
-        LineVortices running along the Panel's left and right legs. If the Panel is not
-        along the trailing edge, they extend backwards and meet the back LineVortex, at
-        the rear Panel's quarter chord. Otherwise, they extend backwards and meet the
-        back LineVortex one quarter chord back from the Panel's back leg.
+        Every Panel has a ring vortex, which is a quadrangle whose front leg is a line
+        vortex at the Panel's quarter chord. The left and right legs are line vortices
+        running along the Panel's left and right legs. If the Panel is not along the
+        trailing edge, they extend backwards and meet the back line vortex, at the rear
+        Panel's quarter chord. Otherwise, they extend backwards and meet the back line
+        vortex one quarter chord back from the Panel's back leg.
 
         :return: None
         """
@@ -716,11 +716,11 @@ class UnsteadyRingVortexLatticeMethodSolver:
         """Collapses the bound vortex and wake state into 1D ndarrays for the current
         time step.
 
-        Bound RingVortex corner positions for this and the previous step are read from
-        the per step list arrays populated by _initialize_panel_vortices_at. Wake
-        RingVortex corner positions, strengths, and ages are already stored in the per
-        step list arrays; this method only needs to wire the per Panel scalars and last
-        step leg derivatives.
+        Bound ring vortex corner positions for this and the previous step are read from
+        the per step list arrays populated by _initialize_panel_vortices_at. Wake ring
+        vortex corner positions, strengths, and ages are already stored in the per step
+        list arrays; this method only needs to wire the per Panel scalars and last step
+        leg derivatives.
 
         :return: None
         """
@@ -765,7 +765,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
                     global_panel_position += 1
 
                 # Set the wake characteristic core radius for every wake
-                # RingVortex contributed by this Wing at this step. The wake
+                # ring vortex contributed by this Wing at this step. The wake
                 # corner positions, strengths, and ages are already stored in
                 # the per step list arrays aliased to self._currentStack* in
                 # run() and populated by _populate_next_airplanes_wake_vortices.
@@ -822,15 +822,15 @@ class UnsteadyRingVortexLatticeMethodSolver:
         influence coefficients (observed from the Earth frame).
 
         When an image surface is defined on the OperatingPoint, the influence
-        coefficients also include the contributions from image bound RingVortices
+        coefficients also include the contributions from image bound ring vortices
         reflected across that surface.
 
         :return: None
         """
         # Find the 2D ndarray of normalized velocities (in the first Airplane's
         # geometry axes, observed from the Earth frame) induced at each Panel's
-        # collocation point by each bound RingVortex. The answer is normalized
-        # because the solver's list of bound RingVortex strengths was initialized to
+        # collocation point by each bound ring vortex. The answer is normalized
+        # because the solver's list of bound ring vortex strengths was initialized to
         # all be 1.0. This will be updated once the correct strengths are calculated.
         singularity_counts = np.zeros(4, dtype=np.int64)
         gridNormVIndCpp_GP1_E = (
@@ -946,7 +946,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         the Earth frame) at the current time step.
 
         When an image surface is defined on the OperatingPoint, the influence
-        coefficients also include the contributions from image wake RingVortices
+        coefficients also include the contributions from image wake ring vortices
         reflected across that surface.
 
         **Notes:**
@@ -959,7 +959,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         """
         if self._current_step > 0:
             # Get the velocities (in the first Airplane's geometry axes, observed
-            # from the Earth frame) induced by the wake RingVortices at each Panel's
+            # from the Earth frame) induced by the wake ring vortices at each Panel's
             # collocation point.
             singularity_counts = np.zeros(4, dtype=np.int64)
             currentStackWakeV_GP1_E = (
@@ -1026,13 +1026,13 @@ class UnsteadyRingVortexLatticeMethodSolver:
         else:
             # If this is the first time step, set all the current Wake-wing influence
             # coefficients to 0.0 (observed from the Earth frame) because no wake
-            # RingVortices have been shed.
+            # ring vortices have been shed.
             self._currentStackWakeWingInfluences__E = np.zeros(
                 self.num_panels, dtype=float
             )
 
     def _calculate_vortex_strengths(self) -> None:
-        """Solves for the strength of each Panel's bound RingVortex.
+        """Solves for the strength of each Panel's bound ring vortex.
 
         :return: None
         """
@@ -1051,16 +1051,16 @@ class UnsteadyRingVortexLatticeMethodSolver:
         """Finds the fluid velocity (in the first Airplane's geometry axes, observed
         from the Earth frame) at one or more points (in the first Airplane's geometry
         axes, relative to the first Airplane's CG) due to the freestream velocity and
-        the induced velocity from every RingVortex.
+        the induced velocity from every ring vortex.
 
         When an image surface is defined on the OperatingPoint, the returned velocity
-        also includes the induced velocity from image bound and wake RingVortices
+        also includes the induced velocity from image bound and wake ring vortices
         reflected across that surface.
 
         **Notes:**
 
-        This method assumes that the correct strengths for the RingVortices have already
-        been calculated and set.
+        This method assumes that the correct strengths for the ring vortices have
+        already been calculated and set.
 
         This method also does not include the velocity due to the Movement's motion at
         any of the points provided, as it has no way of knowing if any of the points lie
@@ -1072,16 +1072,15 @@ class UnsteadyRingVortexLatticeMethodSolver:
             a tuple, list, or ndarray. Values are converted to floats internally. The
             units are in meters.
         :param bound_singularity_counts: An optional (4,) ndarray of int64 for
-            accumulating singularity event counts from bound RingVortices. If None,
+            accumulating singularity event counts from bound ring vortices. If None,
             counts are discarded.
         :param wake_singularity_counts: An optional (4,) ndarray of int64 for
-            accumulating singularity event counts from wake RingVortices. If None,
+            accumulating singularity event counts from wake ring vortices. If None,
             counts are discarded.
         :return: A (N,3) ndarray of floats representing the velocity (in the first
             Airplane's geometry axes, observed from the Earth frame) at each evaluation
             point due to the summed effects of the freestream velocity and the induced
-            velocity from every RingVortex and HorseshoeVortex. The units are in meters
-            per second.
+            velocity from every ring vortex. The units are in meters per second.
         """
         stackP_GP1_CgP1 = (
             _parameter_validation.arrayLike_of_threeD_number_vectorLikes_return_float(
@@ -1186,16 +1185,16 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         **Notes:**
 
-        This method assumes that the correct strengths for the RingVortices and
-        HorseshoeVortices have already been calculated and set.
+        This method assumes that the correct strengths for the ring vortices have
+        already been calculated and set.
 
         This method used to accidentally double-count the load on each Panel due to the
-        left and right LineVortex legs. Additionally, it didn't include contributions to
-        the load on each Panel from their back LineVortex legs. Thankfully, these issues
-        only introduced small errors in most typical simulations. They have both now
-        been fixed by (1) using a 1/2 factor for each "effective" vortex strength shared
-        between two Panels, and (2) including the effects each Panel's back LineVortex
-        with its own effective strength.
+        left and right line vortex legs. Additionally, it didn't include contributions
+        to the load on each Panel from their back line vortex legs. Thankfully, these
+        issues only introduced small errors in most typical simulations. They have both
+        now been fixed by (1) using a 1/2 factor for each "effective" vortex strength
+        shared between two Panels, and (2) including the effects each Panel's back line
+        vortex with its own effective strength.
 
         :return: None
         """
@@ -1204,7 +1203,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         global_panel_position = 0
 
         # Initialize three 1D ndarrays to hold the effective strength of the Panels'
-        # RingVortices' LineVortices.
+        # ring vortices' line vortices.
         effective_right_line_vortex_strengths = np.zeros(self.num_panels, dtype=float)
         effective_front_line_vortex_strengths = np.zeros(self.num_panels, dtype=float)
         effective_left_line_vortex_strengths = np.zeros(self.num_panels, dtype=float)
@@ -1238,8 +1237,8 @@ class UnsteadyRingVortexLatticeMethodSolver:
                             this_strength
                         )
                     else:
-                        # Set the effective right LineVortex strength to 1/2 the
-                        # difference between this Panel's bound RingVortex
+                        # Set the effective right line vortex strength to 1/2 the
+                        # difference between this Panel's bound ring vortex
                         # strength and that of the Panel to the right.
                         effective_right_line_vortex_strengths[global_panel_position] = (
                             this_strength
@@ -1253,8 +1252,8 @@ class UnsteadyRingVortexLatticeMethodSolver:
                             this_strength
                         )
                     else:
-                        # Set the effective front LineVortex strength to 1/2 the
-                        # difference between this Panel's bound RingVortex
+                        # Set the effective front line vortex strength to 1/2 the
+                        # difference between this Panel's bound ring vortex
                         # strength and that of the Panel in front of it.
                         effective_front_line_vortex_strengths[global_panel_position] = (
                             this_strength
@@ -1268,8 +1267,8 @@ class UnsteadyRingVortexLatticeMethodSolver:
                             this_strength
                         )
                     else:
-                        # Set the effective left LineVortex strength to 1/2 the
-                        # difference between this Panel's bound RingVortex
+                        # Set the effective left line vortex strength to 1/2 the
+                        # difference between this Panel's bound ring vortex
                         # strength and that of the Panel to the left.
                         effective_left_line_vortex_strengths[global_panel_position] = (
                             this_strength
@@ -1280,18 +1279,18 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
                     if panel.is_trailing_edge:
                         if self._current_step == 0:
-                            # No wake RingVortex exists yet to cancel out this
-                            # Panel's back LineVortex contribution, so the
-                            # effective back strength is the full RingVortex
+                            # No wake ring vortex exists yet to cancel out this
+                            # Panel's back line vortex contribution, so the
+                            # effective back strength is the full ring vortex
                             # strength.
                             effective_back_line_vortex_strengths[
                                 global_panel_position
                             ] = this_strength
                         else:
-                            # The Panel's back LineVortex is partially cancelled
-                            # by the front LineVortex of the wake RingVortex
-                            # immediately to its rear. That wake RingVortex
-                            # carries the strength this Panel's bound RingVortex
+                            # The Panel's back line vortex is partially cancelled
+                            # by the front line vortex of the wake ring vortex
+                            # immediately to its rear. That wake ring vortex
+                            # carries the strength this Panel's bound ring vortex
                             # had last time step, so the effective back strength
                             # is the difference between this step and the last.
                             effective_back_line_vortex_strengths[
@@ -1303,8 +1302,8 @@ class UnsteadyRingVortexLatticeMethodSolver:
                                 ]
                             )
                     else:
-                        # Set the effective back LineVortex strength to 1/2 the
-                        # difference between this Panel's bound RingVortex
+                        # Set the effective back line vortex strength to 1/2 the
+                        # difference between this Panel's bound ring vortex
                         # strength and that of the Panel to the back.
                         effective_back_line_vortex_strengths[global_panel_position] = (
                             this_strength
@@ -1316,8 +1315,8 @@ class UnsteadyRingVortexLatticeMethodSolver:
                     global_panel_position += 1
 
         # Calculate the velocity (in the first Airplane's geometry axes, observed
-        # from the Earth frame) at the center of every Panels' RingVortex's right
-        # LineVortex, front LineVortex, left LineVortex, and back LineVortex.
+        # from the Earth frame) at the center of every Panels' ring vortex's right
+        # line vortex, front line vortex, left line vortex, and back line vortex.
         bound_singularity_counts = np.zeros(4, dtype=np.int64)
         wake_singularity_counts = np.zeros(4, dtype=np.int64)
         stackVelocityRightLineVortexCenters_GP1__E = (
@@ -1359,7 +1358,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         # Subtract the expected structural collinearity before logging. For each Wing
         # with C chordwise and S spanwise Panels, the four leg center evaluations
         # produce (8 * C * S - 2 * C - 2 * S) bound collinearity singularities from
-        # RingVortex self and adjacent shared edge pairs. When there is a wake (time
+        # ring vortex self and adjacent shared edge pairs. When there is a wake (time
         # step > 0), each trailing edge Panel's back leg center is also collinear with
         # and on-filament for the first wake row's front leg, adding S wake collinearity
         # singularities per Wing.
@@ -1391,10 +1390,10 @@ class UnsteadyRingVortexLatticeMethodSolver:
             unexpected_wake_singularity_counts,
         )
 
-        # Using the effective LineVortex strengths and the Kutta-Joukowski theorem,
+        # Using the effective line vortex strengths and the Kutta-Joukowski theorem,
         # find the forces (in the first Airplane's geometry axes) on the Panels'
-        # RingVortex's right LineVortex, front LineVortex, left LineVortex, and back
-        # LineVortex using the effective vortex strengths.
+        # ring vortex's right line vortex, front line vortex, left line vortex, and back
+        # line vortex using the effective vortex strengths.
         rightLegForces_GP1 = (
             self.current_operating_point.rho
             * np.expand_dims(effective_right_line_vortex_strengths, axis=1)
@@ -1428,13 +1427,13 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         # The unsteady force calculation below includes a negative sign to account for a
         # sign convention mismatch between Ptera Software and the reference literature.
-        # Ptera Software defines RingVortices with counter-clockwise (CCW) vertex
+        # Ptera Software defines ring vortices with counter-clockwise (CCW) vertex
         # ordering, while the references use clockwise (CW) ordering. Both define panel
         # normals as pointing upward. This convention difference only affects the
         # unsteady force term because it depends on both vortex strength and the normal
         # vector. When converting from CCW to CW, the strength changes sign but the
         # normal vector does not, requiring a sign correction. In contrast, steady
-        # Kutta-Joukowski forces depend on the strength and the LineVortex vectors. Both
+        # Kutta-Joukowski forces depend on the strength and the line vortex vectors. Both
         # have flipped signs, causing the negatives to cancel. See issue #27:
         # https://github.com/camUrban/PteraSoftware/issues/27
 
@@ -1463,8 +1462,8 @@ class UnsteadyRingVortexLatticeMethodSolver:
         )
 
         # Find the moments (in the first Airplane's geometry axes, relative to the
-        # first Airplane's CG) on the Panels' RingVortex's right LineVortex,
-        # front LineVortex, left LineVortex, and back LineVortex.
+        # first Airplane's CG) on the Panels' ring vortex's right line vortex,
+        # front line vortex, left line vortex, and back line vortex.
         rightLegMoments_GP1_CgP1 = _functions.numba_1d_explicit_cross(
             self.stackCblvpr_GP1_CgP1, rightLegForces_GP1
         )
@@ -1479,7 +1478,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
         )
 
         # The unsteady moment is calculated at the collocation point because the
-        # unsteady force acts on the bound RingVortex, whose center is at the
+        # unsteady force acts on the bound ring vortex, whose center is at the
         # collocation point, not at the Panel's centroid.
 
         # Find the moments (in the first Airplane's geometry axes, relative to the
@@ -1505,15 +1504,15 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         :return: None
         """
-        # Populate the locations of the next time step's Airplanes' wake RingVortex
+        # Populate the locations of the next time step's Airplanes' wake ring vortex
         # points.
         self._populate_next_airplanes_wake_vortex_points()
 
-        # Populate the locations of the next time step's Airplanes' wake RingVortices.
+        # Populate the locations of the next time step's Airplanes' wake ring vortices.
         self._populate_next_airplanes_wake_vortices()
 
     def _populate_next_airplanes_wake_vortex_points(self) -> None:
-        """Populates the locations of the next time step's Airplanes' wake RingVortex
+        """Populates the locations of the next time step's Airplanes' wake ring vortex
         points.
 
         :return: None
@@ -1553,7 +1552,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
                         chordwise_panel_id = num_chordwise_panels - 1
 
                         # Initialize a ndarray to hold the points of the new row of
-                        # wake RingVortices (in the first Airplane's geometry axes,
+                        # wake ring vortices (in the first Airplane's geometry axes,
                         # relative to the first Airplane's CG).
                         newRowWrvp_GP1_CgP1 = np.zeros(
                             (1, num_spanwise_panels + 1, 3), dtype=float
@@ -1573,23 +1572,23 @@ class UnsteadyRingVortexLatticeMethodSolver:
                         for spanwise_panel_id in range(num_spanwise_panels):
                             te_global_idx = te_panel_base + spanwise_panel_id
 
-                            # The position of the new front left wake RingVortex's
+                            # The position of the new front left wake ring vortex's
                             # point is the next time step's Panel's bound
-                            # RingVortex's back left point.
+                            # ring vortex's back left point.
                             newRowWrvp_GP1_CgP1[0, spanwise_panel_id] = next_stackBl[
                                 te_global_idx
                             ]
 
                             # If the Panel is at the right edge of the Wing, add
-                            # its back right bound RingVortex point to the row
-                            # of new wake RingVortex points.
+                            # its back right bound ring vortex point to the row
+                            # of new wake ring vortex points.
                             if spanwise_panel_id == (num_spanwise_panels - 1):
                                 newRowWrvp_GP1_CgP1[0, spanwise_panel_id + 1] = (
                                     next_stackBr[te_global_idx]
                                 )
 
-                        # Set the next time step's Wing's grid of wake RingVortex
-                        # points to a copy of the row of new wake RingVortex points.
+                        # Set the next time step's Wing's grid of wake ring vortex
+                        # points to a copy of the row of new wake ring vortex points.
                         # This is correct because it is currently the first time step.
                         next_wing.gridWrvp_GP1_CgP1 = np.copy(newRowWrvp_GP1_CgP1)
 
@@ -1618,7 +1617,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
                             + vRowWrvp_GP1__E * self.delta_time
                         )
 
-                        # Update the next time step's Wing's grid of wake RingVortex
+                        # Update the next time step's Wing's grid of wake ring vortex
                         # points by vertically stacking the new second row below it.
                         next_wing.gridWrvp_GP1_CgP1 = np.vstack(
                             (
@@ -1632,9 +1631,9 @@ class UnsteadyRingVortexLatticeMethodSolver:
                         _thisGridWrvp_GP1_CgP1 = this_wing.gridWrvp_GP1_CgP1
                         assert _thisGridWrvp_GP1_CgP1 is not None
 
-                        # Set the next time step's Wing's grid of wake RingVortex
+                        # Set the next time step's Wing's grid of wake ring vortex
                         # points to a copy of this time step's Wing's grid of wake
-                        # RingVortex points.
+                        # ring vortex points.
                         next_wing.gridWrvp_GP1_CgP1 = np.copy(_thisGridWrvp_GP1_CgP1)
 
                         # If the wake is prescribed, the velocity at every point is
@@ -1669,7 +1668,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
                         assert _num_spanwise_panels is not None
 
                         # Initialize a new ndarray to hold the new row of wake
-                        # RingVortex vertices.
+                        # ring vortex vertices.
                         newRowWrvp_GP1_CgP1 = np.zeros(
                             (1, _num_spanwise_panels + 1, 3), dtype=float
                         )
@@ -1689,22 +1688,22 @@ class UnsteadyRingVortexLatticeMethodSolver:
                         for spanwise_panel_id in range(_num_spanwise_panels):
                             te_global_idx = te_panel_base + spanwise_panel_id
 
-                            # Add the Panel's back left bound RingVortex point to
-                            # the grid of new wake RingVortex points.
+                            # Add the Panel's back left bound ring vortex point to
+                            # the grid of new wake ring vortex points.
                             newRowWrvp_GP1_CgP1[0, spanwise_panel_id] = next_stackBl[
                                 te_global_idx
                             ]
 
                             # If the Panel is at the right edge of the Wing, add
-                            # its back right bound RingVortex point to the grid
-                            # of new wake RingVortex vertices.
+                            # its back right bound ring vortex point to the grid
+                            # of new wake ring vortex vertices.
                             if spanwise_panel_id == (_num_spanwise_panels - 1):
                                 newRowWrvp_GP1_CgP1[0, spanwise_panel_id + 1] = (
                                     next_stackBr[te_global_idx]
                                 )
 
-                        # Stack the new row of wake RingVortex points above the
-                        # Wing's grid of wake RingVortex points.
+                        # Stack the new row of wake ring vortex points above the
+                        # Wing's grid of wake ring vortex points.
                         next_wing.gridWrvp_GP1_CgP1 = np.vstack(
                             (
                                 newRowWrvp_GP1_CgP1,
@@ -1747,8 +1746,8 @@ class UnsteadyRingVortexLatticeMethodSolver:
         Each Wing's wake POINT grid (Wing.gridWrvp_GP1_CgP1) was already advected by
         _populate_next_airplanes_wake_vortex_points. This method derives the next step's
         per wake-cell corner positions, strengths, and ages and writes them directly
-        into the per step list arrays. Strengths come from this step's solved bound
-        RingVortex strengths (for the new front row) and from this step's wake (for
+        into the per step list arrays. Strengths come from this step's solved bound ring
+        vortex strengths (for the new front row) and from this step's wake (for
         inherited rows). Ages are delta_time for the new front row and (last age +
         delta_time) for inherited rows. The oldest row of this step's wake is dropped
         when truncation is in effect.
@@ -1896,7 +1895,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
     def _calculate_current_movement_velocities_at_right_leg_centers(self) -> np.ndarray:
         """Finds the apparent velocities (in the first Airplane's geometry axes,
-        observed from the Earth frame) at the center point of each bound RingVortex's
+        observed from the Earth frame) at the center point of each bound ring vortex's
         right leg due to any motion defined in Movement at the current time step.
 
         **Notes:**
@@ -1906,7 +1905,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         :return: A (M, 3) ndarray of floats representing the apparent velocity (in the
             first Airplane's geometry axes, observed from the Earth frame) at the center
-            point of each bound RingVortex's right leg due to any motion defined in
+            point of each bound ring vortex's right leg due to any motion defined in
             Movement. If the current time step is the first time step, these velocities
             will all be all zeros. Its units are in meters per second.
         """
@@ -1922,7 +1921,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
     def _calculate_current_movement_velocities_at_front_leg_centers(self) -> np.ndarray:
         """Finds the apparent velocities (in the first Airplane's geometry axes,
-        observed from the Earth frame) at the center point of each bound RingVortex's
+        observed from the Earth frame) at the center point of each bound ring vortex's
         front leg due to any motion defined in Movement at the current time step.
 
         **Notes:**
@@ -1932,7 +1931,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         :return: A (M, 3) ndarray of floats representing the apparent velocity (in the
             first Airplane's geometry axes, observed from the Earth frame) at the center
-            point of each bound RingVortex's front leg due to any motion defined in
+            point of each bound ring vortex's front leg due to any motion defined in
             Movement. If the current time step is the first time step, these velocities
             will all be all zeros. Its units are in meters per second.
         """
@@ -1948,7 +1947,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
     def _calculate_current_movement_velocities_at_left_leg_centers(self) -> np.ndarray:
         """Finds the apparent velocities (in the first Airplane's geometry axes,
-        observed from the Earth frame) at the center point of each bound RingVortex's
+        observed from the Earth frame) at the center point of each bound ring vortex's
         left leg due to any motion defined in Movement at the current time step.
 
         **Notes:**
@@ -1958,7 +1957,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         :return: A (M, 3) ndarray of floats representing the apparent velocity (in the
             first Airplane's geometry axes, observed from the Earth frame) at the center
-            point of each bound RingVortex's left leg due to any motion defined in
+            point of each bound ring vortex's left leg due to any motion defined in
             Movement. If the current time step is the first time step, these velocities
             will all be all zeros. Its units are in meters per second.
         """
@@ -1974,7 +1973,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
     def _calculate_current_movement_velocities_at_back_leg_centers(self) -> np.ndarray:
         """Finds the apparent velocities (in the first Airplane's geometry axes,
-        observed from the Earth frame) at the center point of each bound RingVortex's
+        observed from the Earth frame) at the center point of each bound ring vortex's
         back leg due to any motion defined in Movement at the current time step.
 
         **Notes:**
@@ -1984,7 +1983,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         :return: A (M, 3) ndarray of floats representing the apparent velocity (in the
             first Airplane's geometry axes, observed from the Earth frame) at the center
-            point of each bound RingVortex's back leg due to any motion defined in
+            point of each bound ring vortex's back leg due to any motion defined in
             Movement. If the current time step is the first time step, these velocities
             will all be all zeros. Its units are in meters per second.
         """
@@ -2140,10 +2139,10 @@ class UnsteadyRingVortexLatticeMethodSolver:
         return self.steady_problems[step]
 
     def _initialize_panel_vortices_at(self, step: int) -> None:
-        """Calculates the bound RingVortex corner positions at a given time step and
+        """Calculates the bound ring vortex corner positions at a given time step and
         stores them in the per step list arrays.
 
-        :param step: The time step at which to initialize the Panels' bound RingVortex
+        :param step: The time step at which to initialize the Panels' bound ring vortex
             corner positions.
         :return: None
         """
@@ -2183,13 +2182,13 @@ class UnsteadyRingVortexLatticeMethodSolver:
                         _Frbvp_GP1_CgP1 = panel.Frbvp_GP1_CgP1
                         assert _Frbvp_GP1_CgP1 is not None
 
-                        # Front bound RingVortex corner points coincide with the
+                        # Front bound ring vortex corner points coincide with the
                         # Panel's front bound vortex points.
                         Flrvp_GP1_CgP1 = _Flbvp_GP1_CgP1
                         Frrvp_GP1_CgP1 = _Frbvp_GP1_CgP1
 
                         # Define the location of the back left and back right
-                        # bound RingVortex points based on whether the Panel is
+                        # bound ring vortex points based on whether the Panel is
                         # along the trailing edge.
                         if not panel.is_trailing_edge:
                             next_chordwise_panel: _panel.Panel = _panels[

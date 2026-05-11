@@ -46,7 +46,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
     calculate_solution_velocity: Finds the fluid velocity (in the first Airplane's
     geometry axes, observed from the Earth frame) at one or more points (in the first
     Airplane's geometry axes, relative to the first Airplane's CG) due to the freestream
-    velocity and the induced velocity from every HorseshoeVortex.
+    velocity and the induced velocity from every horseshoe vortex.
 
     **Citation:**
 
@@ -147,7 +147,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
 
         :return: None
         """
-        # Compute the HorseshoeVortex geometries and collapse them, along with each
+        # Compute the horseshoe vortex geometries and collapse them, along with each
         # Panel's per panel scalars, into 1D ndarrays of attributes.
         _logger.debug("Collapsing the geometry.")
         self._collapse_geometry()
@@ -162,8 +162,8 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
         _logger.debug("Calculating the freestream Wing influences.")
         _functions.calculate_steady_freestream_wing_influences(steady_solver=self)
 
-        # Solve for each Panel's HorseshoeVortex's strength.
-        _logger.debug("Calculating the HorseshoeVortex strengths.")
+        # Solve for each Panel's horseshoe vortex's strength.
+        _logger.debug("Calculating the horseshoe vortex strengths.")
         self._calculate_vortex_strengths()
 
         # Solve for the forces (in the first Airplane's geometry axes) and moments (
@@ -181,10 +181,10 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
         self.ran = True
 
     def _collapse_geometry(self) -> None:
-        """Computes the HorseshoeVortex geometries and collapses them, along with each
+        """Computes the horseshoe vortex geometries and collapses them, along with each
         Panel's per panel scalars, into the solver's 1D ndarrays of attributes.
 
-        Every Panel carries a HorseshoeVortex. The finite leg runs along the Panel's
+        Every Panel carries a horseshoe vortex. The finite leg runs along the Panel's
         quarter chord from right to left. The semi infinite legs extend downstream from
         the front corners along the freestream direction.
 
@@ -205,7 +205,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
             for wing in airplane.wings:
                 _span = wing.span
                 assert _span is not None
-                # At twenty times the Wing's span, the HorseshoeVortex legs are
+                # At twenty times the Wing's span, the horseshoe vortex legs are
                 # essentially infinite.
                 infinite_leg_offset_GP1 = vInfHat_GP1__E * (_span * 20)
 
@@ -281,14 +281,14 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
         (observed from the Earth frame).
 
         When an image surface is defined on the OperatingPoint, the influence
-        coefficients also include the contributions from image HorseshoeVortices
+        coefficients also include the contributions from image horseshoe vortices
         reflected across that surface.
 
         :return: None
         """
         # Find the 2D ndarray of normalized velocities (in the first Airplane's
         # geometry axes, observed from the Earth frame) induced at each Panel's
-        # collocation point by each HorseshoeVortex.
+        # collocation point by each horseshoe vortex.
         singularity_counts = np.zeros(4, dtype=np.int64)
         gridNormVIndCpp_GP1__E = (
             _aerodynamics_functions.expanded_velocities_from_horseshoe_vortices(
@@ -354,7 +354,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
         )
 
     def _calculate_vortex_strengths(self) -> None:
-        """Solves for the strength of each Panel's HorseshoeVortex.
+        """Solves for the strength of each Panel's horseshoe vortex.
 
         :return: None
         """
@@ -370,15 +370,15 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
         """Finds the fluid velocity (in the first Airplane's geometry axes, observed
         from the Earth frame) at one or more points (in the first Airplane's geometry
         axes, relative to the first Airplane's CG) due to the freestream velocity and
-        the induced velocity from every HorseshoeVortex.
+        the induced velocity from every horseshoe vortex.
 
         When an image surface is defined on the OperatingPoint, the returned velocity
-        also includes the induced velocity from image HorseshoeVortices reflected across
-        that surface.
+        also includes the induced velocity from image horseshoe vortices reflected
+        across that surface.
 
         **Notes:**
 
-        This method assumes that the correct strengths for the HorseshoeVortices have
+        This method assumes that the correct strengths for the horseshoe vortices have
         already been calculated and set.
 
         :param stackP_GP1_CgP1: An array-like object of numbers (int or float) with
@@ -387,12 +387,12 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
             a tuple, list,or ndarray. Values are converted to floats internally. The
             units are in meters.
         :param bound_singularity_counts: An optional (4,) ndarray of int64 for
-            accumulating singularity event counts from bound HorseshoeVortices. If None,
-            counts are discarded.
+            accumulating singularity event counts from bound horseshoe vortices. If
+            None, counts are discarded.
         :return: A (N,3) ndarray of floats representing the velocity (in the first
             Airplane's geometry axes, observed from the Earth frame) at each evaluation
             point due to the summed effects of the freestream velocity and the induced
-            velocity from every HorseshoeVortex. The units are in meters per second.
+            velocity from every horseshoe vortex. The units are in meters per second.
         """
         stackP_GP1_CgP1 = (
             _parameter_validation.arrayLike_of_threeD_number_vectorLikes_return_float(
@@ -455,13 +455,13 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
 
         **Notes:**
 
-        This method assumes that the correct strengths for the HorseshoeVortices have
+        This method assumes that the correct strengths for the horseshoe vortices have
         already been calculated and set.
 
         :return: None
         """
         # Calculate the velocity (in the first Airplane's geometry axes, observed
-        # from the Earth frame) at the center of every Panel's HorseshoeVortex's
+        # from the Earth frame) at the center of every Panel's horseshoe vortex's
         # finite leg.
         bound_singularity_counts = np.zeros(4, dtype=np.int64)
         stackVelocityBoundVortexCenters_GP1__E = self.calculate_solution_velocity(
@@ -483,7 +483,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
         )
 
         # Calculate the force (in the first Airplane's geometry axes) on each Panel's
-        # HorseshoeVortex's finite leg using the Kutta-Joukowski theorem.
+        # horseshoe vortex's finite leg using the Kutta-Joukowski theorem.
         forces_GP1 = (
             self.operating_point.rho
             * np.expand_dims(self._vortex_strengths, axis=1)
@@ -497,7 +497,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
         # TODO: Determine if we get any performance gains by switching to the
         #  functions.numba1d_explicit_cross function here.
         # Calculate the moment (in the first Airplane's geometry axes, relative to the
-        # first Airplane's CG) on each Panel's HorseshoeVortex's finite leg.
+        # first Airplane's CG) on each Panel's horseshoe vortex's finite leg.
         moments_GP1_CgP1 = np.cross(
             self._stackBoundVortexCenters_GP1_CgP1,
             forces_GP1,

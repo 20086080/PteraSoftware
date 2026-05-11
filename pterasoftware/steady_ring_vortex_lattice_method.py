@@ -46,7 +46,7 @@ class SteadyRingVortexLatticeMethodSolver:
     calculate_solution_velocity: Finds the fluid velocity (in the first Airplane's
     geometry axes, observed from the Earth frame) at one or more points (in the first
     Airplane's geometry axes, relative to the first Airplane's CG) due to the freestream
-    velocity and the induced velocity from every RingVortex and HorseshoeVortex.
+    velocity and the induced velocity from every ring vortex and horseshoe vortex.
 
     **Citation:**
 
@@ -137,21 +137,21 @@ class SteadyRingVortexLatticeMethodSolver:
         # to the first Airplane's CG)
         self.stackCpp_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
 
-        # Back-right, front right, front left, and back left bound RingVortex points
+        # Back-right, front right, front left, and back left bound ring vortex points
         # (in the first Airplane's geometry axes, relative to the first Airplane's CG).
         self.stackBrbrvp_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
         self.stackFrbrvp_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
         self.stackFlbrvp_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
         self.stackBlbrvp_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
 
-        # Center bound LineVortex points for the right, front, left, and back legs (
+        # Center bound line vortex points for the right, front, left, and back legs (
         # in the first Airplane's geometry axes, relative to the first Airplane's CG).
         self.stackCblvpr_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
         self.stackCblvpf_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
         self.stackCblvpl_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
         self.stackCblvpb_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
 
-        # Right, front, left, and back bound RingVortex vectors (in the first
+        # Right, front, left, and back bound ring vortex vectors (in the first
         # Airplane's geometry axes).
         self.stackRbrv_GP1 = np.zeros((self.num_panels, 3), dtype=float)
         self.stackFbrv_GP1 = np.zeros((self.num_panels, 3), dtype=float)
@@ -159,12 +159,12 @@ class SteadyRingVortexLatticeMethodSolver:
         self.stackBbrv_GP1 = np.zeros((self.num_panels, 3), dtype=float)
 
         # Initialize variables that will hold data which characterizes this Panels'
-        # HorseshoeVortex. If the Panel does not have a HorseshoeVortex, these values
+        # horseshoe vortex. If the Panel does not have a horseshoe vortex, these values
         # will not be updated. However, this does not adversely affect the results,
-        # because the default HorseshoeVortex strength is zero. The default
+        # because the default horseshoe vortex strength is zero. The default
         # coordinates will also be updated by the collapse geometry method for Panels
-        # that have a HorseshoeVortex.
-        # TODO: Compact the HorseshoeVortex arrays to only contain trailing edge
+        # that have a horseshoe vortex.
+        # TODO: Compact the horseshoe vortex arrays to only contain trailing edge
         #  Panels. The current num_panels sized arrays waste ~93% of the expanded
         #  kernel computation and produce phantom degenerate filament singularities
         #  at non trailing edge positions.
@@ -192,7 +192,7 @@ class SteadyRingVortexLatticeMethodSolver:
 
         :return: None
         """
-        # Compute the bound RingVortex and trailing edge HorseshoeVortex geometries
+        # Compute the bound ring vortex and trailing edge horseshoe vortex geometries
         # and collapse them, along with each Panel's per panel scalars, into 1D
         # ndarrays of attributes.
         _logger.debug("Collapsing geometry.")
@@ -208,8 +208,8 @@ class SteadyRingVortexLatticeMethodSolver:
         _logger.debug("Calculating the freestream Wing influences.")
         _functions.calculate_steady_freestream_wing_influences(steady_solver=self)
 
-        # Solve for each Panel's RingVortex's and HorseshoeVortex's strength.
-        _logger.debug("Calculating RingVortex and HorseshoeVortex strengths.")
+        # Solve for each Panel's ring vortex's and horseshoe vortex's strength.
+        _logger.debug("Calculating ring vortex and horseshoe vortex strengths.")
         self._calculate_vortex_strengths()
 
         # Solve for the forces (in the first Airplane's geometry axes) and moments (
@@ -227,20 +227,20 @@ class SteadyRingVortexLatticeMethodSolver:
         self.ran = True
 
     def _collapse_geometry(self) -> None:
-        """Computes the bound RingVortex and trailing edge HorseshoeVortex geometries
+        """Computes the bound ring vortex and trailing edge horseshoe vortex geometries
         and collapses them, along with each Panel's per panel scalars, into the solver's
         1D ndarrays of attributes.
 
-        Every Panel has a bound RingVortex, a quadrangle whose front leg lies on the
+        Every Panel has a bound ring vortex, a quadrangle whose front leg lies on the
         Panel's quarter chord. The left and right legs run along the Panel's left and
         right legs. If the Panel is not along the trailing edge, the back leg meets the
         next Panel's quarter chord. Otherwise, it is offset one quarter of the Panel's
         chord behind the trailing edge.
 
-        Trailing edge Panels also carry a HorseshoeVortex whose finite leg overlaps the
-        bound RingVortex's back leg in the opposite direction, and whose semi infinite
-        legs extend downstream along the freestream. The RingVortex and HorseshoeVortex
-        carry the same strength, so the back leg contributions cancel.
+        Trailing edge Panels also carry a horseshoe vortex whose finite leg overlaps the
+        bound ring vortex's back leg in the opposite direction, and whose semi infinite
+        legs extend downstream along the freestream. The ring vortex and horseshoe
+        vortex carry the same strength, so the back leg contributions cancel.
 
         :return: None
         """
@@ -259,7 +259,7 @@ class SteadyRingVortexLatticeMethodSolver:
             for wing in airplane.wings:
                 _span = wing.span
                 assert _span is not None
-                # At twenty times the Wing's span, the HorseshoeVortex legs are
+                # At twenty times the Wing's span, the horseshoe vortex legs are
                 # essentially infinite.
                 infinite_leg_offset_GP1 = vInfHat_GP1__E * (_span * 20)
 
@@ -278,7 +278,7 @@ class SteadyRingVortexLatticeMethodSolver:
                         ]
 
                         # Find the location of this Panel's front right and front
-                        # left bound RingVortex points (in the first Airplane's
+                        # left bound ring vortex points (in the first Airplane's
                         # geometry axes, relative to the first Airplane's CG).
                         Frrvp_GP1_CgP1 = panel.Frbvp_GP1_CgP1
                         assert Frrvp_GP1_CgP1 is not None
@@ -287,7 +287,7 @@ class SteadyRingVortexLatticeMethodSolver:
                         assert Flrvp_GP1_CgP1 is not None
 
                         # Define the location of the back left and back right
-                        # bound RingVortex points based on whether the Panel is
+                        # bound ring vortex points based on whether the Panel is
                         # along the trailing edge or not.
                         if not panel.is_trailing_edge:
                             next_chordwise_panel = _panels[
@@ -319,7 +319,7 @@ class SteadyRingVortexLatticeMethodSolver:
                                 _Brpp_GP1_CgP1 - _Frpp_GP1_CgP1
                             )
 
-                        # Update the solver's bound RingVortex stack arrays and
+                        # Update the solver's bound ring vortex stack arrays and
                         # per Panel scalars.
                         _functions.update_ring_vortex_solvers_panel_attributes(
                             ring_vortex_solver=self,
@@ -332,9 +332,9 @@ class SteadyRingVortexLatticeMethodSolver:
                         )
 
                         if panel.is_trailing_edge:
-                            # Populate the HorseshoeVortex stack arrays. The
-                            # HorseshoeVortex shares its front corners with the
-                            # bound RingVortex's back corners and its semi infinite
+                            # Populate the horseshoe vortex stack arrays. The
+                            # horseshoe vortex shares its front corners with the
+                            # bound ring vortex's back corners and its semi infinite
                             # legs extend downstream along the freestream. The
                             # strength is initialized to 1.0 and will be replaced
                             # after the strength solve.
@@ -361,15 +361,15 @@ class SteadyRingVortexLatticeMethodSolver:
         (observed from the Earth frame).
 
         When an image surface is defined on the OperatingPoint, the influence
-        coefficients also include the contributions from image RingVortices and image
-        HorseshoeVortices reflected across that surface.
+        coefficients also include the contributions from image ring vortices and image
+        horseshoe vortices reflected across that surface.
 
         :return: None
         """
         # Find the 2D ndarray of normalized velocities (in the first Airplane's
         # geometry axes, observed from the Earth frame) induced at each Panel's
-        # collocation point by each RingVortex. The answer is normalized because the
-        # solver's list of RingVortex strengths was initialized to all be 1.0. This
+        # collocation point by each ring vortex. The answer is normalized because the
+        # solver's list of ring vortex strengths was initialized to all be 1.0. This
         # will be updated once the correct strengths are calculated.
         singularity_counts = np.zeros(4, dtype=np.int64)
         gridRingNormVIndCpp_GP1__E = (
@@ -389,10 +389,10 @@ class SteadyRingVortexLatticeMethodSolver:
 
         # Find the 2D ndarray of normalized velocities (in the first Airplane's
         # geometry axes, observed from the Earth frame) induced at every Panel's
-        # collocation point by every HorseshoeVortex. The answer is normalized
-        # because the solver's list of HorseshoeVortex strengths was initialized to
-        # 1.0 for locations which have a HorseshoeVortex, and zeros everywhere else.
-        # The strengths at the positions with a HorseshoeVortex will be updated once
+        # collocation point by every horseshoe vortex. The answer is normalized
+        # because the solver's list of horseshoe vortex strengths was initialized to
+        # 1.0 for locations which have a horseshoe vortex, and zeros everywhere else.
+        # The strengths at the positions with a horseshoe vortex will be updated once
         # the correct vortex strengths are calculated. The positions elsewhere will
         # remain zero.
         gridHorseshoeNormVIndCpp_GP1__E = (
@@ -460,7 +460,7 @@ class SteadyRingVortexLatticeMethodSolver:
         unexpected_singularity_counts = np.copy(singularity_counts)
 
         # Subtract the expected degenerate filament count before logging. Non
-        # trailing edge Panels have phantom all zero HorseshoeVortex vertices,
+        # trailing edge Panels have phantom all zero horseshoe vortex vertices,
         # producing 3 degenerate legs each (right, front, left) per horseshoe
         # wrapper call. When an image surface is defined, the image horseshoe
         # call doubles the expected count.
@@ -497,7 +497,8 @@ class SteadyRingVortexLatticeMethodSolver:
         )
 
     def _calculate_vortex_strengths(self) -> None:
-        """Solves for the bound RingVortex and trailing edge HorseshoeVortex strengths.
+        """Solves for the bound ring vortex and trailing edge horseshoe vortex
+        strengths.
 
         :return: None
         """
@@ -506,7 +507,7 @@ class SteadyRingVortexLatticeMethodSolver:
         )
 
         # Mirror the trailing edge entries of the solved strengths into the
-        # HorseshoeVortex strength array. Non trailing edge entries remain zero.
+        # horseshoe vortex strength array. Non trailing edge entries remain zero.
         self._horseshoe_vortex_strengths[self.panel_is_trailing_edge] = (
             self._vortex_strengths[self.panel_is_trailing_edge]
         )
@@ -519,16 +520,16 @@ class SteadyRingVortexLatticeMethodSolver:
         """Finds the fluid velocity (in the first Airplane's geometry axes, observed
         from the Earth frame) at one or more points (in the first Airplane's geometry
         axes, relative to the first Airplane's CG) due to the freestream velocity and
-        the induced velocity from every RingVortex and HorseshoeVortex.
+        the induced velocity from every ring vortex and horseshoe vortex.
 
         When an image surface is defined on the OperatingPoint, the returned velocity
-        also includes the induced velocity from image RingVortices and image
-        HorseshoeVortices reflected across that surface.
+        also includes the induced velocity from image ring vortices and image horseshoe
+        vortices reflected across that surface.
 
         **Notes:**
 
-        This method assumes that the correct strengths for the RingVortices and
-        HorseshoeVortices have already been calculated and set.
+        This method assumes that the correct strengths for the ring vortices and
+        horseshoe vortices have already been calculated and set.
 
         :param stackP_GP1_CgP1: An array-like object of numbers (int or float) with
             shape (N,3) representing the positions of the evaluation points (in the
@@ -536,13 +537,13 @@ class SteadyRingVortexLatticeMethodSolver:
             a tuple, list, or ndarray. Values are converted to floats internally. The
             units are in meters.
         :param bound_singularity_counts: An optional (4,) ndarray of int64 for
-            accumulating singularity event counts from bound RingVortices and
-            HorseshoeVortices. If None, counts are discarded.
+            accumulating singularity event counts from bound ring vortices and horseshoe
+            vortices. If None, counts are discarded.
         :return: A (N,3) ndarray of floats representing the velocity (in the first
             Airplane's geometry axes, observed from the Earth frame) at each evaluation
             point due to the summed effects of the freestream velocity and the induced
-            velocity from every RingVortex and HorseshoeVortex. The units are in meters
-            per second.
+            velocity from every ring vortex and horseshoe vortex. The units are in
+            meters per second.
         """
         stackP_GP1_CgP1 = (
             _parameter_validation.arrayLike_of_threeD_number_vectorLikes_return_float(
@@ -641,16 +642,16 @@ class SteadyRingVortexLatticeMethodSolver:
 
         **Notes:**
 
-        This method assumes that the correct strengths for the RingVortices and
-        HorseshoeVortices have already been calculated and set.
+        This method assumes that the correct strengths for the ring vortices and
+        horseshoe vortices have already been calculated and set.
 
         This method used to accidentally double-count the load on each Panel due to the
-        left and right LineVortex legs. Additionally, it didn't include contributions to
-        the load on each Panel from their back LineVortex legs. Thankfully, these issues
-        only introduced small errors in most typical simulations. They have both now
-        been fixed by (1) using a 1/2 factor for each "effective" vortex strength shared
-        between two Panels, and (2) including the effects each Panel's back LineVortex
-        with its own effective strength.
+        left and right line vortex legs. Additionally, it didn't include contributions
+        to the load on each Panel from their back line vortex legs. Thankfully, these
+        issues only introduced small errors in most typical simulations. They have both
+        now been fixed by (1) using a 1/2 factor for each "effective" vortex strength
+        shared between two Panels, and (2) including the effects each Panel's back line
+        vortex with its own effective strength.
 
         :return: None
         """
@@ -659,7 +660,7 @@ class SteadyRingVortexLatticeMethodSolver:
         global_panel_position = 0
 
         # Initialize three 1D ndarrays to hold the effective strength of the Panels'
-        # RingVortices' LineVortices.
+        # ring vortices' line vortices.
         effective_right_line_vortex_strengths = np.zeros(self.num_panels, dtype=float)
         effective_front_line_vortex_strengths = np.zeros(self.num_panels, dtype=float)
         effective_left_line_vortex_strengths = np.zeros(self.num_panels, dtype=float)
@@ -687,14 +688,14 @@ class SteadyRingVortexLatticeMethodSolver:
                     this_strength = self._vortex_strengths[global_panel_position]
 
                     if panel.is_right_edge:
-                        # Set the effective right LineVortex strength to this Panel's
-                        # bound RingVortex strength.
+                        # Set the effective right line vortex strength to this Panel's
+                        # bound ring vortex strength.
                         effective_right_line_vortex_strengths[global_panel_position] = (
                             this_strength
                         )
                     else:
-                        # Set the effective right LineVortex strength to 1/2 the
-                        # difference between this Panel's bound RingVortex strength
+                        # Set the effective right line vortex strength to 1/2 the
+                        # difference between this Panel's bound ring vortex strength
                         # and that of the Panel to the right.
                         effective_right_line_vortex_strengths[global_panel_position] = (
                             this_strength
@@ -702,14 +703,14 @@ class SteadyRingVortexLatticeMethodSolver:
                         ) / 2
 
                     if panel.is_leading_edge:
-                        # Set the effective front LineVortex strength to this Panel's
-                        # bound RingVortex strength.
+                        # Set the effective front line vortex strength to this Panel's
+                        # bound ring vortex strength.
                         effective_front_line_vortex_strengths[global_panel_position] = (
                             this_strength
                         )
                     else:
-                        # Set the effective front LineVortex strength to 1/2 the
-                        # difference between this Panel's bound RingVortex strength
+                        # Set the effective front line vortex strength to 1/2 the
+                        # difference between this Panel's bound ring vortex strength
                         # and that of the Panel in front of it.
                         effective_front_line_vortex_strengths[global_panel_position] = (
                             this_strength
@@ -719,14 +720,14 @@ class SteadyRingVortexLatticeMethodSolver:
                         ) / 2
 
                     if panel.is_left_edge:
-                        # Set the effective left LineVortex strength to this Panel's
-                        # bound RingVortex strength.
+                        # Set the effective left line vortex strength to this Panel's
+                        # bound ring vortex strength.
                         effective_left_line_vortex_strengths[global_panel_position] = (
                             this_strength
                         )
                     else:
-                        # Set the effective left LineVortex strength to 1/2 the
-                        # difference between this Panel's bound RingVortex strength
+                        # Set the effective left line vortex strength to 1/2 the
+                        # difference between this Panel's bound ring vortex strength
                         # and that of the Panel to the left.
                         effective_left_line_vortex_strengths[global_panel_position] = (
                             this_strength
@@ -734,15 +735,15 @@ class SteadyRingVortexLatticeMethodSolver:
                         ) / 2
 
                     if panel.is_trailing_edge:
-                        # Set the effective back LineVortex strength to zero, as it
-                        # is perfectly canceled by the wake HorseshoeVortex's finite
-                        # leg LineVortex.
+                        # Set the effective back line vortex strength to zero, as it
+                        # is perfectly canceled by the wake horseshoe vortex's finite
+                        # leg line vortex.
                         effective_back_line_vortex_strengths[global_panel_position] = (
                             0.0
                         )
                     else:
-                        # Set the effective back LineVortex strength to 1/2 the
-                        # difference between this Panel's bound RingVortex strength
+                        # Set the effective back line vortex strength to 1/2 the
+                        # difference between this Panel's bound ring vortex strength
                         # and that of the Panel to the back.
                         effective_back_line_vortex_strengths[global_panel_position] = (
                             this_strength
@@ -755,8 +756,8 @@ class SteadyRingVortexLatticeMethodSolver:
                     global_panel_position += 1
 
         # Calculate the velocity (in the first Airplane's geometry axes, observed
-        # from the Earth frame) at the center of every Panels' RingVortex's right
-        # LineVortex, front LineVortex, left LineVortex, and back LineVortex.
+        # from the Earth frame) at the center of every Panels' ring vortex's right
+        # line vortex, front line vortex, left line vortex, and back line vortex.
         bound_singularity_counts = np.zeros(4, dtype=np.int64)
         stackVelocityRightLineVortexCenters_GP1__E = self.calculate_solution_velocity(
             stackP_GP1_CgP1=self.stackCblvpr_GP1_CgP1,
@@ -780,10 +781,10 @@ class SteadyRingVortexLatticeMethodSolver:
         # Subtract expected structural singularity counts before logging. For
         # each Wing with C chordwise and S spanwise Panels, the four leg center
         # evaluations produce (8 * C * S - 2 * C - 2 * S) collinearity
-        # singularities from RingVortex self and adjacent shared edge pairs.
+        # singularities from ring vortex self and adjacent shared edge pairs.
         # Each trailing edge Panel's back leg center is also collinear with the
-        # corresponding wake HorseshoeVortex's finite leg, adding S per Wing.
-        # Non trailing edge Panels have phantom all zero HorseshoeVortex vertices,
+        # corresponding wake horseshoe vortex's finite leg, adding S per Wing.
+        # Non trailing edge Panels have phantom all zero horseshoe vortex vertices,
         # producing 3 degenerate legs each per horseshoe wrapper call, times 4
         # calculate_solution_velocity calls.
         expected_collinearity = 0
@@ -807,10 +808,10 @@ class SteadyRingVortexLatticeMethodSolver:
             unexpected_bound_singularity_counts,
         )
 
-        # Using the effective LineVortex strengths and the Kutta-Joukowski theorem,
+        # Using the effective line vortex strengths and the Kutta-Joukowski theorem,
         # find the forces (in the first Airplane's geometry axes) on the Panels'
-        # RingVortex's right LineVortex, front LineVortex, left LineVortex, and back
-        # LineVortex using the effective vortex strengths.
+        # ring vortex's right line vortex, front line vortex, left line vortex, and back
+        # line vortex using the effective vortex strengths.
         rightLegForces_GP1 = (
             self.operating_point.rho
             * np.expand_dims(effective_right_line_vortex_strengths, axis=1)
@@ -858,8 +859,8 @@ class SteadyRingVortexLatticeMethodSolver:
         # TODO: Determine if we get any performance gains by switching to the
         #  functions.numba_1d_explicit_cross function here.
         # Find the moments (in the first Airplane's geometry axes, relative to the
-        # first Airplane's CG) on the Panels' RingVortex's right LineVortex,
-        # front LineVortex, left LineVortex, and back LineVortex.
+        # first Airplane's CG) on the Panels' ring vortex's right line vortex,
+        # front line vortex, left line vortex, and back line vortex.
         rightLegMoments_GP1_CgP1 = np.cross(
             self.stackCblvpr_GP1_CgP1,
             rightLegForces_GP1,
