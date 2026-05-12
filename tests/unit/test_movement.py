@@ -1350,6 +1350,7 @@ class TestOptimizeDeltaTimeNonStatic(unittest.TestCase):
         """Test that _optimize_delta_time_non_static returns a positive float."""
         from pterasoftware._core import lcm_multiple
         from pterasoftware.movements.movement import (
+            _analytically_optimize_delta_time,
             _optimize_delta_time_non_static,
         )
 
@@ -1366,8 +1367,15 @@ class TestOptimizeDeltaTimeNonStatic(unittest.TestCase):
             all_periods.extend(airplane_movement.all_periods)
         lcm_period = lcm_multiple(all_periods)
 
-        # Use a larger initial_delta_time to reduce the brute force search range.
-        initial_delta_time = 0.1
+        # Seed with the analytical result so the brute force bracket is centered
+        # near the true optimum, mirroring real usage. The analytical's
+        # initial_delta_time is only used as a fallback for fully static
+        # Movements, so any positive placeholder works here.
+        initial_delta_time = _analytically_optimize_delta_time(
+            airplane_movements=airplane_movements,
+            operating_point_movement=operating_point_movement,
+            initial_delta_time=1.0,
+        )
 
         optimized_delta_time = _optimize_delta_time_non_static(
             airplane_movements=airplane_movements,
@@ -1383,6 +1391,7 @@ class TestOptimizeDeltaTimeNonStatic(unittest.TestCase):
         """Test that _optimize_delta_time_non_static result divides LCM period evenly."""
         from pterasoftware._core import lcm_multiple
         from pterasoftware.movements.movement import (
+            _analytically_optimize_delta_time,
             _optimize_delta_time_non_static,
         )
 
@@ -1399,7 +1408,15 @@ class TestOptimizeDeltaTimeNonStatic(unittest.TestCase):
             all_periods.extend(airplane_movement.all_periods)
         lcm_period = lcm_multiple(all_periods)
 
-        initial_delta_time = 0.1
+        # Seed with the analytical result so the brute force bracket is centered
+        # near the true optimum, mirroring real usage. The analytical's
+        # initial_delta_time is only used as a fallback for fully static
+        # Movements, so any positive placeholder works here.
+        initial_delta_time = _analytically_optimize_delta_time(
+            airplane_movements=airplane_movements,
+            operating_point_movement=operating_point_movement,
+            initial_delta_time=1.0,
+        )
 
         optimized_delta_time = _optimize_delta_time_non_static(
             airplane_movements=airplane_movements,
@@ -1420,7 +1437,10 @@ class TestOptimizeDeltaTime(unittest.TestCase):
     def test_returns_positive_float_within_bounds(self):
         """Test that _optimize_delta_time returns a positive float within expected
         bounds."""
-        from pterasoftware.movements.movement import _optimize_delta_time
+        from pterasoftware.movements.movement import (
+            _analytically_optimize_delta_time,
+            _optimize_delta_time,
+        )
 
         airplane_movements = [
             airplane_movement_fixtures.make_basic_airplane_movement_fixture()
@@ -1429,10 +1449,17 @@ class TestOptimizeDeltaTime(unittest.TestCase):
             base_operating_point=operating_point_fixtures.make_basic_operating_point_fixture()
         )
 
-        # Use a larger initial_delta_time to reduce the brute force search range.
-        # The fixture has a period of 2.0 s, so 0.1 s gives ~20 steps per period,
-        # and the search range is ~10 to ~40 steps (~30 evaluations).
-        initial_delta_time = 0.1
+        # Seed the iterative optimizer with the analytical result. This keeps the
+        # brute force bracket centered near the true optimum so the search does
+        # not hit either bound, mirroring real usage. The initial_delta_time
+        # passed to _analytically_optimize_delta_time is only used as a fallback
+        # for fully static Movements, so any positive placeholder works here
+        # since the fixture has motion.
+        initial_delta_time = _analytically_optimize_delta_time(
+            airplane_movements=airplane_movements,
+            operating_point_movement=operating_point_movement,
+            initial_delta_time=1.0,
+        )
 
         # For non static movements, brute force search is used (mismatch_cutoff is
         # ignored).
