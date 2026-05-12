@@ -2048,6 +2048,138 @@ class TestComputeWakeAreaMismatchEdgeCases(unittest.TestCase):
         self.assertGreaterEqual(mismatch, 0.0)
 
 
+class TestComputeWakeAreaMismatchesCachedNonStatic(unittest.TestCase):
+    """Tests for the _compute_wake_area_mismatches_cached_non_static function."""
+
+    def test_returns_dict_with_all_candidate_keys(self):
+        """Test that the result dict has exactly the input candidates as keys, with
+        non-negative float values."""
+        from pterasoftware.movements.movement import (
+            _compute_wake_area_mismatches_cached_non_static,
+        )
+
+        airplane_movements = [
+            airplane_movement_fixtures.make_basic_airplane_movement_fixture()
+        ]
+        operating_point_movement = ps.movements.operating_point_movement.OperatingPointMovement(
+            base_operating_point=operating_point_fixtures.make_basic_operating_point_fixture()
+        )
+
+        # The basic fixture has period 2.0 s; the cached helper accepts lcm_period
+        # directly rather than rederiving it.
+        lcm_period = 2.0
+        candidates = [2, 3, 4]
+
+        results = _compute_wake_area_mismatches_cached_non_static(
+            airplane_movements=airplane_movements,
+            operating_point_movement=operating_point_movement,
+            lcm_period=lcm_period,
+            num_steps_candidates=candidates,
+        )
+
+        self.assertEqual(set(results.keys()), set(candidates))
+        for value in results.values():
+            self.assertIsInstance(value, float)
+            self.assertGreaterEqual(value, 0.0)
+
+    def test_does_not_mutate_original_movements(self):
+        """Test that the cached helper does not mutate the original objects."""
+        from pterasoftware.movements.movement import (
+            _compute_wake_area_mismatches_cached_non_static,
+        )
+
+        airplane_movements = [
+            airplane_movement_fixtures.make_basic_airplane_movement_fixture()
+        ]
+        operating_point_movement = ps.movements.operating_point_movement.OperatingPointMovement(
+            base_operating_point=operating_point_fixtures.make_basic_operating_point_fixture()
+        )
+
+        original_base_airplane = airplane_movements[0].base_airplane
+
+        _compute_wake_area_mismatches_cached_non_static(
+            airplane_movements=airplane_movements,
+            operating_point_movement=operating_point_movement,
+            lcm_period=2.0,
+            num_steps_candidates=[2, 4],
+        )
+
+        self.assertIs(
+            airplane_movements[0].base_airplane,
+            original_base_airplane,
+        )
+
+    def test_agrees_with_uncached_at_exact_divisor_candidates(self):
+        """Test that the cached helper matches _compute_wake_area_mismatch at
+        candidates where linear interpolation reduces to a direct lookup.
+
+        With _NON_STATIC_CACHE_OVERSAMPLE = 2 and max_candidate = 4, the high
+        resolution Movement has 8 intervals. Candidates 2 and 4 both divide 8
+        exactly, so their fractional sample indices are all integers and the
+        cached evaluator's interpolation weights collapse to a direct lookup.
+        Under that condition the cached result must equal the uncached result
+        at the same delta_time to within floating-point round-off.
+        """
+        from pterasoftware.movements.movement import (
+            _compute_wake_area_mismatch,
+            _compute_wake_area_mismatches_cached_non_static,
+        )
+
+        airplane_movements = [
+            airplane_movement_fixtures.make_basic_airplane_movement_fixture()
+        ]
+        operating_point_movement = ps.movements.operating_point_movement.OperatingPointMovement(
+            base_operating_point=operating_point_fixtures.make_basic_operating_point_fixture()
+        )
+
+        lcm_period = 2.0
+        candidates = [2, 4]
+
+        cached_results = _compute_wake_area_mismatches_cached_non_static(
+            airplane_movements=airplane_movements,
+            operating_point_movement=operating_point_movement,
+            lcm_period=lcm_period,
+            num_steps_candidates=candidates,
+        )
+
+        for num_steps in candidates:
+            delta_time = lcm_period / num_steps
+            uncached_result = _compute_wake_area_mismatch(
+                delta_time=delta_time,
+                airplane_movements=airplane_movements,
+                operating_point_movement=operating_point_movement,
+                num_steps=num_steps,
+            )
+            self.assertAlmostEqual(
+                cached_results[num_steps], uncached_result, places=10
+            )
+
+
+class TestEvaluateCachedWakeAreaMismatch(unittest.TestCase):
+    """Tests for the _evaluate_cached_wake_area_mismatch function."""
+
+    def test_returns_zero_for_num_steps_below_two(self):
+        """Test that the evaluator returns 0.0 when num_steps is less than 2,
+        since at least one step pair is needed for a comparison."""
+        import numpy as np
+
+        from pterasoftware.movements.movement import (
+            _evaluate_cached_wake_area_mismatch,
+        )
+
+        # The function returns early before touching cache_per_wing or
+        # v_inf_high_res, so minimal placeholder inputs are sufficient.
+        result = _evaluate_cached_wake_area_mismatch(
+            cache_per_wing=[],
+            v_inf_high_res=np.zeros((1, 3)),
+            lcm_period=1.0,
+            high_res_num_intervals=1,
+            num_steps=1,
+        )
+
+        self.assertEqual(result, 0.0)
+
+
 class TestOptimizeDeltaTimeNonStaticWarnings(unittest.TestCase):
     """Tests for warnings in _optimize_delta_time_non_static."""
 
