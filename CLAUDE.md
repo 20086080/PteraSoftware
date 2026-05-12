@@ -41,13 +41,15 @@ Requires Python 3.11, but active development is done in 3.13
     - `workflows/`: Directory with GitHub Actions workflows
         - `black.yml`
         - `codespell.yml`
+        - `isort.yml`
         - `mypy.yml`
         - `tests.yml`
     - `pull_request_template.md`
 - `.venv/`: Directory for the Python virtual environment (not included in version control)
 - `experimental/`: Directory with experimental scripts and prototypes (not included in version control)
 - `docs/`: Directory with documentation files
-    - `examples expected output/`: Example output files for verification
+    - `examples_expected_output/`: Example output files for verification
+    - `hero_graphics/`: Scripts and assets for the README hero graphic
     - `private/`: Directory with documentation not included in this repository's version control
         - `katz_plotkin_12_2/`: A recreation of Chapter 12.2, which describes efficiently including the effects of symmetry and ground effect for vortex lattice methods, from the textbook "Low-Speed Aerodynamics" by Katz and Plotkin
         - `katz_plotkin_13_12/`: A recreation of Chapter 13.12, which describes the UVLM, from the textbook "Low-Speed Aerodynamics" by Katz and Plotkin
@@ -64,10 +66,6 @@ Requires Python 3.11, but active development is done in 3.13
 - `examples/`: Directory with example scripts for users
 - `gui/`: Directory with GUI source code
 - `pterasoftware/`: Main package with modular solver architecture
-    - `_vortices/`: Package with vortex classes
-        - `_line_vortex.py`: LineVortex class
-        - `horseshoe_vortex.py`: HorseshoeVortex class
-        - `ring_vortex.py`: RingVortex class
     - `geometry/`: Package with aircraft geometry classes
         - `_airfoils/`: Directory containing data files with airfoil coordinates
         - `_meshing.py`: Wing mesh generation
@@ -93,6 +91,7 @@ Requires Python 3.11, but active development is done in 3.13
         - `wing_movement.py`: WingMovement class
     - `_aerodynamics_functions.py`: Induced velocity functions
     - `_core.py`: Core classes for the movement and problem hierarchies
+    - `_coupled_unsteady_ring_vortex_lattice_method.py`: Coupled unsteady UVLM solver subclass with step-by-step geometry
     - `_functions.py`: Shared utility functions
     - `_logging.py`: Contains function for setting up logging
     - `_oscillation.py`: Oscillation functions for movement classes
@@ -110,6 +109,7 @@ Requires Python 3.11, but active development is done in 3.13
     - `unsteady_ring_vortex_lattice_method.py`: Unsteady ring UVLM solver
 - `tests/`: Directory with unit and integration tests
     - `benchmarks/`: Performance benchmark scripts and saved results
+        - `bench_parallel_biot_savart.py`
         - `bench_serialization.py`
         - `bench_slots.py`
     - `integration/`: Integration tests for combined functionality
@@ -144,8 +144,6 @@ Requires Python 3.11, but active development is done in 3.13
             - `core_wing_cross_section_movement_fixtures.py`
             - `core_wing_movement_fixtures.py`
             - `geometry_fixtures.py`
-            - `horseshoe_vortex_fixtures.py`
-            - `line_vortex_fixtures.py`
             - `movement_fixtures.py`
             - `operating_point_fixtures.py`
             - `operating_point_movement_fixtures.py`
@@ -153,7 +151,6 @@ Requires Python 3.11, but active development is done in 3.13
             - `panel_fixtures.py`
             - `parameter_validation_fixtures.py`
             - `problem_fixtures.py`
-            - `ring_vortex_fixtures.py`
             - `serialization_fixtures.py`
             - `solver_fixtures.py`
             - `wing_cross_section_movement_fixtures.py`
@@ -169,8 +166,9 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_core_unsteady_problem.py`
         - `test_core_wing_cross_section_movement.py`
         - `test_core_wing_movement.py`
-        - `test_horseshoe_vortex.py`
-        - `test_line_vortex.py`
+        - `test_coupled_unsteady_problem.py`
+        - `test_coupled_unsteady_ring_vortex_lattice_method.py`
+        - `test_functions.py`
         - `test_logging.py`
         - `test_movement.py`
         - `test_operating_point.py`
@@ -180,18 +178,20 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_panel.py`
         - `test_parameter_validation.py`
         - `test_problems.py`
-        - `test_ring_vortex.py`
         - `test_serialization.py`
         - `test_slots.py`
         - `test_transformations.py`
+        - `test_unsteady_ring_vortex_lattice_method.py`
         - `test_wing.py`
         - `test_wing_cross_section.py`
         - `test_wing_cross_section_movement.py`
         - `test_wing_movement.py`
-- `.codespell-ignore`: File listing words to ignore in spell checking
+- `.codespell-ignore.txt`: File listing words to ignore in spell checking
 - `.gitignore`: Git ignore file
 - `.pre-commit-config.yaml`: Pre-commit configuration file
+- `.readthedocs.yaml`: Read the Docs build configuration
 - `BUILD.md`: Instructions for building the GUI
+- `codecov.yml`: Codecov configuration for test coverage reporting
 - `CONTRIBUTING.md`: Contribution guidelines for developers
 - `make_installer.iss`: Inno Setup script for building Windows installer
 - `MANIFEST.in`: Manifest file for packaging
@@ -201,6 +201,7 @@ Requires Python 3.11, but active development is done in 3.13
 - `README.md`: Project overview and installation instructions for developers
 - `requirements.txt`: Full list of runtime dependencies with version constraints
 - `requirements_dev.txt`: Full list of development dependencies with version constraints
+- `requirements_min.txt`: Minimum-version runtime dependencies
 - `setup.cfg`: Setup configuration file
 
 ## Running Scripts That Import Ptera Software

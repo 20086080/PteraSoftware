@@ -18,7 +18,7 @@ from typing import cast
 import numpy as np
 import scipy.optimize as sp_opt
 
-from .. import _core, _logging, _parameter_validation, _vortices, geometry
+from .. import _core, _logging, _parameter_validation, geometry
 from .. import operating_point as operating_point_mod
 from .. import problems
 from . import airplane_movement as airplane_movement_mod
@@ -81,15 +81,15 @@ class Movement(_core.CoreMovement):
             changes to the UnsteadyProblem's operating conditions.
         :param delta_time: The time between each time step. Accepts the following: None
             (default): Movement analytically estimates the delta_time that produces wake
-            RingVortices with roughly the same chord length as the bound trailing edge
-            RingVortices, accounting for both freestream and geometry motion velocities.
-            This provides good results across all Strouhal numbers. "optimize": Movement
-            first runs the analytical estimation, then uses that result as an initial
-            guess for an iterative optimization that minimizes the area mismatch between
-            wake RingVortices and their parent bound trailing edge RingVortices. This is
-            slower but may produce slightly more accurate results. Positive number (int
-            or float): Use the specified value directly. All values are converted
-            internally to floats. The units are in seconds.
+            ring vortices with roughly the same chord length as the bound trailing edge
+            ring vortices, accounting for both freestream and geometry motion
+            velocities. This provides good results across all Strouhal numbers.
+            "optimize": Movement first runs the analytical estimation, then uses that
+            result as an initial guess for an iterative optimization that minimizes the
+            area mismatch between wake ring vortices and their parent bound trailing
+            edge ring vortices. This is slower but may produce slightly more accurate
+            results. Positive number (int or float): Use the specified value directly.
+            All values are converted internally to floats. The units are in seconds.
         :param num_cycles: The number of cycles of the maximum period motion used to
             calculate a num_steps parameter initialized as None if Movement isn't
             static. If num_steps is not None or if Movement is static, this must be
@@ -111,7 +111,7 @@ class Movement(_core.CoreMovement):
             objects. If num_steps is initialized as None, and Movement is static,
             Movement will calculate a value for num_steps such that the simulation will
             result in a wake extending back by some number of reference chord lengths.
-        :param max_wake_rows: The maximum number of chordwise wake RingVortex rows per
+        :param max_wake_rows: The maximum number of chordwise wake ring vortex rows per
             Wing. Works for both static and non static Movements. Must be a positive int
             if set. At most one of max_wake_rows, max_wake_chords, and max_wake_cycles
             can be non None. The default is None (no truncation).
@@ -492,21 +492,30 @@ def _compute_wake_area_mismatch(
     operating_point_movement: operating_point_movement_mod.OperatingPointMovement,
     num_steps: int | None = None,
 ) -> float:
-    """Computes the average area mismatch between wake and bound RingVortices.
+    """Computes the average area mismatch between wake and bound ring vortices.
 
     Builds a temporary Movement and UnsteadyProblem so the panel vertex points are
     populated in the first Airplane's geometry axes (GP1_CgP1), then computes bound
-    trailing edge RingVortex areas and wake first row RingVortex areas analytically from
-    the panel corners. Skips solver instantiation, the per-step initialize_step_geometry
-    walk, the bound RingVortex object creation, and the wake vertex grid population.
+    trailing edge ring vortex areas and wake first row ring vortex areas analytically
+    from the panel corners. Skips solver instantiation, the per step
+    initialize_step_geometry walk, the bound corner stack population, and the wake
+    corner stack population.
 
-    Bound trailing edge RingVortex back vertices are computed exactly as
+    The area mismatch metric measures how well the wake ring vortex sizing matches the
+    bound ring vortex sizing. A lower value indicates better matching.
+
+    The number of time steps checked is picked to capture the full range of differences
+    in areas for the wake and bound ring vortex child parent pairs. For static cases,
+    this is just a single time step. For non static cases, it is enough time steps to
+    cover one full maximum length period of motion.
+
+    Bound trailing edge ring vortex back vertices are computed exactly as
     UnsteadyRingVortexLatticeMethodSolver._initialize_panel_vortices_at would: at step
     0, panel.B[lr]pp + 0.25 * vInf * dt; at step k > 0, 0.75 * panel.B[lr]pp(k) + 0.25 *
-    panel.B[lr]pp(k - 1) + 0.25 * vInf(k) * dt. Wake first row RingVortex area at step k
-    reduces algebraically to dt * |cross(Brrvp(k) - Blrvp(k), vInf(k - 1))|, where the
+    panel.B[lr]pp(k - 1) + 0.25 * vInf(k) * dt. Wake first row ring vortex area at step
+    k reduces algebraically to dt * |cross(Brrvp(k) - Blrvp(k), vInf(k - 1))|, where the
     advection velocity is taken at step k - 1 because the solver populates the wake
-    using the previous step's _currentVInf.
+    using the previous step's freestream velocity.
 
     :param delta_time: The delta_time value to test. It must be a positive float. Its
         units are in seconds.
@@ -518,9 +527,9 @@ def _compute_wake_area_mismatch(
         the cached non-static evaluator and avoid floating point rounding in the
         inferred step count.
     :return: The average area mismatch. The absolute percent error between the area of
-        shed wake RingVortices and the area of their parent bound RingVortices (at the
+        shed wake ring vortices and the area of their parent bound ring vortices (at the
         time step where they were shed). Averaged across all time steps and all pairs of
-        child and parent RingVortices. A lower value indicates better matching.
+        child and parent ring vortices. A lower value indicates better matching.
     """
     airplane_movements_copy = copy.deepcopy(airplane_movements)
     operating_point_movement_copy = copy.deepcopy(operating_point_movement)
@@ -550,7 +559,7 @@ def _compute_wake_area_mismatch(
     )
 
     # UnsteadyProblem populates panel.*_GP1_CgP1 attributes on every Airplane snapshot,
-    # which is the frame the solver's bound RingVortex construction reads.
+    # which is the frame the solver's bound ring vortex construction reads.
     temp_problem = problems.UnsteadyProblem(movement=temp_movement)
 
     if num_steps < 2:
@@ -1049,8 +1058,8 @@ def _optimize_delta_time(
 ) -> float:
     """Finds an optimal delta_time by minimizing wake area mismatch.
 
-    Optimizes delta_time to minimize the area mismatch between wake RingVortices and
-    their parent bound trailing edge RingVortices. This produces better results at high
+    Optimizes delta_time to minimize the area mismatch between wake ring vortices and
+    their parent bound trailing edge ring vortices. This produces better results at high
     Strouhal numbers where motion induced velocity is significant.
 
     For non static Movements, the optimization uses a brute force search over integer
@@ -1302,10 +1311,10 @@ def _analytically_optimize_delta_time(
 ) -> float:
     """Analytically estimates the optimal delta_time from wake displacement.
 
-    Estimates the delta_time that produces wake RingVortices with roughly the same chord
-    length as the bound trailing edge RingVortices, accounting for both freestream and
-    geometry motion velocities. This is faster than _optimize_delta_time but may be
-    slightly less accurate.
+    Estimates the delta_time that produces wake ring vortices with roughly the same
+    chord length as the bound trailing edge ring vortices, accounting for both
+    freestream and geometry motion velocities. This is faster than _optimize_delta_time
+    but may be slightly less accurate.
 
     The algorithm works by: (1) computing a very small preliminary delta_time as the
     minimum motion period divided by 100 (capped by a maximum of 1000 total time steps
@@ -1314,9 +1323,9 @@ def _analytically_optimize_delta_time(
     coordinates transformed into the first Airplane's geometry axes), (3) measuring the
     average wake displacement per time step for each Wing's trailing edge Panels
     (combining freestream velocity and geometry motion, both in the first Airplane's
-    geometry axes), and (4) choosing a delta_time such that each wake RingVortex has
-    approximately the same chord as its parent bound RingVortex (averaged across the one
-    LCM period).
+    geometry axes), and (4) choosing a delta_time such that each wake ring vortex has
+    approximately the same chord as its parent bound ring vortex (averaged across the
+    one LCM period).
 
     :param airplane_movements: The AirplaneMovements defining the motion.
     :param operating_point_movement: The OperatingPointMovement.
@@ -1402,7 +1411,7 @@ def _analytically_optimize_delta_time(
             num_spanwise = _panels.shape[1]
 
             # Compute the mean chordwise width of trailing edge Panels. This is
-            # the target chord length for wake RingVortices. We use the trailing
+            # the target chord length for wake ring vortices. We use the trailing
             # edge Panel chord directly (rather than standard_mean_chord /
             # num_chordwise) because non uniform chordwise spacing can cause
             # trailing edge Panels to have different chords than average.
@@ -1489,7 +1498,7 @@ def _analytically_optimize_delta_time(
             # Average distance over one LCM period per spanwise Panel.
             average_distance = total_distance / num_measurements
             # The desired number of steps per LCM period is such that each wake
-            # RingVortex chord equals the trailing edge bound Panel chord.
+            # ring vortex chord equals the trailing edge bound Panel chord.
             wing_num_steps_per_lcm = average_distance / mean_te_panel_chord
             wing_num_steps_values.append(wing_num_steps_per_lcm)
             wing_num_spanwise_panels_values.append(num_spanwise)
@@ -1533,7 +1542,7 @@ def _analytically_optimize_delta_time(
 
     # Warn if the result implies fewer than 20 time steps per minimum period of motion.
     # This indicates the trailing edge Panels are large relative to the motion, so
-    # matching wake RingVortex area to bound RingVortex area requires a time step that
+    # matching wake ring vortex area to bound ring vortex area requires a time step that
     # is large compared to the minimum period. This results in poor temporal resolution
     # of the fastest motion. Increasing the number of chordwise Panels or switching to
     # cosine chordwise spacing (which concentrates Panels at the leading and trailing
