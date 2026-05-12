@@ -513,10 +513,13 @@ def _compute_wake_area_mismatch(
     Bound trailing edge ring vortex back vertices are computed exactly as
     UnsteadyRingVortexLatticeMethodSolver._initialize_panel_vortices_at would: at step
     0, panel.B[lr]pp + 0.25 * vInf * dt; at step k > 0, 0.75 * panel.B[lr]pp(k) + 0.25 *
-    panel.B[lr]pp(k - 1) + 0.25 * vInf(k) * dt. Wake first row ring vortex area at step
-    k reduces algebraically to dt * |cross(Brrvp(k) - Blrvp(k), vInf(k - 1))|, where the
-    advection velocity is taken at step k - 1 because the solver populates the wake
-    using the previous step's freestream velocity.
+    panel.B[lr]pp(k - 1) + 0.25 * vInf(k) * dt. For the first wake-row case
+    corresponding to step == 1, the wake ring vortex area reduces algebraically to
+    dt * |cross(Brrvp(k) - Blrvp(k), vInf(k - 1))|. For later steps (step >= 2), the
+    wake first row ring vortex area depends on both current and previous bound trailing
+    edge vertices and is computed using the general quadrilateral-diagonal formula.
+    The advection velocity uses step k - 1 because the solver populates the wake using
+    the previous step's freestream velocity.
 
     :param delta_time: The delta_time value to test. It must be a positive float. Its
         units are in seconds.
