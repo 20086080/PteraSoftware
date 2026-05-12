@@ -480,9 +480,10 @@ class Movement(_core.CoreMovement):
 
 
 # Oversampling factor for the non static cached path. The high resolution
-# Movement is built at _NON_STATIC_CACHE_OVERSAMPLE * max_num_steps snapshots so
-# the maximum and half maximum candidates have integer strides and other
-# candidates stay within roughly half a high resolution step of the nominal time.
+# Movement is built with _NON_STATIC_CACHE_OVERSAMPLE * max_num_steps
+# intervals (and therefore one more snapshot) so the maximum and half maximum
+# candidates have integer strides and other candidates stay within roughly
+# half a high resolution step of the nominal time.
 _NON_STATIC_CACHE_OVERSAMPLE: int = 2
 
 
