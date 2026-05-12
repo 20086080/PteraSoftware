@@ -64,6 +64,7 @@ class SteadyRingVortexLatticeMethodSolver:
         "reynolds_numbers",
         "num_airplanes",
         "num_panels",
+        "num_trailing_edge_panels",
         "vInf_GP1__E",
         "stackFreestreamWingInfluences__E",
         "_gridWingWingInfluences__E",
@@ -116,9 +117,13 @@ class SteadyRingVortexLatticeMethodSolver:
         self.reynolds_numbers = self._steady_problem.reynolds_numbers
         self.num_airplanes = len(self.airplanes)
         self.num_panels = 0
+        self.num_trailing_edge_panels = 0
         airplane: geometry.airplane.Airplane
         for airplane in self.airplanes:
             self.num_panels += airplane.num_panels
+            for wing in airplane.wings:
+                assert wing.num_spanwise_panels is not None
+                self.num_trailing_edge_panels += wing.num_spanwise_panels
 
         # Initialize attributes to hold aerodynamic data that pertains to this
         # simulation.
@@ -158,21 +163,25 @@ class SteadyRingVortexLatticeMethodSolver:
         self.stackLbrv_GP1 = np.zeros((self.num_panels, 3), dtype=float)
         self.stackBbrv_GP1 = np.zeros((self.num_panels, 3), dtype=float)
 
-        # Initialize variables that will hold data which characterizes this Panels'
-        # horseshoe vortex. If the Panel does not have a horseshoe vortex, these values
-        # will not be updated. However, this does not adversely affect the results,
-        # because the default horseshoe vortex strength is zero. The default
-        # coordinates will also be updated by the collapse geometry method for Panels
-        # that have a horseshoe vortex.
-        # TODO: Compact the horseshoe vortex arrays to only contain trailing edge
-        #  Panels. The current num_panels sized arrays waste ~93% of the expanded
-        #  kernel computation and produce phantom degenerate filament singularities
-        #  at non trailing edge positions.
-        self._stackBrhvp_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
-        self._stackFrhvp_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
-        self._stackFlhvp_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
-        self._stackBlhvp_GP1_CgP1 = np.zeros((self.num_panels, 3), dtype=float)
-        self._horseshoe_vortex_strengths = np.zeros(self.num_panels, dtype=float)
+        # Initialize variables that will hold data which characterizes the trailing
+        # edge Panels' horseshoe vortices. These arrays are sized by the number of
+        # trailing edge Panels, in trailing edge order, since non trailing edge Panels
+        # do not carry a horseshoe vortex.
+        self._stackBrhvp_GP1_CgP1 = np.zeros(
+            (self.num_trailing_edge_panels, 3), dtype=float
+        )
+        self._stackFrhvp_GP1_CgP1 = np.zeros(
+            (self.num_trailing_edge_panels, 3), dtype=float
+        )
+        self._stackFlhvp_GP1_CgP1 = np.zeros(
+            (self.num_trailing_edge_panels, 3), dtype=float
+        )
+        self._stackBlhvp_GP1_CgP1 = np.zeros(
+            (self.num_trailing_edge_panels, 3), dtype=float
+        )
+        self._horseshoe_vortex_strengths = np.zeros(
+            self.num_trailing_edge_panels, dtype=float
+        )
 
         self._stackRc0s = np.zeros(self.num_panels, dtype=float)
 
@@ -251,6 +260,11 @@ class SteadyRingVortexLatticeMethodSolver:
         # Initialize a variable to hold the global position of the Panel as we
         # iterate through them.
         global_panel_position = 0
+
+        # Initialize a variable to hold the trailing edge position as we encounter
+        # trailing edge Panels. This indexes the trailing edge sized horseshoe
+        # vortex arrays.
+        te_position = 0
 
         # Iterate through each Airplane's Wings.
         airplane: geometry.airplane.Airplane
@@ -338,21 +352,16 @@ class SteadyRingVortexLatticeMethodSolver:
                             # legs extend downstream along the freestream. The
                             # strength is initialized to 1.0 and will be replaced
                             # after the strength solve.
-                            self._stackBrhvp_GP1_CgP1[global_panel_position] = (
+                            self._stackBrhvp_GP1_CgP1[te_position] = (
                                 Brrvp_GP1_CgP1 + infinite_leg_offset_GP1
                             )
-                            self._stackFrhvp_GP1_CgP1[global_panel_position] = (
-                                Brrvp_GP1_CgP1
-                            )
-                            self._stackFlhvp_GP1_CgP1[global_panel_position] = (
-                                Blrvp_GP1_CgP1
-                            )
-                            self._stackBlhvp_GP1_CgP1[global_panel_position] = (
+                            self._stackFrhvp_GP1_CgP1[te_position] = Brrvp_GP1_CgP1
+                            self._stackFlhvp_GP1_CgP1[te_position] = Blrvp_GP1_CgP1
+                            self._stackBlhvp_GP1_CgP1[te_position] = (
                                 Blrvp_GP1_CgP1 + infinite_leg_offset_GP1
                             )
-                            self._horseshoe_vortex_strengths[global_panel_position] = (
-                                1.0
-                            )
+                            self._horseshoe_vortex_strengths[te_position] = 1.0
+                            te_position += 1
 
                         global_panel_position += 1
 
@@ -389,12 +398,12 @@ class SteadyRingVortexLatticeMethodSolver:
 
         # Find the 2D ndarray of normalized velocities (in the first Airplane's
         # geometry axes, observed from the Earth frame) induced at every Panel's
-        # collocation point by every horseshoe vortex. The answer is normalized
-        # because the solver's list of horseshoe vortex strengths was initialized to
-        # 1.0 for locations which have a horseshoe vortex, and zeros everywhere else.
-        # The strengths at the positions with a horseshoe vortex will be updated once
-        # the correct vortex strengths are calculated. The positions elsewhere will
-        # remain zero.
+        # collocation point by every trailing edge Panel's horseshoe vortex. The
+        # answer is normalized because the horseshoe vortex strengths were
+        # initialized to 1.0 and will be updated once the correct vortex strengths
+        # are calculated. The result has shape (num_panels, num_trailing_edge_panels,
+        # 3) and is later scatter added into the ring contribution at the trailing
+        # edge columns.
         gridHorseshoeNormVIndCpp_GP1__E = (
             _aerodynamics_functions.expanded_velocities_from_horseshoe_vortices(
                 stackP_GP1_CgP1=self.stackCpp_GP1_CgP1,
@@ -458,22 +467,6 @@ class SteadyRingVortexLatticeMethodSolver:
             )
 
         unexpected_singularity_counts = np.copy(singularity_counts)
-
-        # Subtract the expected degenerate filament count before logging. Non
-        # trailing edge Panels have phantom all zero horseshoe vortex vertices,
-        # producing 3 degenerate legs each (right, front, left) per horseshoe
-        # wrapper call. When an image surface is defined, the image horseshoe
-        # call doubles the expected count.
-        num_trailing_edge_panels = 0
-        for airplane in self.airplanes:
-            for wing in airplane.wings:
-                assert wing.num_spanwise_panels is not None
-                num_trailing_edge_panels += wing.num_spanwise_panels
-        num_horseshoe_calls = 2 if surfaceReflect_T_act_GP1_CgP1 is not None else 1
-        expected_degenerate = (
-            num_horseshoe_calls * 3 * (self.num_panels - num_trailing_edge_panels)
-        )
-        unexpected_singularity_counts[0] -= expected_degenerate
         _functions.log_unexpected_singularity_counts(
             _logger,
             logging.ERROR,
@@ -481,9 +474,12 @@ class SteadyRingVortexLatticeMethodSolver:
             unexpected_singularity_counts,
         )
 
-        gridNormVIndCpp_GP1__E = (
-            gridRingNormVIndCpp_GP1__E + gridHorseshoeNormVIndCpp_GP1__E
-        )
+        # Fold the trailing edge sized horseshoe contribution into the ring grid at
+        # the trailing edge columns. For non trailing edge columns the ring grid is
+        # untouched.
+        gridRingNormVIndCpp_GP1__E[
+            :, self.panel_is_trailing_edge, :
+        ] += gridHorseshoeNormVIndCpp_GP1__E
 
         # Take the batch dot product of the normalized induced velocities (in the
         # first Airplane's geometry axes, observed from the Earth frame) with each
@@ -492,7 +488,7 @@ class SteadyRingVortexLatticeMethodSolver:
         # the Earth frame).
         self._gridWingWingInfluences__E = np.einsum(
             "...k,...k->...",
-            gridNormVIndCpp_GP1__E,
+            gridRingNormVIndCpp_GP1__E,
             np.expand_dims(self.stackUnitNormals_GP1, axis=1),
         )
 
@@ -507,10 +503,10 @@ class SteadyRingVortexLatticeMethodSolver:
         )
 
         # Mirror the trailing edge entries of the solved strengths into the
-        # horseshoe vortex strength array. Non trailing edge entries remain zero.
-        self._horseshoe_vortex_strengths[self.panel_is_trailing_edge] = (
-            self._vortex_strengths[self.panel_is_trailing_edge]
-        )
+        # trailing edge sized horseshoe vortex strength array.
+        self._horseshoe_vortex_strengths = self._vortex_strengths[
+            self.panel_is_trailing_edge
+        ]
 
     def calculate_solution_velocity(
         self,
@@ -778,17 +774,13 @@ class SteadyRingVortexLatticeMethodSolver:
 
         unexpected_bound_singularity_counts = np.copy(bound_singularity_counts)
 
-        # Subtract expected structural singularity counts before logging. For
+        # Subtract expected structural collinearity counts before logging. For
         # each Wing with C chordwise and S spanwise Panels, the four leg center
         # evaluations produce (8 * C * S - 2 * C - 2 * S) collinearity
         # singularities from ring vortex self and adjacent shared edge pairs.
         # Each trailing edge Panel's back leg center is also collinear with the
         # corresponding wake horseshoe vortex's finite leg, adding S per Wing.
-        # Non trailing edge Panels have phantom all zero horseshoe vortex vertices,
-        # producing 3 degenerate legs each per horseshoe wrapper call, times 4
-        # calculate_solution_velocity calls.
         expected_collinearity = 0
-        num_trailing_edge_panels = 0
         for airplane in self.airplanes:
             for wing in airplane.wings:
                 num_chordwise = wing.num_chordwise_panels
@@ -797,9 +789,6 @@ class SteadyRingVortexLatticeMethodSolver:
                 n = num_chordwise * num_spanwise
                 expected_collinearity += 8 * n - 2 * num_chordwise - 2 * num_spanwise
                 expected_collinearity += num_spanwise
-                num_trailing_edge_panels += num_spanwise
-        expected_degenerate = 4 * 3 * (self.num_panels - num_trailing_edge_panels)
-        unexpected_bound_singularity_counts[0] -= expected_degenerate
         unexpected_bound_singularity_counts[3] -= expected_collinearity
         _functions.log_unexpected_singularity_counts(
             _logger,
