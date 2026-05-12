@@ -514,12 +514,12 @@ def _compute_wake_area_mismatch(
     UnsteadyRingVortexLatticeMethodSolver._initialize_panel_vortices_at would: at step
     0, panel.B[lr]pp + 0.25 * vInf * dt; at step k > 0, 0.75 * panel.B[lr]pp(k) + 0.25 *
     panel.B[lr]pp(k - 1) + 0.25 * vInf(k) * dt. For the first wake-row case
-    corresponding to step == 1, the wake ring vortex area reduces algebraically to
-    dt * |cross(Brrvp(k) - Blrvp(k), vInf(k - 1))|. For later steps (step >= 2), the
-    wake first row ring vortex area depends on both current and previous bound trailing
-    edge vertices and is computed using the general quadrilateral-diagonal formula.
-    The advection velocity uses step k - 1 because the solver populates the wake using
-    the previous step's freestream velocity.
+    corresponding to step == 1, the wake ring vortex area reduces algebraically to dt *
+    |cross(Brrvp(k) - Blrvp(k), vInf(k - 1))|. For later steps (step >= 2), the wake
+    first row ring vortex area depends on both current and previous bound trailing edge
+    vertices and is computed using the general quadrilateral-diagonal formula. The
+    advection velocity uses step k - 1 because the solver populates the wake using the
+    previous step's freestream velocity.
 
     :param delta_time: The delta_time value to test. It must be a positive float. Its
         units are in seconds.
@@ -878,9 +878,9 @@ def _evaluate_cached_wake_area_mismatch(
 ) -> float:
     """Evaluates wake area mismatch at one candidate num_steps using a shared cache.
 
-    Maps each candidate step k in [0, num_steps] to a fractional high resolution index k
-    * high_res_num_intervals / num_steps and linearly interpolates the cached panel
-    corners and freestream between adjacent high resolution samples. Linear
+    Maps each candidate step k in [0, num_steps - 1] to a fractional high resolution
+    index k * high_res_num_intervals / num_steps and linearly interpolates the cached
+    panel corners and freestream between adjacent high resolution samples. Linear
     interpolation has O(dt^2) error in panel position for smooth motion, which is small
     enough at the oversampling factors used here that the integer num_steps picked by
     the optimizer matches the result obtained from a fresh per candidate Movement and
@@ -918,13 +918,12 @@ def _evaluate_cached_wake_area_mismatch(
 
     # Linear interpolation mapping from candidate steps to high resolution
     # samples. The floor index gives the lower bracketing sample; the fractional
-    # part is the interpolation weight on the next sample.
-    fractional_indices = np.arange(num_steps + 1) * high_res_num_intervals / num_steps
+    # part is the interpolation weight on the next sample. Only num_steps
+    # candidate samples are generated since the comparison loop reads indices
+    # [0, num_steps - 1]; the t = lcm_period sample would be dead.
+    fractional_indices = np.arange(num_steps) * high_res_num_intervals / num_steps
     floor_indices = np.floor(fractional_indices).astype(int)
     weights_next = fractional_indices - floor_indices
-    # Clamp to keep floor_indices + 1 in range. At the upper boundary the weight
-    # on the next sample is zero so the clamped neighbor never contributes.
-    floor_indices = np.clip(floor_indices, 0, high_res_num_intervals - 1)
     next_indices = floor_indices + 1
     weights_floor = 1.0 - weights_next
     # Reshape weights for broadcasting against (num_samples, num_spanwise, 3)
@@ -940,8 +939,8 @@ def _evaluate_cached_wake_area_mismatch(
 
     for cache in cache_per_wing:
         # Sample and linearly interpolate the cached panel attribute arrays at
-        # the candidate step times. Each result has shape (num_steps + 1,
-        # num_spanwise_panels, 3); v_inf has shape (num_steps + 1, 3).
+        # the candidate step times. Each result has shape (num_steps,
+        # num_spanwise_panels, 3); v_inf has shape (num_steps, 3).
         Flpp = (
             weights_floor_b * cache["Flpp"][floor_indices]
             + weights_next_b * cache["Flpp"][next_indices]
