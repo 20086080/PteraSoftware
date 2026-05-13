@@ -12,7 +12,7 @@ Link any related issues using GitHub's syntax. For bugs, write, "Fixes #<issue n
 
 ## Changes
 
-List the changes you made in bullet points.
+* List the changes you made in bullet points.
 
 ## Dependency Updates
 

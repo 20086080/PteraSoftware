@@ -97,6 +97,42 @@ Ptera Software now uses GitHub Flow to manage code contributions. If this is new
     deactivate
     ```
     **Note:** If you use PyCharm, the repository includes a pre-configured `.idea` directory with code style settings and inspection profiles. If you use Claude Code, the repository also includes a pre-configured `CLAUDE.md` file and a `.claude` directory with permission and sandbox settings.
+
+   #### PyCharm Setup
+
+   The repository tracks a small set of `.idea/` files for shared code style and inspection settings, and PyCharm rewrites them on your machine whenever you open the project. To keep these local rewrites out of your commits, run two commands once from the project root after cloning.
+
+   First, add `.idea/` to your personal exclude file so any new `.idea/` files PyCharm creates do not appear in `git status`. This file lives only in your clone and is never committed:
+
+   ```shell
+   echo ".idea/" >> .git/info/exclude
+   ```
+
+   Second, mark every currently-tracked `.idea/` file with `skip-worktree` so PyCharm rewriting them does not appear in `git status` either. Run this in a shell that supports pipes (Git Bash on Windows, Terminal on macOS, or any Linux shell):
+
+   ```shell
+   git ls-files .idea/ | xargs git update-index --skip-worktree
+   ```
+
+   The tracked `.idea/` files remain in the repository, but local modifications to them are ignored. Before opening a PR, confirm that `git status` does not list anything inside `.idea/`.
+
+   If a future pull from `upstream/main` legitimately updates one of the tracked `.idea/` files, `git pull` will refuse with an error like:
+
+   ```
+   error: Your local changes to the following files would be overwritten by merge:
+           .idea/<some-file>
+   Please commit your changes or stash them before you merge.
+   Aborting
+   ```
+
+   If every file listed in the error is inside `.idea/`, discard your local versions (PyCharm will rewrite them the next time you open the project) and pull again:
+
+   ```shell
+   git checkout HEAD -- .idea/
+   git pull
+   ```
+
+   If any listed file is outside `.idea/`, stop and ask in a [discussion](https://github.com/camUrban/PteraSoftware/discussions) before running anything else.
 3. **Create a new branch**
     - Branch from main for each change.
     - Use descriptive branch names, such as `feature/add_new_plot` or `bug/fix_units`.
