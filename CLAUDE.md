@@ -204,26 +204,6 @@ Requires Python 3.11, but active development is done in 3.13
 - `requirements_min.txt`: Minimum-version runtime dependencies
 - `setup.cfg`: Setup configuration file
 
-## Running Scripts That Import Ptera Software
-
-When running scripts outside the main pterasoftware directory that import the package (e.g., scripts in `experimental/`), you need to set `PYTHONPATH` to the project root:
-
-```bash
-cd ${WORKSPACE}/experimental && PYTHONPATH="$PWD/.." ../.venv/Scripts/python.exe script_name.py
-```
-
-On Unix-like systems:
-
-```bash
-cd ${WORKSPACE}/experimental && PYTHONPATH="$PWD/.." ../.venv/bin/python script_name.py
-```
-
-This pattern:
-
-1. Changes to the script's directory
-2. Sets `PYTHONPATH` to the parent directory (project root)
-3. Runs the script using the virtual environment's Python interpreter
-
 ## Common Mistakes
 
 - Forgetting to read RUNNING_TESTS_AND_TYPE_CHECKS.md before running tests and trying to use pytest (Ptera Software uses unittest)

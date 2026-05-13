@@ -1937,7 +1937,6 @@ def _get_wing_section_num_spanwise_panels(
     :return: The number of spanwise Panels that results in an average Panel aspect ratio
         closest to the desired value.
     """
-
     this_num_spanwise_panels = start_val
     average_panel_aspect_ratios = []
 
