@@ -71,7 +71,7 @@ Ptera Software now uses GitHub Flow to manage code contributions. If this is new
 
    Some issues and pull requests (PRs) may represent work that is actively under design or refinement.
 
-   If a PR exists, or if an issue has been assigned to or claimed by someone else, please do **not** start parallel implementation work without first checking in via a comment. A short message like "Are you still actively working on this?" or "Is this a good time to help with X?” is usually sufficient.
+   If a PR exists, or if an issue has been assigned to or claimed by someone else, please do **not** start parallel implementation work without first checking in via a comment. A short message like "Are you still actively working on this?" or "Is this a good time to help with X?" is usually sufficient.
 
    This helps avoid duplicated effort and ensures that contributions align with the current design direction.
 2. **Set up your local environment**
@@ -162,7 +162,7 @@ Ptera Software now uses GitHub Flow to manage code contributions. If this is new
     - Include references, derivations, or reasoning where appropriate.
     - Add tests that validate the behavior against known physical expectations (e.g., symmetry, limiting cases, conservation behavior).
 
-   If you’re unsure whether a change falls into this category, feel free to ask in the issue or PR thread before investing significant effort.
+   If you're unsure whether a change falls into this category, feel free to ask in the issue or PR thread before investing significant effort.
 5. **Commit your work**
     - Run automated checks locally:
     ```shell

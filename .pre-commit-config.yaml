@@ -18,3 +18,11 @@ repos:
         additional_dependencies: [tomli]
         args: [--in-place, --config, ./pyproject.toml]
         files: ^pterasoftware/
+  - repo: local
+    hooks:
+      - id: ascii-only
+        name: ascii-only
+        entry: python scripts/check_ascii_only.py
+        language: system
+        types: [text]
+        exclude: '\.ui$'

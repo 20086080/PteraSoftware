@@ -117,7 +117,7 @@ panel = cast(_panel.Panel, object_array[i, j])
 - You're certain of the type but can't prove it to the type checker
 - No runtime check is needed
 
-**Avoid `cast()` for `Type | None` → `Type` narrowing** - use `assert` instead for runtime safety.
+**Avoid `cast()` for `Type | None` -> `Type` narrowing** - use `assert` instead for runtime safety.
 
 ### Module Alias Pattern
 

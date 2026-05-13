@@ -181,7 +181,7 @@ class TestPanel(unittest.TestCase):
         normal_G = np.array([0.0, 1.0, 1.0])  # Will be normalized internally
         projected_area = panel.calculate_projected_area(normal_G)
 
-        # Should be area * cos(45°) = area / sqrt(2)
+        # Should be area * cos(45 deg) = area / sqrt(2)
         expected_projected_area = panel.area / np.sqrt(2)
         self.assertAlmostEqual(projected_area, expected_projected_area, places=10)
 

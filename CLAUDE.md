@@ -39,6 +39,7 @@ Requires Python 3.11, but active development is done in 3.13
         - `bug_report.md`
         - `feature_request.md`
     - `workflows/`: Directory with GitHub Actions workflows
+        - `ascii.yml`
         - `black.yml`
         - `codespell.yml`
         - `isort.yml`
@@ -107,6 +108,8 @@ Requires Python 3.11, but active development is done in 3.13
     - `steady_ring_vortex_lattice_method.py`: Steady ring VLM solver
     - `trim.py`: Trim analysis functionality
     - `unsteady_ring_vortex_lattice_method.py`: Unsteady ring UVLM solver
+- `scripts/`: Directory with maintenance and tooling scripts
+    - `check_ascii_only.py`: Pre-commit hook script that flags non-ASCII characters in text files
 - `tests/`: Directory with unit and integration tests
     - `benchmarks/`: Performance benchmark scripts and saved results
         - `bench_parallel_biot_savart.py`

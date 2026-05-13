@@ -560,7 +560,7 @@ class TestAerodynamicsFunctions(unittest.TestCase):
         This is a reference implementation to validate the aerodynamics functions.
 
         Formula:
-            v_A__I = (gamma/(4*pi)) * (r3_A / |r3_A|^2) * [r0_A · (r1Hat_A - r2Hat_A)]
+            v_A__I = (gamma/(4*pi)) * (r3_A / |r3_A|^2) * [dot(r0_A, r1Hat_A - r2Hat_A)]
 
         Where:
             r1_A = P_A_a - S_A_a

@@ -32,6 +32,16 @@ docformatter is configured as a pre-commit hook. Run it with:
 pre-commit run --all-files docformatter
 ```
 
+## Running ascii-only
+
+ascii-only is configured as a pre-commit hook that enforces the [ASCII Only](#ascii-only) rule below. Run it with:
+
+```shell
+pre-commit run --all-files ascii-only
+```
+
+The hook reports each violation with its line, column, the offending character, its Unicode code point and name, and its UTF-8 byte sequence. The check is read-only; it never modifies files. Qt Designer `.ui` files are excluded because Qt regenerates them on every save.
+
 ## ASCII Only
 
 In all written contributions to this project (code, comments, docstrings, documentation, commit messages, file contents), use only the 95 printable ASCII characters (0x20 through 0x7E: space, letters, digits, and standard punctuation).
