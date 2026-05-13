@@ -42,6 +42,7 @@ Requires Python 3.11, but active development is done in 3.13
         - `ascii.yml`
         - `black.yml`
         - `codespell.yml`
+        - `docformatter.yml`
         - `isort.yml`
         - `mypy.yml`
         - `tests.yml`
