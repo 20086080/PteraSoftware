@@ -3,6 +3,7 @@ repos:
     rev: v5.0.0
     hooks:
       - id: end-of-file-fixer
+      - id: trailing-whitespace
   - repo: https://github.com/pycqa/isort
     rev: 9.0.0a3
     hooks:

@@ -20,3 +20,5 @@ jobs:
           pip install pre-commit
       - name: Run end-of-file-fixer hook
         run: pre-commit run --all-files end-of-file-fixer
+      - name: Run trailing-whitespace hook
+        run: pre-commit run --all-files trailing-whitespace

@@ -6,7 +6,7 @@ The guidance below assumes the project's virtual environment has already been cr
 
 ## Linters, Formatters, and Spell-Checkers
 
-Every tool configured as a hook in `.pre-commit-config.yaml` (currently `isort`, `black`, `codespell`, `docformatter`, `ascii-only`, `mypy`, `end-of-file-fixer`) must always be invoked through pre-commit, never directly:
+Every tool configured as a hook in `.pre-commit-config.yaml` (currently `isort`, `black`, `codespell`, `docformatter`, `ascii-only`, `mypy`, `end-of-file-fixer`, `trailing-whitespace`) must always be invoked through pre-commit, never directly:
 
 ```shell
 pre-commit run --all-files                                 # every hook, every tracked file
