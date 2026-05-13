@@ -1,4 +1,4 @@
-name: ascii
+name: ascii-only
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
     branches: [main]
 
 jobs:
-  ascii:
+  ascii-only:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

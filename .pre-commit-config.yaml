@@ -4,22 +4,28 @@ repos:
     rev: v6.0.0
     hooks:
       - id: end-of-file-fixer
+        name: fixer    end-of-files
       - id: trailing-whitespace
+        name: fixer    trailing-whitespace
       - id: mixed-line-ending
+        name: fixer    mixed-line-endings
         args: [--fix=lf]
   # Auto-formatters: rewrite code on top of the normalized bytes.
   - repo: https://github.com/pycqa/isort
     rev: 9.0.0a3
     hooks:
       - id: isort
+        name: fixer    isort
   - repo: https://github.com/psf/black
     rev: 26.3.1
     hooks:
       - id: black
+        name: fixer    black
   - repo: https://github.com/PyCQA/docformatter
     rev: v1.7.8
     hooks:
       - id: docformatter
+        name: fixer    docformatter
         additional_dependencies: [tomli]
         args: [--in-place, --config, ./pyproject.toml]
         files: ^pterasoftware/
@@ -28,28 +34,38 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-merge-conflict
+        name: checker  merge-conflicts
       - id: check-case-conflict
+        name: checker  case-conflicts
       - id: check-illegal-windows-names
+        name: checker  illegal-names
       - id: check-symlinks
+        name: checker  lost-symlinks
       - id: destroyed-symlinks
+        name: checker  destroyed-symlinks
       - id: check-yaml
+        name: checker  yaml-files
       - id: check-toml
+        name: checker  toml-files
       - id: check-xml
+        name: checker  xml-files
       - id: check-json
+        name: checker  json-files
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.2
     hooks:
       - id: codespell
+        name: checker  codespell
   - repo: local
     hooks:
       - id: ascii-only
-        name: ascii-only
+        name: checker  ascii-only
         entry: python scripts/check_ascii_only.py
         language: system
         types: [text]
         exclude: '\.ui$'
       - id: mypy
-        name: mypy
+        name: checker  mypy
         entry: mypy pterasoftware
         language: system
         always_run: true

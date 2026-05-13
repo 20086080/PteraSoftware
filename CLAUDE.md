@@ -39,7 +39,7 @@ Requires Python 3.11, but active development is done in 3.13
         - `bug_report.md`
         - `feature_request.md`
     - `workflows/`: Directory with GitHub Actions workflows
-        - `ascii.yml`
+        - `ascii-only.yml`
         - `black.yml`
         - `codespell.yml`
         - `docformatter.yml`
