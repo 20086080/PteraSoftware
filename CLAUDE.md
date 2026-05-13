@@ -45,6 +45,7 @@ Requires Python 3.11, but active development is done in 3.13
         - `docformatter.yml`
         - `isort.yml`
         - `mypy.yml`
+        - `pre-commit-hooks.yml`
         - `tests.yml`
     - `pull_request_template.md`
 - `.venv/`: Directory for the Python virtual environment (not included in version control)
