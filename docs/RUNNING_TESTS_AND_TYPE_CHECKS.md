@@ -6,7 +6,7 @@ The guidance below assumes the project's virtual environment has already been cr
 
 ## Linters, Formatters, and Spell-Checkers
 
-Every tool configured as a hook in `.pre-commit-config.yaml` (currently `isort`, `black`, `codespell`, `docformatter`, `ascii-only`) must always be invoked through pre-commit, never directly:
+Every tool configured as a hook in `.pre-commit-config.yaml` (currently `isort`, `black`, `codespell`, `docformatter`, `ascii-only`, `mypy`) must always be invoked through pre-commit, never directly:
 
 ```shell
 pre-commit run --all-files                                 # every hook, every tracked file
@@ -20,13 +20,11 @@ Invoking a bare entry point such as `codespell ...` or `docformatter ...` is for
 
 ## Type Checking
 
-mypy is not a pre-commit hook today, so run it directly from the activated venv:
+mypy is configured as a pre-commit hook and reads `mypy.ini` from the project root automatically. Run it with:
 
 ```shell
-mypy pterasoftware
+pre-commit run --all-files mypy
 ```
-
-mypy reads `mypy.ini` from the project root automatically.
 
 ## Tests
 

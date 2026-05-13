@@ -29,6 +29,14 @@ CodeSpell is configured as a pre-commit hook. Run it with:
 pre-commit run --all-files codespell
 ```
 
+## Running mypy
+
+mypy is configured as a pre-commit hook. Run it with:
+
+```shell
+pre-commit run --all-files mypy
+```
+
 ## Imports
 
 - Import Ptera Software using the following pattern: ```import pterasoftware as ps```
