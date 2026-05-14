@@ -1,7 +1,7 @@
 repos:
   # Fixers: normalize bytes first so later hooks see clean files.
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
       - id: end-of-file-fixer
         name: fixer    end-of-files
@@ -16,17 +16,17 @@ repos:
         name: fixer    requirements-txt
   # Auto-formatters: rewrite code on top of the normalized bytes.
   - repo: https://github.com/pycqa/isort
-    rev: 9.0.0a3
+    rev: dac090ce4d9ee313d086e2e89ab1acb8c2664fa1  # frozen: 9.0.0a3
     hooks:
       - id: isort
         name: fixer    isort
   - repo: https://github.com/psf/black
-    rev: 26.3.1
+    rev: c6755bb741b6481d6b3d3bb563c83fa060db96c9  # frozen: 26.3.1
     hooks:
       - id: black
         name: fixer    black
   - repo: https://github.com/PyCQA/docformatter
-    rev: v1.7.8
+    rev: 0032269a0e65c068af9cd86c9a8859a0ddd568d6  # frozen: v1.7.8
     hooks:
       - id: docformatter
         name: fixer    docformatter
@@ -35,7 +35,7 @@ repos:
         files: ^pterasoftware/
   # Validators: read-only, run against the final state.
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
+    rev: 3e8a8703264a2f4a69428a0aa4dcb512790b2c8c  # frozen: v6.0.0
     hooks:
       - id: check-merge-conflict
         name: checker  merge-conflicts
@@ -70,7 +70,7 @@ repos:
       - id: debug-statements
         name: checker  debug-statements
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.2
+    rev: 2ccb47ff45ad361a21071a7eedda4c37e6ae8c5a  # frozen: v2.4.2
     hooks:
       - id: codespell
         name: checker  codespell
