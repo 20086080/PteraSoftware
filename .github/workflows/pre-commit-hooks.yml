@@ -13,18 +13,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { hook: end-of-file-fixer,           name: end-of-files }
-          - { hook: trailing-whitespace,         name: trailing-whitespace }
-          - { hook: mixed-line-ending,           name: mixed-line-endings }
-          - { hook: check-merge-conflict,        name: merge-conflicts }
-          - { hook: check-case-conflict,         name: case-conflicts }
-          - { hook: check-illegal-windows-names, name: illegal-names }
-          - { hook: check-symlinks,              name: lost-symlinks }
-          - { hook: destroyed-symlinks,          name: destroyed-symlinks }
-          - { hook: check-yaml,                  name: yaml-files }
-          - { hook: check-toml,                  name: toml-files }
-          - { hook: check-xml,                   name: xml-files }
-          - { hook: check-json,                  name: json-files }
+          - { hook: end-of-file-fixer,                    name: end-of-files }
+          - { hook: trailing-whitespace,                  name: trailing-whitespace }
+          - { hook: mixed-line-ending,                    name: mixed-line-endings }
+          - { hook: fix-byte-order-marker,                name: byte-order-marks }
+          - { hook: check-merge-conflict,                 name: merge-conflicts }
+          - { hook: check-case-conflict,                  name: case-conflicts }
+          - { hook: check-illegal-windows-names,          name: illegal-names }
+          - { hook: check-symlinks,                       name: lost-symlinks }
+          - { hook: destroyed-symlinks,                   name: destroyed-symlinks }
+          - { hook: check-yaml,                           name: yaml-files }
+          - { hook: check-toml,                           name: toml-files }
+          - { hook: check-xml,                            name: xml-files }
+          - { hook: check-json,                           name: json-files }
+          - { hook: detect-private-key,                   name: private-keys }
+          - { hook: forbid-submodules,                    name: submodules }
+          - { hook: check-vcs-permalinks,                 name: vcs-permalinks }
+          - { hook: check-executables-have-shebangs,      name: exec-shebangs }
+          - { hook: check-shebang-scripts-are-executable, name: shebang-execs }
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.13

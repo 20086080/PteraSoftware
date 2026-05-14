@@ -10,6 +10,8 @@ repos:
       - id: mixed-line-ending
         name: fixer    mixed-line-endings
         args: [--fix=lf]
+      - id: fix-byte-order-marker
+        name: fixer    byte-order-marks
   # Auto-formatters: rewrite code on top of the normalized bytes.
   - repo: https://github.com/pycqa/isort
     rev: 9.0.0a3
@@ -51,6 +53,16 @@ repos:
         name: checker  xml-files
       - id: check-json
         name: checker  json-files
+      - id: detect-private-key
+        name: checker  private-keys
+      - id: forbid-submodules
+        name: checker  submodules
+      - id: check-vcs-permalinks
+        name: checker  vcs-permalinks
+      - id: check-executables-have-shebangs
+        name: checker  exec-shebangs
+      - id: check-shebang-scripts-are-executable
+        name: checker  shebang-execs
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.2
     hooks:
