@@ -787,9 +787,10 @@ class Airplane:
 
     @staticmethod
     def process_wing_symmetry(wing: wing_mod.Wing) -> list[wing_mod.Wing]:
-        """Processes a Wing to determine what type of symmetry it has. If necessary, it
-        then modifies the Wing. If type 5 symmetry is detected, it also creates a second
-        reflected Wing. Finally, it returns a list of Wings.
+        """Processes a Wing to determine what type of symmetry it has.
+
+        If necessary, it then modifies the Wing. If type 5 symmetry is detected, it also
+        creates a second reflected Wing. Finally, it returns a list of Wings.
 
         :param wing: The Wing to process for symmetry analysis and potential
             modification.

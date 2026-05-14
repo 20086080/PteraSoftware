@@ -39,10 +39,13 @@ Requires Python 3.11, but active development is done in 3.13
         - `bug_report.md`
         - `feature_request.md`
     - `workflows/`: Directory with GitHub Actions workflows
+        - `ascii-only.yml`
         - `black.yml`
         - `codespell.yml`
+        - `docformatter.yml`
         - `isort.yml`
         - `mypy.yml`
+        - `pre-commit-hooks.yml`
         - `tests.yml`
     - `pull_request_template.md`
 - `.venv/`: Directory for the Python virtual environment (not included in version control)
@@ -107,6 +110,8 @@ Requires Python 3.11, but active development is done in 3.13
     - `steady_ring_vortex_lattice_method.py`: Steady ring VLM solver
     - `trim.py`: Trim analysis functionality
     - `unsteady_ring_vortex_lattice_method.py`: Unsteady ring UVLM solver
+- `scripts/`: Directory with maintenance and tooling scripts
+    - `check_ascii_only.py`: Pre-commit hook script that flags non-ASCII characters in text files
 - `tests/`: Directory with unit and integration tests
     - `benchmarks/`: Performance benchmark scripts and saved results
         - `bench_parallel_biot_savart.py`
@@ -203,26 +208,6 @@ Requires Python 3.11, but active development is done in 3.13
 - `requirements_dev.txt`: Full list of development dependencies with version constraints
 - `requirements_min.txt`: Minimum-version runtime dependencies
 - `setup.cfg`: Setup configuration file
-
-## Running Scripts That Import Ptera Software
-
-When running scripts outside the main pterasoftware directory that import the package (e.g., scripts in `experimental/`), you need to set `PYTHONPATH` to the project root:
-
-```bash
-cd ${WORKSPACE}/experimental && PYTHONPATH="$PWD/.." ../.venv/Scripts/python.exe script_name.py
-```
-
-On Unix-like systems:
-
-```bash
-cd ${WORKSPACE}/experimental && PYTHONPATH="$PWD/.." ../.venv/bin/python script_name.py
-```
-
-This pattern:
-
-1. Changes to the script's directory
-2. Sets `PYTHONPATH` to the parent directory (project root)
-3. Runs the script using the virtual environment's Python interpreter
 
 ## Common Mistakes
 

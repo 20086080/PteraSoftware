@@ -522,7 +522,7 @@ def numba_1d_explicit_cross(
     Adapted from:
     https://stackoverflow.com/a/66757029/13240504
 
-    Author: Jérôme Richard
+    Author: Jerome Richard
 
     Date of retrieval: 03/23/2021
 
