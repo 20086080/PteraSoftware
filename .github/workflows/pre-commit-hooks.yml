@@ -17,6 +17,7 @@ jobs:
           - { hook: trailing-whitespace,                  name: trailing-whitespace }
           - { hook: mixed-line-ending,                    name: mixed-line-endings }
           - { hook: fix-byte-order-marker,                name: byte-order-marks }
+          - { hook: requirements-txt-fixer,               name: requirements-txt }
           - { hook: check-merge-conflict,                 name: merge-conflicts }
           - { hook: check-case-conflict,                  name: case-conflicts }
           - { hook: check-illegal-windows-names,          name: illegal-names }
@@ -31,6 +32,8 @@ jobs:
           - { hook: check-vcs-permalinks,                 name: vcs-permalinks }
           - { hook: check-executables-have-shebangs,      name: exec-shebangs }
           - { hook: check-shebang-scripts-are-executable, name: shebang-execs }
+          - { hook: check-added-large-files,              name: large-files }
+          - { hook: debug-statements,                     name: debug-statements }
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.13

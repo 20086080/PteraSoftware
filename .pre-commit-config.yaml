@@ -12,6 +12,8 @@ repos:
         args: [--fix=lf]
       - id: fix-byte-order-marker
         name: fixer    byte-order-marks
+      - id: requirements-txt-fixer
+        name: fixer    requirements-txt
   # Auto-formatters: rewrite code on top of the normalized bytes.
   - repo: https://github.com/pycqa/isort
     rev: 9.0.0a3
@@ -63,6 +65,10 @@ repos:
         name: checker  exec-shebangs
       - id: check-shebang-scripts-are-executable
         name: checker  shebang-execs
+      - id: check-added-large-files
+        name: checker  large-files
+      - id: debug-statements
+        name: checker  debug-statements
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.2
     hooks:
