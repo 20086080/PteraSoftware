@@ -16,11 +16,11 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
         dependency-set: ["min", "latest"]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - name: Set up Python
-        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
           cache: 'pip'
@@ -28,7 +28,7 @@ jobs:
             requirements.txt
             requirements_min.txt
       - name: Setup headless display
-        uses: pyvista/setup-headless-display-action@9c1c7435d9635423c90d2c37489588c81673274a # v3
+        uses: pyvista/setup-headless-display-action@5bc8de3bc71fcda7a96439571287a554901541a0 # v4.3
       - name: Install minimum dependencies
         if: ${{ matrix.dependency-set == 'min' }}
         run: |
@@ -56,7 +56,7 @@ jobs:
           coverage xml -o coverage.xml
       - name: Upload coverage report to Codecov
         if: ${{ matrix.python-version == '3.13' && matrix.dependency-set == 'latest' }}
-        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage.xml
