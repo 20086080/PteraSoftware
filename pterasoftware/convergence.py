@@ -459,9 +459,10 @@ def analyze_steady_convergence(
 
             convergence_logger.info("\t\t\tStarting simulation...")
 
-            # Run the steady solver and time how long it takes to execute.
+            # Run the steady solver and time how long it takes to execute. Skip the
+            # streamline trace since it does not affect convergence metrics.
             iter_start = time.time()
-            this_solver.run()
+            this_solver.run(calculate_streamlines=False)
             iter_stop = time.time()
             this_iter_time = iter_stop - iter_start
 
