@@ -196,11 +196,19 @@ class SteadyRingVortexLatticeMethodSolver:
 
         self.ran = False
 
-    def run(self) -> None:
+    def run(self, calculate_streamlines: bool | np.bool_ = True) -> None:
         """Runs the solver on the SteadyProblem.
 
+        :param calculate_streamlines: Determines whether to calculate the streamlines
+            emanating from the back of the wing after running the solver. Can be a bool
+            or a numpy bool and will be converted internally to a bool. The default is
+            True.
         :return: None
         """
+        calculate_streamlines = _parameter_validation.boolLike_return_bool(
+            calculate_streamlines, "calculate_streamlines"
+        )
+
         # Compute the bound ring vortex and trailing edge horseshoe vortex geometries
         # and collapse them, along with each Panel's per panel scalars, into 1D
         # ndarrays of attributes.
@@ -228,9 +236,10 @@ class SteadyRingVortexLatticeMethodSolver:
         self._calculate_loads()
 
         # Solve for the location of the streamlines coming off the Wings' trailing
-        # edges.
-        _logger.debug("Calculating streamlines.")
-        _functions.calculate_streamlines(self)
+        # edges, if requested.
+        if calculate_streamlines:
+            _logger.debug("Calculating streamlines.")
+            _functions.calculate_streamlines(self)
 
         # Mark that the solver has run.
         self.ran = True
