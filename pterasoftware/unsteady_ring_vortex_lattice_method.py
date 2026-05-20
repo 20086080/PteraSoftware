@@ -358,10 +358,10 @@ class UnsteadyRingVortexLatticeMethodSolver:
             Set to False to use a free-wake, which may be more accurate but will make
             the fun method significantly slower. Can be a bool or a numpy bool and will
             be converted internally to a bool. The default is True.
-        :param calculate_streamlines: Set this to True to calculate streamlines
-            emanating from the back of the wing after running the solver. It can be a
-            bool or a numpy bool and will be converted internally to a bool. The default
-            is True.
+        :param calculate_streamlines: Determines whether to calculate the streamlines
+            emanating from the back of the wing after running the solver. Can be a bool
+            or a numpy bool and will be converted internally to a bool. The default is
+            True.
         :param show_progress: Set this to True to show the TQDM progress bar. For
             showing the progress bar and displaying log statements, set up logging using
             the setup_logging function. It can be a bool or a numpy bool and will be
