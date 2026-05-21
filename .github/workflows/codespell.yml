@@ -16,7 +16,6 @@ jobs:
         with:
           persist-credentials: false
       - uses: codespell-project/actions-codespell@8f01853be192eb0f849a5c7d721450e7a467c579 # v2.2
-        continue-on-error: true
         with:
           ignore_words_file: .codespell-ignore.txt
-          skip: "*/_build/*,*.dat"
+          skip: "*/_build/*,*.dat,*/docs/_static/benchmarks/*.html"
