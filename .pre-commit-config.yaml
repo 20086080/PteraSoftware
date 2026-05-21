@@ -74,6 +74,10 @@ repos:
     hooks:
       - id: codespell
         name: checker  codespell
+        # The rendered HTML reports embed base64-encoded TTFs. Random byte sequences in
+        # the base64 stream collide with codespell's small typo dictionary (e.g., AEr,
+        # ABL, gEs), so exclude the reports tree where these blobs live.
+        exclude: ^docs/_static/benchmarks/.*\.html$
   - repo: local
     hooks:
       - id: ascii-only
