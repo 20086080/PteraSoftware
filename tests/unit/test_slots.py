@@ -142,6 +142,8 @@ class TestOperatingPointSlots(unittest.TestCase):
         self.assertEqual(self.basic_op.T_pas_BP1_CgP1_to_E_CgP1.shape, (4, 4))
         self.assertEqual(self.basic_op.T_pas_E_CgP1_to_GP1_CgP1.shape, (4, 4))
         self.assertEqual(self.basic_op.T_pas_GP1_CgP1_to_E_CgP1.shape, (4, 4))
+        self.assertEqual(self.basic_op.T_pas_W_CgP1_to_E_CgP1.shape, (4, 4))
+        self.assertEqual(self.basic_op.T_pas_E_CgP1_to_W_CgP1.shape, (4, 4))
 
         # Freestream cached properties.
         self.assertEqual(self.basic_op.vInfHat_GP1__E.shape, (3,))
