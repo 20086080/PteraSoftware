@@ -17,7 +17,7 @@ None
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -341,15 +341,21 @@ class _CoupledUnsteadyProblem(_core.CoreUnsteadyProblem):
         return self._steady_problems[step]
 
     def initialize_next_problem(
-        self, solver: CoupledUnsteadyRingVortexLatticeMethodSolver
+        self,
+        solver: CoupledUnsteadyRingVortexLatticeMethodSolver,
+        step: int,
     ) -> None:
-        """Initialize the next time step's SteadyProblem.
+        """Initialize the next time step's SteadyProblem and perform per step work.
 
-        Must be overridden by subclasses to compute the geometry for the next time step
-        based on the solver's results.
+        Subclasses must override this method. It is invoked by the solver on every step,
+        so subclasses are responsible for guarding any work that depends on a next step
+        existing (such as building the next SteadyProblem) with ``step < self.num_steps
+        - 1``. Per step work that should run on every step (such as recording the
+        current step's loads) belongs outside that guard.
 
         :param solver: The CoupledUnsteadyRingVortexLatticeMethodSolver instance
             providing aerodynamic data from the current time step.
+        :param step: The current time step index (zero indexed).
         :return: None
         """
         raise NotImplementedError("Subclasses must implement initialize_next_problem.")
@@ -527,40 +533,139 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
     def mujoco_model(self) -> _mujoco_model.MuJoCoModel:
         return self._mujoco_model
 
+    @property
+    def _free_flight_movement(self) -> free_flight_movement.FreeFlightMovement:
+        """Type narrowed view of the inherited _movement attribute.
+
+        The parent stores _movement as a CoreMovement (widened to let subclasses pass
+        their own variants). __init__ accepts only a FreeFlightMovement, so the cast
+        here is safe.
+
+        :return: The _movement narrowed to FreeFlightMovement.
+        """
+        return cast(free_flight_movement.FreeFlightMovement, self._movement)
+
     def initialize_next_problem(
-        self, solver: CoupledUnsteadyRingVortexLatticeMethodSolver
+        self,
+        solver: CoupledUnsteadyRingVortexLatticeMethodSolver,
+        step: int,
     ) -> None:
         """Initializes the next time step's SteadyProblem from rigid body dynamics.
 
-        Transforms aerodynamic loads into Earth axes, applies them (along with weight
-        and any external forces) to the MuJoCo model, steps the dynamics forward,
-        extracts the new state, and creates the next SteadyProblem with the updated
-        OperatingPoint and the prescribed Airplane geometry for the next step.
+        On every step except the last one, transforms aerodynamic loads into Earth axes,
+        applies them (along with weight and any external forces) to the MuJoCo model,
+        steps the dynamics forward, extracts the new state, and creates the next
+        SteadyProblem with the new OperatingPoint and the prescribed Airplane geometry
+        for the next step. On every step (including the last one), records the current
+        step's loads in the load history lists.
 
         :param solver: The CoupledUnsteadyRingVortexLatticeMethodSolver instance
             providing aerodynamic data from the current time step.
+        :param step: The current time step index (zero indexed).
         :return: None
         """
+        current_airplane = solver.current_airplanes[0]
+        current_operating_point = solver.current_operating_point
+
+        # The solver populates these load attributes via _calculate_loads before
+        # invoking this method.
+        assert current_airplane.forces_W is not None
+        assert current_airplane.forceCoefficients_W is not None
+        assert current_airplane.moments_W_CgP1 is not None
+        assert current_airplane.momentCoefficients_W_CgP1 is not None
+
         # 1. Get aerodynamic loads from the current Airplane.
+        aeroForces_W = current_airplane.forces_W
+        aeroMoments_W_CgP1 = current_airplane.moments_W_CgP1
 
-        # 2. Add external forces if external_forces_fn is set.
+        if step < self.num_steps - 1:
+            # 2. Add external forces if external_forces_fn is set.
+            if self._external_forces_fn is not None:
+                externalForces_W, externalMoments_W_CgP1 = self._external_forces_fn(
+                    current_operating_point, current_airplane
+                )
+                totalForces_W = aeroForces_W + externalForces_W
+                totalMoments_W_CgP1 = aeroMoments_W_CgP1 + externalMoments_W_CgP1
+            else:
+                totalForces_W = aeroForces_W
+                totalMoments_W_CgP1 = aeroMoments_W_CgP1
 
-        # 3. Transform loads from wind axes to Earth axes.
+            # 3. Transform loads from wind axes to Earth axes.
+            T_pas_W_CgP1_to_E_CgP1 = current_operating_point.T_pas_W_CgP1_to_E_CgP1
+            totalForces_E = _transformations.apply_T_to_vectors(
+                T_pas_W_CgP1_to_E_CgP1, totalForces_W, has_point=False
+            )
+            totalMoments_E_CgP1 = _transformations.apply_T_to_vectors(
+                T_pas_W_CgP1_to_E_CgP1, totalMoments_W_CgP1, has_point=True
+            )
 
-        # 4. Add the weight force in Earth axes.
+            # 4. Add the weight force in Earth axes.
+            g_E = current_operating_point.g_E
+            totalForces_E = (
+                totalForces_E + current_airplane.weight * g_E / np.linalg.norm(g_E)
+            )
 
-        # 5. Apply loads to MuJoCo and step the dynamics forward.
+            # 5. Apply loads to MuJoCo and step the dynamics forward.
+            self._mujoco_model.apply_loads(totalForces_E, totalMoments_E_CgP1)
+            self._mujoco_model.step()
 
-        # 6. Extract the new state from MuJoCo.
+            # 6. Extract the new state from MuJoCo.
+            newState = self._mujoco_model.get_state()
+            position_E_E = newState["position_E_E"]
+            R_pas_E_to_BP1 = newState["R_pas_E_to_BP1"]
+            velocity_E__E = newState["velocity_E__E"]
+            omegas_BP1__E = newState["omegas_BP1__E"]
 
-        # 7. Derive alpha, beta, and Euler angles from the new state.
+            # 7. Derive alpha, beta, and Euler angles from the new state.
+            vCg__E = float(np.linalg.norm(velocity_E__E))
+            angles_E_to_BP1_izyx = _transformations.R_to_angles_izyx(R_pas_E_to_BP1)
+            T_pas_E_CgP1_to_BP1_CgP1 = _transformations.generate_rot_T(
+                angles=angles_E_to_BP1_izyx,
+                passive=True,
+                intrinsic=True,
+                order="zyx",
+            )
+            vInf_E__E = -velocity_E__E
+            vInf_BP1__E = _transformations.apply_T_to_vectors(
+                T_pas_E_CgP1_to_BP1_CgP1, vInf_E__E, has_point=False
+            )
+            alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(
+                vInf_BP1__E, vCg__E
+            )
 
-        # 8. Create the new OperatingPoint for the next time step.
+            # 8. Create the next OperatingPoint.
+            next_operating_point = operating_point_mod.OperatingPoint(
+                rho=current_operating_point.rho,
+                vCg__E=vCg__E,
+                alpha=alpha,
+                beta=beta,
+                angles_E_to_BP1_izyx=angles_E_to_BP1_izyx,
+                CgP1_E_Eo=position_E_E,
+                surfaceNormal_E=current_operating_point.surfaceNormal_E,
+                surfacePoint_E_Eo=current_operating_point.surfacePoint_E_Eo,
+                externalFX_W=current_operating_point.externalFX_W,
+                nu=current_operating_point.nu,
+                g_E=current_operating_point.g_E,
+                omegas_BP1__E=omegas_BP1__E,
+            )
+            self._free_flight_movement.operating_point_movement.operating_points.append(
+                next_operating_point
+            )
 
-        # 9. Get the next Airplane from the movement's pregenerated airplanes.
+            # 9. Get the next Airplane from the movement's pregenerated airplanes.
+            next_airplane = self._free_flight_movement.airplanes[0][step + 1]
 
-        # 10. Create the next SteadyProblem and append to _steady_problems.
+            # 10. Create the next SteadyProblem and append to _steady_problems.
+            next_steady_problem = SteadyProblem(
+                airplanes=[next_airplane],
+                operating_point=next_operating_point,
+            )
+            self._steady_problems.append(next_steady_problem)
 
         # 11. Store load history.
-
-        raise NotImplementedError
+        self.forces_W.append(np.copy(aeroForces_W))
+        self.forceCoefficients_W.append(np.copy(current_airplane.forceCoefficients_W))
+        self.moments_W_Cg.append(np.copy(aeroMoments_W_CgP1))
+        self.momentCoefficients_W_Cg.append(
+            np.copy(current_airplane.momentCoefficients_W_CgP1)
+        )

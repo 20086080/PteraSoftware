@@ -69,8 +69,8 @@ class CoupledUnsteadyRingVortexLatticeMethodSolver(
         self._initialize_panel_vortices_at(step)
 
     def _pre_shed_hook(self, step: int) -> None:
+        self._coupled_problem.initialize_next_problem(self, step)
         if step < self.num_steps - 1:
-            self._coupled_problem.initialize_next_problem(self)
             self._initialize_panel_vortices_at(step + 1)
 
     def _get_steady_problem_at(self, step: int) -> problems.SteadyProblem:

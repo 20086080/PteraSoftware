@@ -132,7 +132,7 @@ class TestCoupledUnsteadyProblem(unittest.TestCase):
         abstract middle class.
         """
         with self.assertRaises(NotImplementedError):
-            self.problem.initialize_next_problem(None)
+            self.problem.initialize_next_problem(None, 0)
 
 
 class TestCoupledUnsteadyProblemImmutability(unittest.TestCase):

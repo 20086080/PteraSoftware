@@ -3,11 +3,22 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import TypedDict
 
 import mujoco
 import numpy as np
 
 from . import _parameter_validation, _transformations
+
+
+class _MuJoCoState(TypedDict):
+    """The state returned by MuJoCoModel.get_state."""
+
+    position_E_E: np.ndarray
+    R_pas_E_to_BP1: np.ndarray
+    velocity_E__E: np.ndarray
+    omegas_BP1__E: np.ndarray
+    time: float
 
 
 class MuJoCoModel:
@@ -317,7 +328,7 @@ class MuJoCoModel:
         """
         mujoco.mj_step(self._model, self._data)
 
-    def get_state(self) -> dict[str, np.ndarray | float]:
+    def get_state(self) -> _MuJoCoState:
         """Extracts the current position, orientation, velocity, and angular velocity of
         the model.
 

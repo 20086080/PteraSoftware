@@ -74,6 +74,8 @@ class OperatingPoint:
         "_T_pas_BP1_CgP1_to_E_CgP1",
         "_T_pas_E_CgP1_to_GP1_CgP1",
         "_T_pas_GP1_CgP1_to_E_CgP1",
+        "_T_pas_W_CgP1_to_E_CgP1",
+        "_T_pas_E_CgP1_to_W_CgP1",
         "_surfaceNormal_GP1",
         "_surfacePoint_GP1_CgP1",
         "_surfaceReflect_T_act_GP1_CgP1",
@@ -279,6 +281,8 @@ class OperatingPoint:
         self._T_pas_BP1_CgP1_to_E_CgP1: np.ndarray | None = None
         self._T_pas_E_CgP1_to_GP1_CgP1: np.ndarray | None = None
         self._T_pas_GP1_CgP1_to_E_CgP1: np.ndarray | None = None
+        self._T_pas_W_CgP1_to_E_CgP1: np.ndarray | None = None
+        self._T_pas_E_CgP1_to_W_CgP1: np.ndarray | None = None
         self._surfaceNormal_GP1: np.ndarray | None = None
         self._surfacePoint_GP1_CgP1: np.ndarray | None = None
         self._surfaceReflect_T_act_GP1_CgP1: np.ndarray | None = None
@@ -529,6 +533,40 @@ class OperatingPoint:
             )
             self._T_pas_GP1_CgP1_to_E_CgP1.flags.writeable = False
         return self._T_pas_GP1_CgP1_to_E_CgP1
+
+    @property
+    def T_pas_W_CgP1_to_E_CgP1(self) -> np.ndarray:
+        """The passive transformation matrix which maps in homogeneous coordinates from
+        wind axes relative to the first Airplane's CG to Earth axes relative to the
+        first Airplane's CG.
+
+        :return: The passive transformation matrix which maps in homogeneous coordinates
+            from wind axes relative to the first Airplane's CG to Earth axes relative to
+            the first Airplane's CG.
+        """
+        if self._T_pas_W_CgP1_to_E_CgP1 is None:
+            self._T_pas_W_CgP1_to_E_CgP1 = _transformations.compose_T_pas(
+                self.T_pas_W_CgP1_to_BP1_CgP1, self.T_pas_BP1_CgP1_to_E_CgP1
+            )
+            self._T_pas_W_CgP1_to_E_CgP1.flags.writeable = False
+        return self._T_pas_W_CgP1_to_E_CgP1
+
+    @property
+    def T_pas_E_CgP1_to_W_CgP1(self) -> np.ndarray:
+        """The passive transformation matrix which maps in homogeneous coordinates from
+        Earth axes relative to the first Airplane's CG to wind axes relative to the
+        first Airplane's CG.
+
+        :return: The passive transformation matrix which maps in homogeneous coordinates
+            from Earth axes relative to the first Airplane's CG to wind axes relative to
+            the first Airplane's CG.
+        """
+        if self._T_pas_E_CgP1_to_W_CgP1 is None:
+            self._T_pas_E_CgP1_to_W_CgP1 = _transformations.invert_T_pas(
+                self.T_pas_W_CgP1_to_E_CgP1
+            )
+            self._T_pas_E_CgP1_to_W_CgP1.flags.writeable = False
+        return self._T_pas_E_CgP1_to_W_CgP1
 
     @property
     def surfaceNormal_GP1(self) -> np.ndarray | None:

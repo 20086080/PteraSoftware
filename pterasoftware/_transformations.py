@@ -635,3 +635,51 @@ def R_to_quat_wxyz(R: np.ndarray | Sequence[Sequence[float | int]]) -> np.ndarra
     q_mag = float(np.linalg.norm(q))
 
     return q / q_mag
+
+
+def R_to_angles_izyx(R: np.ndarray) -> np.ndarray:
+    """Converts a rotation matrix to intrinsic z-y'-x" Euler angles in degrees.
+
+    Interprets R as a passive rotation matrix and returns ``[angleX, angleY, angleZ]``
+    such that ``generate_rot_T(angles=[angleX, angleY, angleZ], passive=True,
+    intrinsic=True, order="zyx")`` produces a (4,4) homogeneous transform whose rotation
+    block is R.
+
+    Handles gimbal lock (pitch at +/- 90 degrees) by assigning the indeterminate
+    rotation to angleZ and setting angleX to zero, which is one valid decomposition of
+    the rotation in that degenerate case.
+
+    :param R: A (3,3) ndarray of floats representing a rotation matrix.
+    :return: A (3,) ndarray of floats representing [angleX, angleY, angleZ] in degrees.
+    """
+    sin_angleY = float(np.clip(-R[0, 2], -1.0, 1.0))
+    angleY = float(np.rad2deg(np.arcsin(sin_angleY)))
+    if abs(sin_angleY) > 0.99999:
+        angleX = 0.0
+        angleZ = float(np.rad2deg(np.arctan2(-R[1, 0], R[1, 1])))
+    else:
+        angleX = float(np.rad2deg(np.arctan2(R[1, 2], R[2, 2])))
+        angleZ = float(np.rad2deg(np.arctan2(R[0, 1], R[0, 0])))
+    return np.asarray([angleX, angleY, angleZ], dtype=float)
+
+
+def alpha_and_beta_from_vInf_BP1(
+    vInf_BP1__E: np.ndarray,
+    vCg__E: float,
+) -> tuple[float, float]:
+    """Extracts the angle of attack and angle of sideslip from the freestream velocity
+    in the first Airplane's body axes.
+
+    :param vInf_BP1__E: A (3,) ndarray of floats representing the freestream velocity
+        (in the first Airplane's body axes, observed from the Earth frame) in meters per
+        second.
+    :param vCg__E: A float representing the speed of the first Airplane's CG (observed
+        from the Earth frame) in meters per second.
+    :return: A tuple (alpha, beta) where alpha is the angle of attack in degrees and
+        beta is the angle of sideslip in degrees.
+    """
+    vInfX_BP1__E, vInfY_BP1__E, vInfZ_BP1__E = vInf_BP1__E
+    alpha = float(np.rad2deg(np.arctan2(-vInfZ_BP1__E, -vInfX_BP1__E)))
+    sin_beta = float(np.clip(vInfY_BP1__E / (vCg__E + 1e-12), -1.0, 1.0))
+    beta = float(np.rad2deg(np.arcsin(sin_beta)))
+    return alpha, beta
