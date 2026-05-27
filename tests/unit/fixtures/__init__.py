@@ -30,14 +30,9 @@ This package contains the following modules:
     geometry_fixtures.py: This module contains functions to create geometry objects
     for use in tests.
 
-    horseshoe_vortex_fixtures.py: This module contains functions to create
-    HorseshoeVortices for uses in tests.
-
-    line_vortex_fixtures.py: This module contains functions to create LineVortices
-    for use in tests.
-
     mujoco_model_fixtures.py: This module contains functions to create MuJoCoModels
     for use in tests.
+
 
     movement_fixtures.py: This module contains functions to create Movements for use
     in tests.
@@ -63,9 +58,6 @@ This package contains the following modules:
     problem_fixtures.py: This module contains functions to create problem objects
     for use in tests.
 
-    ring_vortex_fixtures.py: This module contains functions to create RingVortices
-    for uses in tests.
-
     serialization_fixtures.py: This module contains functions to create objects for use
     in serialization tests.
 
@@ -87,8 +79,6 @@ import tests.unit.fixtures.core_operating_point_movement_fixtures
 import tests.unit.fixtures.core_wing_cross_section_movement_fixtures
 import tests.unit.fixtures.core_wing_movement_fixtures
 import tests.unit.fixtures.geometry_fixtures
-import tests.unit.fixtures.horseshoe_vortex_fixtures
-import tests.unit.fixtures.line_vortex_fixtures
 import tests.unit.fixtures.movement_fixtures
 import tests.unit.fixtures.mujoco_model_fixtures
 import tests.unit.fixtures.operating_point_fixtures
@@ -97,7 +87,6 @@ import tests.unit.fixtures.oscillation_fixtures
 import tests.unit.fixtures.panel_fixtures
 import tests.unit.fixtures.parameter_validation_fixtures
 import tests.unit.fixtures.problem_fixtures
-import tests.unit.fixtures.ring_vortex_fixtures
 import tests.unit.fixtures.serialization_fixtures
 import tests.unit.fixtures.solver_fixtures
 import tests.unit.fixtures.wing_cross_section_movement_fixtures
