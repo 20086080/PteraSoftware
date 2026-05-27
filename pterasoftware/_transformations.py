@@ -2,11 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-
 import numpy as np
-
-from . import _parameter_validation
 
 
 def _generate_homogs(vectors_A: np.ndarray, has_point: bool) -> np.ndarray:
@@ -554,7 +550,7 @@ def apply_T_to_vectors(
     )
 
 
-def R_to_quat_wxyz(R: np.ndarray | Sequence[Sequence[float | int]]) -> np.ndarray:
+def R_to_quat_wxyz(R: np.ndarray) -> np.ndarray:
     """Converts a rotation matrix to a unit quaternion.
 
     **Citation:**
@@ -565,24 +561,9 @@ def R_to_quat_wxyz(R: np.ndarray | Sequence[Sequence[float | int]]) -> np.ndarra
 
     Date retrieved: 11/25/2025
 
-    :param R: A (3,3) array-like object of numbers (int or float) representing a
-        rotation matrix.
+    :param R: A (3,3) ndarray of floats representing a rotation matrix.
     :return: A (4,) ndarray of floats representing the unit quaternion.
     """
-    R = _parameter_validation.m_by_n_number_arrayLike_return_float(R, "R", 3, 3)
-
-    det_R = float(np.linalg.det(R))
-    if not np.allclose(det_R, 1.0):
-        raise ValueError(
-            f"R must be a proper rotation matrix (determinant = 1.0 and orthogonal), "
-            f"but it has a determinant of {det_R}."
-        )
-    if not np.allclose(R @ R.T, np.eye(3, dtype=float)):
-        raise ValueError(
-            f"R must be a proper rotation matrix (determinant = 1.0 and orthogonal), "
-            f"but it is not orthogonal."
-        )
-
     r_11, r_12, r_13 = R[0]
     r_21, r_22, r_23 = R[1]
     r_31, r_32, r_33 = R[2]
