@@ -4,6 +4,24 @@ from __future__ import annotations
 
 import numpy as np
 
+# Threshold below which R_to_quat_wxyz's per component branch checks trigger the
+# catastrophic-cancellation-resistant alternative formulas for extracting the
+# corresponding quaternion component. Sarabandi and Thomas (2019) Section 4 Table 1
+# identifies eta = 0 as the experimentally optimal value across worst-case error,
+# average error, and standard deviation.
+_QUAT_BRANCH_THRESHOLD = 0.0
+
+# Threshold above which |sin(angleY)| indicates R_to_angles_izyx is within roughly 0.26
+# degrees of the +/- 90 degree gimbal-lock pole. At and beyond this point the roll/yaw
+# decomposition is ill defined, so the helper assigns the indeterminate rotation to
+# angleZ and zeros angleX.
+_GIMBAL_LOCK_THRESHOLD = 0.99999
+
+# Additive guard on the speed denominator in alpha_and_beta_from_vInf_BP1, ensuring
+# the sin(beta) calculation stays finite when vCg__E is exactly zero. The clip onto
+# [-1, 1] downstream then yields beta = +/- 90 degrees as the degenerate result.
+_VCG_EPSILON = 1.0e-12
+
 
 def _generate_homogs(vectors_A: np.ndarray, has_point: bool) -> np.ndarray:
     """Converts 3D vector(s) to homogeneous coordinates for use with (4,4)
@@ -568,11 +586,9 @@ def R_to_quat_wxyz(R: np.ndarray) -> np.ndarray:
     r_21, r_22, r_23 = R[1]
     r_31, r_32, r_33 = R[2]
 
-    eta: float = 1.0e-10
-
     q_1: float
     check_1 = r_11 + r_22 + r_33
-    if check_1 > eta:
+    if check_1 > _QUAT_BRANCH_THRESHOLD:
         q_1 = 0.5 * np.sqrt(1 + check_1)
     else:
         num_1 = (r_32 - r_23) ** 2 + (r_13 - r_31) ** 2 + (r_21 - r_12) ** 2
@@ -581,7 +597,7 @@ def R_to_quat_wxyz(R: np.ndarray) -> np.ndarray:
 
     q_2_abs: float
     check_2 = r_11 - r_22 - r_33
-    if check_2 > eta:
+    if check_2 > _QUAT_BRANCH_THRESHOLD:
         q_2_abs = 0.5 * np.sqrt(1 + check_2)
     else:
         num_2 = (r_32 - r_23) ** 2 + (r_12 + r_21) ** 2 + (r_31 + r_13) ** 2
@@ -592,7 +608,7 @@ def R_to_quat_wxyz(R: np.ndarray) -> np.ndarray:
 
     q_3_abs: float
     check_3 = -r_11 + r_22 - r_33
-    if check_3 > eta:
+    if check_3 > _QUAT_BRANCH_THRESHOLD:
         q_3_abs = 0.5 * np.sqrt(1 + check_3)
     else:
         num_3 = (r_13 - r_31) ** 2 + (r_12 + r_21) ** 2 + (r_23 + r_32) ** 2
@@ -603,7 +619,7 @@ def R_to_quat_wxyz(R: np.ndarray) -> np.ndarray:
 
     q_4_abs: float
     check_4 = -r_11 - r_22 + r_33
-    if check_4 > eta:
+    if check_4 > _QUAT_BRANCH_THRESHOLD:
         q_4_abs = 0.5 * np.sqrt(1 + check_4)
     else:
         num_4 = (r_21 - r_12) ** 2 + (r_31 + r_13) ** 2 + (r_32 + r_23) ** 2
@@ -635,7 +651,7 @@ def R_to_angles_izyx(R: np.ndarray) -> np.ndarray:
     """
     sin_angleY = float(np.clip(-R[0, 2], -1.0, 1.0))
     angleY = float(np.rad2deg(np.arcsin(sin_angleY)))
-    if abs(sin_angleY) > 0.99999:
+    if abs(sin_angleY) > _GIMBAL_LOCK_THRESHOLD:
         angleX = 0.0
         angleZ = float(np.rad2deg(np.arctan2(-R[1, 0], R[1, 1])))
     else:
@@ -661,6 +677,6 @@ def alpha_and_beta_from_vInf_BP1(
     """
     vInfX_BP1__E, vInfY_BP1__E, vInfZ_BP1__E = vInf_BP1__E
     alpha = float(np.rad2deg(np.arctan2(-vInfZ_BP1__E, -vInfX_BP1__E)))
-    sin_beta = float(np.clip(vInfY_BP1__E / (vCg__E + 1e-12), -1.0, 1.0))
+    sin_beta = float(np.clip(vInfY_BP1__E / (vCg__E + _VCG_EPSILON), -1.0, 1.0))
     beta = float(np.rad2deg(np.arcsin(sin_beta)))
     return alpha, beta
