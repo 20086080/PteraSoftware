@@ -1354,6 +1354,44 @@ class TestOperatingPoint(unittest.TestCase):
 
                 npt.assert_allclose(T_E_to_GP1, T_BP1_to_GP1 @ T_E_to_BP1, atol=1e-14)
 
+    def test_T_pas_W_CgP1_to_E_CgP1_shape_and_type(self):
+        """Test T_pas_W_CgP1_to_E_CgP1 shape and type."""
+        T = self.with_attitude_angles_op.T_pas_W_CgP1_to_E_CgP1
+
+        self.assertEqual(T.shape, (4, 4))
+        self.assertIsInstance(T, np.ndarray)
+        self.assertEqual(T.dtype, float)
+
+    def test_T_pas_W_CgP1_to_E_CgP1_and_inverse_are_inverses(self):
+        """Test that W to E and E to W are inverses."""
+        fixtures = [
+            self.basic_op,
+            self.with_attitude_angles_op,
+        ]
+
+        for op in fixtures:
+            with self.subTest(op=op):
+                T_forward = op.T_pas_W_CgP1_to_E_CgP1
+                T_inverse = op.T_pas_E_CgP1_to_W_CgP1
+
+                npt.assert_allclose(T_forward @ T_inverse, np.eye(4), atol=1e-14)
+                npt.assert_allclose(T_inverse @ T_forward, np.eye(4), atol=1e-14)
+
+    def test_W_to_E_composition_equals_product(self):
+        """Test that W to E equals W to BP1 composed with BP1 to E."""
+        fixtures = [
+            self.basic_op,
+            self.with_attitude_angles_op,
+        ]
+
+        for op in fixtures:
+            with self.subTest(op=op):
+                T_W_to_E = op.T_pas_W_CgP1_to_E_CgP1
+                T_W_to_BP1 = op.T_pas_W_CgP1_to_BP1_CgP1
+                T_BP1_to_E = op.T_pas_BP1_CgP1_to_E_CgP1
+
+                npt.assert_allclose(T_W_to_E, T_BP1_to_E @ T_W_to_BP1, atol=1e-14)
+
     def test_earth_transformations_read_only(self):
         """Test that Earth transformation matrices are read only."""
         op = self.with_attitude_angles_op
@@ -1366,6 +1404,10 @@ class TestOperatingPoint(unittest.TestCase):
             op.T_pas_E_CgP1_to_GP1_CgP1[0, 0] = 999.0
         with self.assertRaises(ValueError):
             op.T_pas_GP1_CgP1_to_E_CgP1[0, 0] = 999.0
+        with self.assertRaises(ValueError):
+            op.T_pas_W_CgP1_to_E_CgP1[0, 0] = 999.0
+        with self.assertRaises(ValueError):
+            op.T_pas_E_CgP1_to_W_CgP1[0, 0] = 999.0
 
     def test_earth_transformations_cached(self):
         """Test that Earth transformation properties return the same objects on
@@ -1377,6 +1419,8 @@ class TestOperatingPoint(unittest.TestCase):
         self.assertIs(op.T_pas_BP1_CgP1_to_E_CgP1, op.T_pas_BP1_CgP1_to_E_CgP1)
         self.assertIs(op.T_pas_E_CgP1_to_GP1_CgP1, op.T_pas_E_CgP1_to_GP1_CgP1)
         self.assertIs(op.T_pas_GP1_CgP1_to_E_CgP1, op.T_pas_GP1_CgP1_to_E_CgP1)
+        self.assertIs(op.T_pas_W_CgP1_to_E_CgP1, op.T_pas_W_CgP1_to_E_CgP1)
+        self.assertIs(op.T_pas_E_CgP1_to_W_CgP1, op.T_pas_E_CgP1_to_W_CgP1)
 
     # --- Tests for derived surface properties ---
 
