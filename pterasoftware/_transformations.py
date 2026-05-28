@@ -11,16 +11,14 @@ import numpy as np
 # average error, and standard deviation.
 _QUAT_BRANCH_THRESHOLD = 0.0
 
-# Threshold above which |sin(angleY)| indicates R_to_angles_izyx is within roughly 0.26
-# degrees of the +/- 90 degree gimbal-lock pole. At and beyond this point the roll/yaw
-# decomposition is ill defined, so the helper assigns the indeterminate rotation to
-# angleZ and zeros angleX.
-_GIMBAL_LOCK_THRESHOLD = 0.99999
-
-# Additive guard on the speed denominator in alpha_and_beta_from_vInf_BP1, ensuring
-# the sin(beta) calculation stays finite when vCg__E is exactly zero. The clip onto
-# [-1, 1] downstream then yields beta = +/- 90 degrees as the degenerate result.
-_VCG_EPSILON = 1.0e-12
+# Threshold above which |sin(angleY)| triggers the gimbal-lock fallback decomposition
+# in R_to_angles_izyx, equivalent to angleY within about 8.1e-5 degrees of the +/- 90
+# degree pole. Picked to sit four orders of magnitude above float64 epsilon (1e-16): the
+# standard atan2 formula keeps cos(angleY) as a shared factor that cancels in the ratio,
+# so it works correctly until cos(angleY) approaches machine epsilon (cos at this
+# threshold is sqrt(2e-12) ~ 1.4e-6). The worst-case round-trip angle error just below
+# the threshold is roughly 1 nanodegree.
+_GIMBAL_LOCK_THRESHOLD = 1.0 - 1.0e-12
 
 
 def _generate_homogs(vectors_A: np.ndarray, has_point: bool) -> np.ndarray:
@@ -637,17 +635,24 @@ def R_to_quat_wxyz(R: np.ndarray) -> np.ndarray:
 def R_to_angles_izyx(R: np.ndarray) -> np.ndarray:
     """Converts a rotation matrix to intrinsic z-y'-x" Euler angles in degrees.
 
-    Interprets R as a passive rotation matrix and returns ``[angleX, angleY, angleZ]``
-    such that ``generate_rot_T(angles=[angleX, angleY, angleZ], passive=True,
-    intrinsic=True, order="zyx")`` produces a (4,4) homogeneous transform whose rotation
-    block is R.
+    The returned ``[angleX, angleY, angleZ]`` always satisfies the matrix round-trip
+    property: ``generate_rot_T(angles=[angleX, angleY, angleZ], passive=True,
+    intrinsic=True, order="zyx")`` produces a (4,4) homogeneous transform whose
+    rotation block equals R.
 
-    Handles gimbal lock (pitch at +/- 90 degrees) by assigning the indeterminate
-    rotation to angleZ and setting angleX to zero, which is one valid decomposition of
-    the rotation in that degenerate case.
+    The angle round-trip property (recovering the same angles that built R) only
+    holds when ``|sin(angleY)| <= 1 - 1e-12``, equivalently when ``|angleY|`` is more
+    than about 8e-5 degrees from the +/- 90 degree gimbal-lock pole. Inside the pole
+    band, the standard atan2 decomposition becomes ill conditioned because
+    cos(angleY) approaches machine epsilon, so the helper falls back to an
+    alternative decomposition with ``angleX = 0`` and ``angleZ`` absorbing the
+    indeterminate rotation. That fallback is one of infinitely many valid
+    decompositions at the pole, so the recovered angles will differ from the
+    originals there even though the matrix is reconstructed correctly.
 
     :param R: A (3,3) ndarray of floats representing a rotation matrix.
-    :return: A (3,) ndarray of floats representing [angleX, angleY, angleZ] in degrees.
+    :return: A (3,) ndarray of floats representing [angleX, angleY, angleZ] in
+        degrees.
     """
     sin_angleY = float(np.clip(-R[0, 2], -1.0, 1.0))
     angleY = float(np.rad2deg(np.arcsin(sin_angleY)))
@@ -667,16 +672,28 @@ def alpha_and_beta_from_vInf_BP1(
     """Extracts the angle of attack and angle of sideslip from the freestream velocity
     in the first Airplane's body axes.
 
+    Returns ``(nan, nan)`` when ``vCg__E`` is exactly zero. The freestream has no
+    preferred direction at zero speed, so alpha and beta are physically undefined;
+    NaN is the IEEE representation of an undefined real value. Callers that need to
+    handle the zero-speed case must check for NaN in the result. The broader free
+    flight simulation pipeline is already mathematically degenerate at zero speed
+    (load coefficients are forces / qInf, and qInf = 0.5 * rho * vCg__E**2 = 0), so
+    this function does not attempt to paper over the degeneracy with a substitute
+    value.
+
     :param vInf_BP1__E: A (3,) ndarray of floats representing the freestream velocity
         (in the first Airplane's body axes, observed from the Earth frame) in meters per
         second.
     :param vCg__E: A float representing the speed of the first Airplane's CG (observed
         from the Earth frame) in meters per second.
     :return: A tuple (alpha, beta) where alpha is the angle of attack in degrees and
-        beta is the angle of sideslip in degrees.
+        beta is the angle of sideslip in degrees. Both are NaN if vCg__E is zero.
     """
+    if vCg__E == 0.0:
+        return float("nan"), float("nan")
+
     vInfX_BP1__E, vInfY_BP1__E, vInfZ_BP1__E = vInf_BP1__E
     alpha = float(np.rad2deg(np.arctan2(-vInfZ_BP1__E, -vInfX_BP1__E)))
-    sin_beta = float(np.clip(vInfY_BP1__E / (vCg__E + _VCG_EPSILON), -1.0, 1.0))
+    sin_beta = float(np.clip(vInfY_BP1__E / vCg__E, -1.0, 1.0))
     beta = float(np.rad2deg(np.arcsin(sin_beta)))
     return alpha, beta

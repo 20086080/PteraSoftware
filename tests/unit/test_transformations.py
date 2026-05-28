@@ -1954,6 +1954,223 @@ class TestRToQuatWxyz(unittest.TestCase):
                 npt.assert_allclose(R, R_reconstructed, atol=1e-14)
 
 
+class TestRToAnglesIzyx(unittest.TestCase):
+    """This class contains methods for testing the R_to_angles_izyx function."""
+
+    def test_identity_rotation(self):
+        """Tests that the identity rotation matrix yields zero angles.
+
+        :return: None
+        """
+        R = np.eye(3, dtype=float)
+        angles = _transformations.R_to_angles_izyx(R)
+
+        expected_angles = np.array([0.0, 0.0, 0.0])
+        npt.assert_allclose(angles, expected_angles, atol=1e-14)
+
+    def test_90_degree_rotations_about_x_and_z(self):
+        """Tests +/-90 degree rotations about the x and z axes.
+
+        Rotations about the y axis at +/-90 degrees hit the gimbal lock pole and
+        are tested separately.
+
+        :return: None
+        """
+        cases = [
+            ("+90 about x", np.array([90.0, 0.0, 0.0])),
+            ("-90 about x", np.array([-90.0, 0.0, 0.0])),
+            ("+90 about z", np.array([0.0, 0.0, 90.0])),
+            ("-90 about z", np.array([0.0, 0.0, -90.0])),
+        ]
+
+        for label, expected_angles in cases:
+            with self.subTest(case=label):
+                T = _transformations.generate_rot_T(
+                    angles=expected_angles,
+                    passive=True,
+                    intrinsic=True,
+                    order="zyx",
+                )
+                R = T[:3, :3]
+
+                angles = _transformations.R_to_angles_izyx(R)
+
+                npt.assert_allclose(angles, expected_angles, atol=1e-14)
+
+    def test_gimbal_lock_at_positive_pole(self):
+        """Tests behavior at +90 degree pitch (positive gimbal lock pole).
+
+        At gimbal lock, the helper assigns the indeterminate rotation to angleZ and
+        zeros angleX, so a pure +90 degree pitch should return [0, 90, 0].
+
+        :return: None
+        """
+        expected_angles = np.array([0.0, 90.0, 0.0])
+        T = _transformations.generate_rot_T(
+            angles=expected_angles,
+            passive=True,
+            intrinsic=True,
+            order="zyx",
+        )
+        R = T[:3, :3]
+
+        angles = _transformations.R_to_angles_izyx(R)
+
+        npt.assert_allclose(angles, expected_angles, atol=1e-14)
+
+    def test_gimbal_lock_at_negative_pole(self):
+        """Tests behavior at -90 degree pitch (negative gimbal lock pole).
+
+        :return: None
+        """
+        expected_angles = np.array([0.0, -90.0, 0.0])
+        T = _transformations.generate_rot_T(
+            angles=expected_angles,
+            passive=True,
+            intrinsic=True,
+            order="zyx",
+        )
+        R = T[:3, :3]
+
+        angles = _transformations.R_to_angles_izyx(R)
+
+        npt.assert_allclose(angles, expected_angles, atol=1e-14)
+
+    def test_round_trip_with_generate_rot_T(self):
+        """Tests that R_to_angles_izyx inverts generate_rot_T for a range of angle
+        combinations away from gimbal lock.
+
+        :return: None
+        """
+        sample_angles = [
+            np.array([10.0, 20.0, 30.0]),
+            np.array([-15.0, 40.0, -25.0]),
+            np.array([45.0, -50.0, 60.0]),
+            np.array([-80.0, 80.0, -80.0]),
+            np.array([5.0, -85.0, 170.0]),
+        ]
+
+        for angles in sample_angles:
+            with self.subTest(angles=angles):
+                T = _transformations.generate_rot_T(
+                    angles=angles,
+                    passive=True,
+                    intrinsic=True,
+                    order="zyx",
+                )
+                R = T[:3, :3]
+
+                recovered_angles = _transformations.R_to_angles_izyx(R)
+
+                npt.assert_allclose(recovered_angles, angles, atol=1e-13)
+
+
+class TestAlphaAndBetaFromVInfBP1(unittest.TestCase):
+    """This class contains methods for testing the alpha_and_beta_from_vInf_BP1
+    function.
+    """
+
+    def test_straight_and_level(self):
+        """Tests that pure forward freestream yields zero alpha and zero beta.
+
+        :return: None
+        """
+        vCg__E = 10.0
+        vInf_BP1__E = np.array([-vCg__E, 0.0, 0.0])
+
+        alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(vInf_BP1__E, vCg__E)
+
+        self.assertEqual(alpha, 0.0)
+        self.assertEqual(beta, 0.0)
+
+    def test_positive_alpha(self):
+        """Tests that freestream with positive nose up component yields positive
+        alpha.
+
+        :return: None
+        """
+        vCg__E = 10.0
+        expected_alpha = 5.0
+        alpha_rad = np.deg2rad(expected_alpha)
+        vInf_BP1__E = np.array(
+            [-vCg__E * np.cos(alpha_rad), 0.0, -vCg__E * np.sin(alpha_rad)]
+        )
+
+        alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(vInf_BP1__E, vCg__E)
+
+        npt.assert_allclose(alpha, expected_alpha, atol=1e-14)
+        npt.assert_allclose(beta, 0.0, atol=1e-14)
+
+    def test_negative_alpha(self):
+        """Tests that freestream with positive nose down component yields negative
+        alpha.
+
+        :return: None
+        """
+        vCg__E = 10.0
+        expected_alpha = -7.5
+        alpha_rad = np.deg2rad(expected_alpha)
+        vInf_BP1__E = np.array(
+            [-vCg__E * np.cos(alpha_rad), 0.0, -vCg__E * np.sin(alpha_rad)]
+        )
+
+        alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(vInf_BP1__E, vCg__E)
+
+        npt.assert_allclose(alpha, expected_alpha, atol=1e-14)
+        npt.assert_allclose(beta, 0.0, atol=1e-14)
+
+    def test_positive_beta(self):
+        """Tests that freestream with positive right component yields positive beta.
+
+        :return: None
+        """
+        vCg__E = 10.0
+        expected_beta = 8.0
+        beta_rad = np.deg2rad(expected_beta)
+        vInf_BP1__E = np.array(
+            [-vCg__E * np.cos(beta_rad), vCg__E * np.sin(beta_rad), 0.0]
+        )
+
+        alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(vInf_BP1__E, vCg__E)
+
+        npt.assert_allclose(alpha, 0.0, atol=1e-14)
+        npt.assert_allclose(beta, expected_beta, atol=1e-14)
+
+    def test_negative_beta(self):
+        """Tests that freestream with positive left component yields negative beta.
+
+        :return: None
+        """
+        vCg__E = 10.0
+        expected_beta = -3.0
+        beta_rad = np.deg2rad(expected_beta)
+        vInf_BP1__E = np.array(
+            [-vCg__E * np.cos(beta_rad), vCg__E * np.sin(beta_rad), 0.0]
+        )
+
+        alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(vInf_BP1__E, vCg__E)
+
+        npt.assert_allclose(alpha, 0.0, atol=1e-14)
+        npt.assert_allclose(beta, expected_beta, atol=1e-14)
+
+    def test_zero_speed_returns_nan(self):
+        """Tests that zero speed yields NaN for both alpha and beta.
+
+        Alpha and beta are physically undefined at zero speed (no preferred
+        freestream direction), and the helper returns NaN to make that explicit
+        rather than substituting a finite placeholder.
+
+        :return: None
+        """
+        vCg__E = 0.0
+        vInf_BP1__E = np.array([0.0, 0.0, 0.0])
+
+        alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(vInf_BP1__E, vCg__E)
+
+        self.assertTrue(np.isnan(alpha))
+        self.assertTrue(np.isnan(beta))
+
+
 class TestComputeOffsetRotationAdjustment(unittest.TestCase):
     """Tests for the compute_offset_rotation_adjustment function."""
 
