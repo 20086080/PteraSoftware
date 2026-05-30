@@ -189,6 +189,7 @@ class Wing:
         mirror_only: bool | np.bool_ = False,
         symmetryNormal_G: None | np.ndarray | Sequence[float | int] = None,
         symmetryPoint_G_Cg: None | np.ndarray | Sequence[float | int] = None,
+        explode_into_strips: bool | np.bool_ = False,
         num_chordwise_panels: int = 8,
         chordwise_spacing: str = "cosine",
     ) -> None:
@@ -249,6 +250,14 @@ class Wing:
             either are True. For more details on how this parameter interacts with
             symmetryNormal_G, symmetric, and mirror_only, see the class docstring. The
             units are meters. The default is None.
+        :param explode_into_strips: Set this to True to have the explode_wing method
+            called on this Wing during initialization, replacing wing_cross_sections
+            with a new list in which every panel is broken into single spanwise strips
+            for deformation. When True, every non tip WingCrossSection in
+            wing_cross_sections must have spanwise_spacing="uniform"; the explosion
+            assumes uniformly spaced intermediates and rejects other spacings rather
+            than silently overriding them. This parameter is consumed during
+            initialization and is not stored as an attribute.
         :param num_chordwise_panels: The number of chordwise panels to be used on this
             Wing, which must be set to a positive integer. The default is 8.
         :param chordwise_spacing: The type of spacing between the Wing's chordwise
@@ -261,6 +270,11 @@ class Wing:
         wing_cross_sections = _parameter_validation.non_empty_list_return_list(
             wing_cross_sections, "wing_cross_sections"
         )
+        explode_into_strips = _parameter_validation.boolLike_return_bool(
+            explode_into_strips, "explode_into_strips"
+        )
+        if explode_into_strips:
+            wing_cross_sections = self.explode_wing(wing_cross_sections)
         num_wing_cross_sections = len(wing_cross_sections)
         if num_wing_cross_sections < 2:
             raise ValueError("wing_cross_sections must contain at least two elements.")
@@ -1491,6 +1505,113 @@ class Wing:
         )
 
         return None
+
+    def interpolate_between_wing_cross_sections(
+        self,
+        wcs1: wing_cross_section_mod.WingCrossSection,
+        wcs2: wing_cross_section_mod.WingCrossSection,
+        first_wcs: bool,
+    ) -> list[wing_cross_section_mod.WingCrossSection]:
+        """Wing cross section panels are between the line of wcs1 and wcs2.
+
+        When exploding a wing to 1 spanwise panel per cross section, we need to
+        interpolate the intermediate cross sections.
+
+        :param wcs1: The first WingCrossSection.
+        :param wcs2: The second WingCrossSection.
+        :param first_wcs: Whether wcs1 is the first WingCrossSection of the wing. If
+            True, the method will include a WingCrossSection with the same parameters as
+            wcs1 in the output list. If False, it will not, since it will have already
+            been included as the last interpolated WingCrossSection between the previous
+            pair of WingCrossSections.
+        :return: A list of WingCrossSections representing the interpolated cross
+            sections
+        """
+        interpolated = []
+
+        if first_wcs:
+            interpolated.append(
+                wing_cross_section_mod.WingCrossSection(
+                    num_spanwise_panels=1,
+                    chord=wcs1.chord,
+                    Lp_Wcsp_Lpp=wcs1.Lp_Wcsp_Lpp,
+                    angles_Wcsp_to_Wcs_ixyz=wcs1.angles_Wcsp_to_Wcs_ixyz,
+                    control_surface_symmetry_type=wcs1.control_surface_symmetry_type,
+                    control_surface_hinge_point=wcs1.control_surface_hinge_point,
+                    control_surface_deflection=wcs1.control_surface_deflection,
+                    spanwise_spacing="uniform",
+                    airfoil=wcs1.airfoil,
+                )
+            )
+
+        N = wcs1.num_spanwise_panels
+        assert N is not None, "wcs1.num_spanwise_panels must not be None"
+
+        for i in range(N):
+            t = (i + 1) / N  # interpolation parameter between 0 and 1
+
+            chord = (1 - t) * wcs1.chord + t * wcs2.chord
+            # Lp_Wcsp_Lpp and angles_Wcsp_to_Wcs_ixyz are parent-relative deltas (see
+            # WingCrossSection's constructor docstring), so each of the N intermediates
+            # carries 1/N of wcs2's delta and the chain composes back to wcs2's offset
+            # and twist. This is exact only when the intermediates are uniformly
+            # spaced, which explode_wing enforces by validating the input.
+            Lp_Wcsp_Lpp = tuple(np.array(wcs2.Lp_Wcsp_Lpp) / N)
+            angles_Wcsp_to_Wcs_ixyz = wcs2.angles_Wcsp_to_Wcs_ixyz / N
+            is_final_section = wcs2.num_spanwise_panels is None and i == N - 1
+
+            interpolated.append(
+                wing_cross_section_mod.WingCrossSection(
+                    num_spanwise_panels=None if is_final_section else 1,
+                    chord=chord,
+                    Lp_Wcsp_Lpp=Lp_Wcsp_Lpp,
+                    angles_Wcsp_to_Wcs_ixyz=angles_Wcsp_to_Wcs_ixyz,
+                    control_surface_symmetry_type=wcs1.control_surface_symmetry_type,
+                    control_surface_hinge_point=wcs1.control_surface_hinge_point,
+                    control_surface_deflection=wcs1.control_surface_deflection,
+                    spanwise_spacing=None if is_final_section else "uniform",
+                    airfoil=wcs1.airfoil,
+                )
+            )
+        return interpolated
+
+    def explode_wing(
+        self, wing_cross_sections: list[wing_cross_section_mod.WingCrossSection]
+    ) -> list[wing_cross_section_mod.WingCrossSection]:
+        """Takes a list of WingCrossSections and returns a new list where all cross
+        sections have num_spanwise_panels = 1.
+
+        The interpolation distributes each non-tip WingCrossSection's parent-relative
+        offset and twist uniformly across its N intermediates, which is exact only
+        when the source WingCrossSection specifies uniform spanwise spacing. Non
+        uniform spacings (for example "cosine") would silently be replaced with
+        uniform spacing in the output mesh, so this method rejects them up front.
+
+        :param wing_cross_sections: The list of wing cross sections to explode. Every
+            non tip WingCrossSection must have spanwise_spacing="uniform".
+        :return: A new list of exploded wing cross sections.
+        :raises ValueError: If any non tip WingCrossSection has a spanwise_spacing
+            other than "uniform".
+        """
+        for i, wing_cross_section in enumerate(wing_cross_sections[:-1]):
+            if wing_cross_section.spanwise_spacing != "uniform":
+                raise ValueError(
+                    f"wing_cross_sections[{i}].spanwise_spacing is "
+                    f'"{wing_cross_section.spanwise_spacing}", but exploding a Wing '
+                    f'(explode_into_strips=True) requires "uniform" on every non tip '
+                    f"WingCrossSection."
+                )
+
+        new_cross_sections = []
+
+        for i in range(len(wing_cross_sections) - 1):
+            new_cross_sections.extend(
+                self.interpolate_between_wing_cross_sections(
+                    wing_cross_sections[i], wing_cross_sections[i + 1], i == 0
+                )
+            )
+
+        return new_cross_sections
 
 
 def _assert_T_not_none(T: np.ndarray | None) -> np.ndarray:

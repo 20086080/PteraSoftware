@@ -134,7 +134,8 @@ class UnsteadyRingVortexLatticeMethodSolver:
     def __init__(self, unsteady_problem: _core.CoreUnsteadyProblem) -> None:
         """The initialization method.
 
-        :param unsteady_problem: The UnsteadyProblem to be solved.
+        :param unsteady_problem: The UnsteadyProblem (or subclass of
+            CoreUnsteadyProblem) to be solved.
         :return: None
         """
         # Guard direct instantiation of the base solver against coupled problems while
@@ -701,6 +702,10 @@ class UnsteadyRingVortexLatticeMethodSolver:
         Panel's quarter chord. Otherwise, they extend backwards and meet the back line
         vortex one quarter chord back from the Panel's back leg.
 
+        :param steady_problem: The SteadyProblem for which to initialize the bound
+            RingVortices.
+        :param steady_problem_id: The index of the given SteadyProblem in the list of
+            SteadyProblems.
         :return: None
         """
         for step in range(self.num_steps):
@@ -1474,6 +1479,34 @@ class UnsteadyRingVortexLatticeMethodSolver:
             + unsteady_forces_GP1
         )
 
+        moments_GP1_CgP1 = self._load_calculation_moment_processing_hook(
+            rightLegForces_GP1,
+            frontLegForces_GP1,
+            leftLegForces_GP1,
+            backLegForces_GP1,
+            unsteady_forces_GP1,
+        )
+
+        # TODO: Transform forces_GP1 and moments_GP1_CgP1 to each Airplane's local
+        #  geometry axes before passing to process_solver_loads.
+        _functions.process_solver_loads(self, forces_GP1, moments_GP1_CgP1)
+
+    def _load_calculation_moment_processing_hook(
+        self,
+        rightLegForces_GP1,
+        frontLegForces_GP1,
+        leftLegForces_GP1,
+        backLegForces_GP1,
+        unsteady_forces_GP1,
+    ) -> np.ndarray:
+        """A hook method for processing the moments calculated in _calculate_loads.
+
+        This is added to allow for overriding the moment calculation in a child class.
+
+        :return: moments_GP1_CgP1, a (N,3) ndarray of floats representing the moments
+            (in the first Airplane's geometry axes, relative to the first Airplane's CG)
+            on every Panel at the current time step.
+        """
         # Find the moments (in the first Airplane's geometry axes, relative to the
         # first Airplane's CG) on the Panels' ring vortex's right line vortex,
         # front line vortex, left line vortex, and back line vortex.
@@ -1508,9 +1541,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             + unsteady_moments_GP1_CgP1
         )
 
-        # TODO: Transform forces_GP1 and moments_GP1_CgP1 to each Airplane's local
-        #  geometry axes before passing to process_solver_loads.
-        _functions.process_solver_loads(self, forces_GP1, moments_GP1_CgP1)
+        return np.array(moments_GP1_CgP1)
 
     def _populate_next_airplanes_wake(self) -> None:
         """Updates the next time step's Airplanes' wakes.
