@@ -13,6 +13,54 @@ from . import (
 )
 
 
+def make_basic_aeroelastic_unsteady_problem_fixture(plot_flap_cycle=False):
+    """This method makes a fixture that is an AeroelasticUnsteadyProblem for testing.
+
+    :param plot_flap_cycle: If True, the returned problem plots time histories at the
+        end of the simulation. The default is False.
+    :return basic_aeroelastic_unsteady_problem_fixture: AeroelasticUnsteadyProblem
+        This is the AeroelasticUnsteadyProblem configured for general testing.
+    """
+    # Create the AeroelasticMovement.
+    aeroelastic_movement = movement_fixtures.make_basic_aeroelastic_movement_fixture()
+
+    # Create and return the AeroelasticUnsteadyProblem.
+    basic_aeroelastic_unsteady_problem_fixture = ps.problems.AeroelasticUnsteadyProblem(
+        movement=aeroelastic_movement,
+        wing_density=0.01,
+        spring_constant=10.0,
+        damping_constant=0.5,
+        plot_flap_cycle=plot_flap_cycle,
+    )
+
+    return basic_aeroelastic_unsteady_problem_fixture
+
+
+def make_aeroelastic_unsteady_problem_with_standard_wing_fixture():
+    """This method makes a fixture that is an AeroelasticUnsteadyProblem whose wing is
+    backed by a standard WingMovement rather than an AeroelasticWingMovement.
+
+    :return aeroelastic_unsteady_problem_with_standard_wing_fixture:
+        AeroelasticUnsteadyProblem
+        This is the AeroelasticUnsteadyProblem configured for testing the
+        non-aeroelastic wing code path.
+    """
+    # Create the AeroelasticMovement with a standard WingMovement child.
+    movement = movement_fixtures.make_aeroelastic_movement_with_standard_wing_fixture()
+
+    # Create and return the AeroelasticUnsteadyProblem.
+    aeroelastic_unsteady_problem_with_standard_wing_fixture = (
+        ps.problems.AeroelasticUnsteadyProblem(
+            movement=movement,
+            wing_density=0.01,
+            spring_constant=10.0,
+            damping_constant=0.5,
+        )
+    )
+
+    return aeroelastic_unsteady_problem_with_standard_wing_fixture
+
+
 def make_basic_steady_problem_fixture():
     """This method makes a fixture that is a SteadyProblem for general testing.
 

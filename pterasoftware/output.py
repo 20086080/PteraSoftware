@@ -484,7 +484,7 @@ def animate(
     """
     if not isinstance(
         unsteady_solver,
-        (unsteady_ring_vortex_lattice_method.UnsteadyRingVortexLatticeMethodSolver,),
+        unsteady_ring_vortex_lattice_method.UnsteadyRingVortexLatticeMethodSolver,
     ):
         raise TypeError(
             "unsteady_solver must be an UnsteadyRingVortexLatticeMethodSolver."
