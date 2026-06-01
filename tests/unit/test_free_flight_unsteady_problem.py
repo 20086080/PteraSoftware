@@ -5,11 +5,7 @@ import unittest
 import numpy as np
 
 import pterasoftware as ps
-from tests.unit.fixtures import (
-    geometry_fixtures,
-    operating_point_fixtures,
-    problem_fixtures,
-)
+from tests.unit.fixtures import problem_fixtures
 
 
 class TestFreeFlightUnsteadyProblem(unittest.TestCase):
@@ -36,42 +32,57 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
             ps.movements.free_flight_movement.FreeFlightMovement,
         )
 
-    def test_single_airplane_validation(self):
-        """Test that initial_airplanes must have exactly one element."""
-        fixture = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+    def test_movement_type_validation(self):
+        """Test that movement must be a FreeFlightMovement."""
+        with self.assertRaises(TypeError):
+            ps.problems.FreeFlightUnsteadyProblem(
+                movement="not_a_movement",
+                I_BP1_CgP1=np.eye(3),
+            )
+
+    def test_single_airplane_movement_validation(self):
+        """Test that the FreeFlightMovement has exactly one FreeFlightAirplaneMovement."""
+        movement = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
+        )
+        two_airplane_movement = ps.movements.free_flight_movement.FreeFlightMovement(
+            airplane_movements=[
+                movement.airplane_movements[0],
+                movement.airplane_movements[0],
+            ],
+            operating_point_movement=movement.operating_point_movement,
+            delta_time=movement.delta_time,
+            prescribed_num_steps=3,
+            free_num_steps=2,
+        )
         with self.assertRaises(ValueError):
             ps.problems.FreeFlightUnsteadyProblem(
-                movement=fixture._movement,
-                initial_airplanes=[
-                    geometry_fixtures.make_first_airplane_fixture(),
-                    geometry_fixtures.make_first_airplane_fixture(),
-                ],
-                initial_operating_point=operating_point_fixtures.make_basic_operating_point_fixture(),
+                movement=two_airplane_movement,
                 I_BP1_CgP1=np.eye(3),
             )
 
     def test_I_BP1_CgP1_symmetry_validation(self):
         """Test that I_BP1_CgP1 must be symmetric."""
-        fixture = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+        movement = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
+        )
         asymmetric_inertia = np.array(
             [[1.0, 0.5, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=float
         )
         with self.assertRaises(ValueError):
             ps.problems.FreeFlightUnsteadyProblem(
-                movement=fixture._movement,
-                initial_airplanes=[geometry_fixtures.make_first_airplane_fixture()],
-                initial_operating_point=operating_point_fixtures.make_basic_operating_point_fixture(),
+                movement=movement,
                 I_BP1_CgP1=asymmetric_inertia,
             )
 
     def test_external_forces_fn_validation(self):
         """Test that external_forces_fn must be callable or None."""
-        fixture = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+        movement = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
+        )
         with self.assertRaises(TypeError):
             ps.problems.FreeFlightUnsteadyProblem(
-                movement=fixture._movement,
-                initial_airplanes=[geometry_fixtures.make_first_airplane_fixture()],
-                initial_operating_point=operating_point_fixtures.make_basic_operating_point_fixture(),
+                movement=movement,
                 I_BP1_CgP1=np.eye(3),
                 external_forces_fn="not_callable",
             )

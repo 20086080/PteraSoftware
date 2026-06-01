@@ -425,8 +425,6 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
     def __init__(
         self,
         movement: movements.free_flight_movement.FreeFlightMovement,
-        initial_airplanes: list[geometry.airplane.Airplane],
-        initial_operating_point: operating_point_mod.OperatingPoint,
         I_BP1_CgP1: np.ndarray | Sequence[Sequence[float | int]],
         external_forces_fn: (
             Callable[
@@ -443,14 +441,12 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
     ) -> None:
         """The initialization method.
 
-        :param movement: The FreeFlightMovement that defines the prescribed wing
-            geometry and operating point for this FreeFlightUnsteadyProblem.
-        :param initial_airplanes: A list containing exactly one Airplane representing
-            the initial geometry at the first time step. Multi-airplane free flight is
-            not supported in this release.
-        :param initial_operating_point: The OperatingPoint at the first time step,
-            defining the initial freestream conditions, body orientation, angular
-            velocity, and gravity vector.
+        :param movement: The FreeFlightMovement that defines the prescribed Airplane
+            geometry for this FreeFlightUnsteadyProblem. The initial Airplane and
+            OperatingPoint are derived from the FreeFlightMovement at the first time
+            step. The FreeFlightMovement must contain exactly one
+            FreeFlightAirplaneMovement; multi-airplane free flight is not supported in
+            this release.
         :param I_BP1_CgP1: An array-like object of numbers (int or float) with shape
             (3,3) representing the inertia matrix of the Airplane (in the first
             Airplane's body axes, relative to the first Airplane's CG). It must be
@@ -472,15 +468,28 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
             default is None.
         :return: None
         """
-        if len(initial_airplanes) != 1:
+        if not isinstance(movement, free_flight_movement.FreeFlightMovement):
+            raise TypeError("movement must be a FreeFlightMovement.")
+
+        if len(movement.airplane_movements) != 1:
             raise ValueError(
-                "initial_airplanes must have exactly one element. "
+                "movement must have exactly one FreeFlightAirplaneMovement. "
                 "Multi-airplane free flight is not supported in this release."
             )
 
+        # Derive the initial Airplane and OperatingPoint from the FreeFlightMovement's
+        # first time step. SteadyProblem mutates each Panel's GP1_CgP1 attributes once,
+        # so the initial Airplane must be a fresh object; generate_airplane_at_time_step
+        # returns one.
+        initial_airplane_movement = movement.airplane_movements[0]
+        initial_airplane = initial_airplane_movement.generate_airplane_at_time_step(
+            step=0, delta_time=movement.delta_time
+        )
+        initial_operating_point = movement.operating_point_movement.operating_points[0]
+
         super().__init__(
             movement=movement,
-            initial_airplanes=initial_airplanes,
+            initial_airplanes=[initial_airplane],
             initial_operating_point=initial_operating_point,
         )
 
@@ -504,8 +513,8 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
         self.momentCoefficients_W_Cg: list[np.ndarray] = []
 
         self._mujoco_model = _mujoco_model.MuJoCoModel(
-            name=initial_airplanes[0].name,
-            weight=initial_airplanes[0].weight,
+            name=initial_airplane.name,
+            weight=initial_airplane.weight,
             omegas_BP1__E=initial_operating_point.omegas_BP1__E,
             g_E=initial_operating_point.g_E,
             T_pas_BP1_CgP1_to_E_CgP1=initial_operating_point.T_pas_BP1_CgP1_to_E_CgP1,

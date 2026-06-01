@@ -254,12 +254,10 @@ def make_basic_free_flight_unsteady_problem_fixture():
         free_num_steps=2,
     )
 
-    # Create the FreeFlightUnsteadyProblem. SteadyProblem sets GP1_CgP1 attributes
-    # on each Panel exactly once, so a fresh Airplane is required.
+    # Create the FreeFlightUnsteadyProblem. The initial geometry and operating point are
+    # derived from the movement at the first time step.
     basic_free_flight_unsteady_problem_fixture = ps.problems.FreeFlightUnsteadyProblem(
         movement=movement,
-        initial_airplanes=[geometry_fixtures.make_first_airplane_fixture()],
-        initial_operating_point=operating_point_fixtures.make_basic_operating_point_fixture(),
         I_BP1_CgP1=np.diag([1.0, 1.0, 1.0]),
     )
 
