@@ -56,6 +56,16 @@ class TestFreeFlightAirplaneMovement(unittest.TestCase):
                 wing_movements=wing_movements,
             )
 
+    def test_wing_movements_property_returns_tuple(self):
+        """Test that the wing_movements property returns a tuple of the
+        FreeFlightAirplaneMovement's wing movements.
+        """
+        free_flight_airplane_movement = (
+            free_flight_airplane_movement_fixtures.make_basic_free_flight_airplane_movement_fixture()
+        )
+        self.assertIsInstance(free_flight_airplane_movement.wing_movements, tuple)
+        self.assertEqual(len(free_flight_airplane_movement.wing_movements), 1)
+
     def test_generate_airplanes_returns_airplanes(self):
         """Test that generate_airplanes returns Airplanes when called through the
         public class.
