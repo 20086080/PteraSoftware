@@ -203,13 +203,19 @@ def make_with_body_rates_unsteady_problem_fixture():
     )
 
 
-def make_basic_free_flight_unsteady_problem_fixture(base_operating_point=None):
+def make_basic_free_flight_unsteady_problem_fixture(
+    base_operating_point=None, external_forces_fn=None
+):
     """This method makes a fixture that is a FreeFlightUnsteadyProblem for general
     testing.
 
     :param base_operating_point: OperatingPoint or None
         The base OperatingPoint for the FreeFlightOperatingPointMovement. If None, a
         basic OperatingPoint with no body rotation is used. The default is None.
+    :param external_forces_fn: Callable or None
+        A callable that computes additional forces and moments to apply to the Airplane
+        during the simulation. If None, no additional forces are applied. The default is
+        None.
     :return basic_free_flight_unsteady_problem_fixture: FreeFlightUnsteadyProblem
         This is the FreeFlightUnsteadyProblem configured for general testing.
     """
@@ -263,6 +269,7 @@ def make_basic_free_flight_unsteady_problem_fixture(base_operating_point=None):
     basic_free_flight_unsteady_problem_fixture = ps.problems.FreeFlightUnsteadyProblem(
         movement=movement,
         I_BP1_CgP1=np.diag([1.0, 1.0, 1.0]),
+        external_forces_fn=external_forces_fn,
     )
 
     return basic_free_flight_unsteady_problem_fixture
