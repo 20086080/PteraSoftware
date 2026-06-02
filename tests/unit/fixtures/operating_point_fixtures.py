@@ -471,3 +471,20 @@ def make_with_body_rates_operating_point_fixture():
     )
 
     return with_body_rates_operating_point_fixture
+
+
+def make_with_full_body_rates_operating_point_fixture():
+    """This method makes a fixture that is an OperatingPoint whose omegas_BP1__E has
+    three distinct non zero components, for testing that the free-flight solver's body
+    to geometry transformation negates the x and z components while preserving the y
+    component.
+
+    :return with_full_body_rates_operating_point_fixture: OperatingPoint
+        This is the OperatingPoint whose angular velocity of the first Airplane's body
+        axes (observed from the Earth frame) has three distinct non zero components.
+    """
+    with_full_body_rates_operating_point_fixture = ps.operating_point.OperatingPoint(
+        omegas_BP1__E=(1.0, 2.0, 3.0),
+    )
+
+    return with_full_body_rates_operating_point_fixture

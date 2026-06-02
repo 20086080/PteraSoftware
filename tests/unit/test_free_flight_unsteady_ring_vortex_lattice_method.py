@@ -110,6 +110,26 @@ class TestFreeFlightUnsteadyRingVortexLatticeMethodSolver(unittest.TestCase):
         expected_omegasRad_GP1__E = np.deg2rad(np.array([0.0, 0.0, -1.0]))
         np.testing.assert_allclose(omegasRad_GP1__E, expected_omegasRad_GP1__E)
 
+    def test_current_omegas_rad_negates_x_and_z_preserves_y(self):
+        """Test that _currentOmegasRad_GP1__E negates the x and z components and
+        preserves the y component when transforming the body rate from the body axes to
+        the geometry axes.
+
+        Using a body rate with three distinct non zero components pins down the full
+        body to geometry flip, which a body rate aligned with a single axis cannot.
+        """
+        self.solver.current_operating_point = (
+            operating_point_fixtures.make_with_full_body_rates_operating_point_fixture()
+        )
+
+        omegasRad_GP1__E = self.solver._currentOmegasRad_GP1__E()
+
+        # The fixture's body rate is (1, 2, 3) degrees per second in body axes, which
+        # becomes (-1, 2, -3) degrees per second in geometry axes, then is converted to
+        # radians per second.
+        expected_omegasRad_GP1__E = np.deg2rad(np.array([-1.0, 2.0, -3.0]))
+        np.testing.assert_allclose(omegasRad_GP1__E, expected_omegasRad_GP1__E)
+
     def test_inherits_empty_slots(self):
         """Test that the subclass declares __slots__ = () so it does not gain an instance
         __dict__ that would defeat the parent's __slots__.
