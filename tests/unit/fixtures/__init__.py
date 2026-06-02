@@ -42,6 +42,9 @@ This package contains the following modules:
     free_flight_airplane_movement_fixtures.py: This module contains functions to create
     FreeFlightAirplaneMovements for use in tests.
 
+    free_flight_movement_fixtures.py: This module contains functions to create
+    FreeFlightMovements for use in tests.
+
     free_flight_operating_point_movement_fixtures.py: This module contains functions to
     create FreeFlightOperatingPointMovements for use in tests.
 
@@ -107,6 +110,7 @@ import tests.unit.fixtures.core_operating_point_movement_fixtures
 import tests.unit.fixtures.core_wing_cross_section_movement_fixtures
 import tests.unit.fixtures.core_wing_movement_fixtures
 import tests.unit.fixtures.free_flight_airplane_movement_fixtures
+import tests.unit.fixtures.free_flight_movement_fixtures
 import tests.unit.fixtures.free_flight_operating_point_movement_fixtures
 import tests.unit.fixtures.free_flight_wing_cross_section_movement_fixtures
 import tests.unit.fixtures.free_flight_wing_movement_fixtures

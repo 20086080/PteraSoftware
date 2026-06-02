@@ -67,6 +67,9 @@ This package contains the following modules:
     test_free_flight_airplane_movement.py: This module contains classes to test
     FreeFlightAirplaneMovements.
 
+    test_free_flight_movement.py: This module contains classes to test
+    FreeFlightMovements.
+
     test_free_flight_operating_point_movement.py: This module contains classes to test
     FreeFlightOperatingPointMovements.
 
@@ -156,6 +159,7 @@ import tests.unit.test_core_wing_movement
 import tests.unit.test_coupled_unsteady_problem
 import tests.unit.test_coupled_unsteady_ring_vortex_lattice_method
 import tests.unit.test_free_flight_airplane_movement
+import tests.unit.test_free_flight_movement
 import tests.unit.test_free_flight_operating_point_movement
 import tests.unit.test_free_flight_unsteady_problem
 import tests.unit.test_free_flight_unsteady_ring_vortex_lattice_method
