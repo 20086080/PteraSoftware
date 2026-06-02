@@ -55,7 +55,7 @@ class CoupledUnsteadyRingVortexLatticeMethodSolver(
         super().__init__(unsteady_problem)
 
     @property
-    def _coupled_problem(self) -> problems._CoupledUnsteadyProblem:
+    def _coupled_unsteady_problem(self) -> problems._CoupledUnsteadyProblem:
         """Type narrowed view of the inherited unsteady_problem attribute.
 
         The parent stores unsteady_problem as a CoreUnsteadyProblem (widened to let
@@ -71,12 +71,12 @@ class CoupledUnsteadyRingVortexLatticeMethodSolver(
         self._initialize_panel_vortices_at(step)
 
     def _pre_shed_hook(self, step: int) -> None:
-        self._coupled_problem.initialize_next_problem(self, step)
+        self._coupled_unsteady_problem.initialize_next_problem(self, step)
         if step < self.num_steps - 1:
             self._initialize_panel_vortices_at(step + 1)
 
     def _get_steady_problem_at(self, step: int) -> problems.SteadyProblem:
-        return self._coupled_problem.get_steady_problem(step)
+        return self._coupled_unsteady_problem.get_steady_problem(step)
 
     def run(
         self,
@@ -100,4 +100,4 @@ class CoupledUnsteadyRingVortexLatticeMethodSolver(
             calculate_streamlines=calculate_streamlines,
             show_progress=show_progress,
         )
-        self.steady_problems = self._coupled_problem.steady_problems
+        self.steady_problems = self._coupled_unsteady_problem.steady_problems

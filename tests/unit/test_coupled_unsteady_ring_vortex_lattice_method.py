@@ -49,16 +49,18 @@ class TestCoupledUnsteadyRingVortexLatticeMethodSolver(unittest.TestCase):
         with self.assertRaises(TypeError):
             CoupledUnsteadyRingVortexLatticeMethodSolver(None)
 
-    def test_coupled_problem_property_narrows_unsteady_problem(self):
-        """Test that the _coupled_problem property returns the same object as
+    def test_coupled_unsteady_problem_property_narrows_unsteady_problem(self):
+        """Test that the _coupled_unsteady_problem property returns the same object as
         unsteady_problem, narrowed to _CoupledUnsteadyProblem.
         """
-        self.assertIs(self.solver._coupled_problem, self.solver.unsteady_problem)
+        self.assertIs(
+            self.solver._coupled_unsteady_problem, self.solver.unsteady_problem
+        )
         self.assertIsInstance(
-            self.solver._coupled_problem, ps.problems._CoupledUnsteadyProblem
+            self.solver._coupled_unsteady_problem, ps.problems._CoupledUnsteadyProblem
         )
 
-    def test_get_steady_problem_at_dispatches_through_coupled_problem(self):
+    def test_get_steady_problem_at_dispatches_through_coupled_unsteady_problem(self):
         """Test that _get_steady_problem_at dispatches through
         _CoupledUnsteadyProblem.get_steady_problem rather than the cached tuple.
 
