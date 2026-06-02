@@ -34,6 +34,12 @@ from . import (
 
 _logger = _logging.get_logger("unsteady_ring_vortex_lattice_method")
 
+# A body angular velocity of zero (in the first Airplane's geometry axes, observed from
+# the Earth frame, in radians per second). Solvers that do not model body rotation return
+# this from _currentOmegasRad_GP1__E so that _apply_body_rate is a no-op.
+_ZERO_OMEGAS_RAD_GP1__E = np.zeros(3, dtype=float)
+_ZERO_OMEGAS_RAD_GP1__E.flags.writeable = False
+
 
 # REFACTOR: Add unit tests for trapezoid-rule-based averages for the mean and RMS loads
 #  and load coefficients.
@@ -131,6 +137,13 @@ class UnsteadyRingVortexLatticeMethodSolver:
         "ran",
     )
 
+    # Whether this solver models body angular rates (a non-zero omegas_BP1__E on an
+    # OperatingPoint). The base solver and its coupled and aeroelastic subclasses do not,
+    # so they reject any non-zero body rate at construction. The free-flight solver, which
+    # contributes the omega cross r velocity at every evaluation point, overrides this to
+    # True.
+    _models_body_rates = False
+
     def __init__(self, unsteady_problem: _core.CoreUnsteadyProblem) -> None:
         """The initialization method.
 
@@ -144,12 +157,12 @@ class UnsteadyRingVortexLatticeMethodSolver:
             unsteady_problem, problems.UnsteadyProblem
         ):
             raise TypeError("unsteady_problem must be an UnsteadyProblem.")
-        if type(self) is UnsteadyRingVortexLatticeMethodSolver:
+        if not self._models_body_rates:
             for step, steady_problem in enumerate(unsteady_problem.steady_problems):
                 if np.any(steady_problem.operating_point.omegas_BP1__E != 0.0):
                     raise ValueError(
-                        f"operating_point.omegas_BP1__E must be all zeros for the "
-                        f"unsteady ring vortex lattice method solver (step {step})."
+                        f"operating_point.omegas_BP1__E must be all zeros for solvers "
+                        f"that do not model body rates (step {step})."
                     )
         self.unsteady_problem = unsteady_problem
 
@@ -923,6 +936,56 @@ class UnsteadyRingVortexLatticeMethodSolver:
             np.expand_dims(self.stackUnitNormals_GP1, axis=1),
         )
 
+    def _currentOmegasRad_GP1__E(self) -> np.ndarray:
+        """Finds the current time step's body angular velocity (in the first Airplane's
+        geometry axes, observed from the Earth frame).
+
+        **Notes:**
+
+        The base solver does not model body rotation and returns a zero vector, which
+        makes _apply_body_rate a no-op. The free-flight solver overrides this to return
+        the current OperatingPoint's body rate, converted from the body axes (in degrees
+        per second) to the first Airplane's geometry axes (in radians per second).
+
+        :return: A (3,) ndarray of floats representing the body angular velocity (in the
+            first Airplane's geometry axes, observed from the Earth frame). Its units
+            are in radians per second.
+        """
+        return _ZERO_OMEGAS_RAD_GP1__E
+
+    def _apply_body_rate(
+        self,
+        stackPoints_GP1_CgP1: np.ndarray,
+        stackBaseV_GP1__E: np.ndarray,
+    ) -> np.ndarray:
+        """Adds the apparent velocity from body rotation (omega cross r) to a stack of
+        velocities.
+
+        **Notes:**
+
+        The apparent velocity at a point due to body rotation is opposite the motion of
+        that point, so it is the negative of the cross product of the body angular
+        velocity and the point's position vector (relative to the first Airplane's CG).
+        When the solver does not model body rotation, _currentOmegasRad_GP1__E returns a
+        zero vector and the base velocities are returned unchanged, so solvers that do
+        not model body rates incur no per-point cost.
+
+        :param stackPoints_GP1_CgP1: A (M, 3) ndarray of floats representing the points
+            (in the first Airplane's geometry axes, relative to the first Airplane's CG)
+            at which to evaluate the body-rotation velocity. Its units are in meters.
+        :param stackBaseV_GP1__E: A (M, 3) ndarray of floats representing the velocities
+            (in the first Airplane's geometry axes, observed from the Earth frame) to
+            which the body-rotation velocity is added. Its units are in meters per
+            second.
+        :return: A (M, 3) ndarray of floats representing the base velocities plus the
+            apparent velocity from body rotation (in the first Airplane's geometry axes,
+            observed from the Earth frame). Its units are in meters per second.
+        """
+        omegasRad_GP1__E = self._currentOmegasRad_GP1__E()
+        if not np.any(omegasRad_GP1__E):
+            return stackBaseV_GP1__E
+        return stackBaseV_GP1__E - np.cross(omegasRad_GP1__E, stackPoints_GP1_CgP1)
+
     def _calculate_freestream_wing_influences(self) -> None:
         """Finds the 1D ndarray of freestream Wing influence coefficients (observed from
         the Earth frame) at the current time step.
@@ -930,7 +993,8 @@ class UnsteadyRingVortexLatticeMethodSolver:
         **Notes:**
 
         This method also includes the influence coefficients due to motion defined in
-        Movement (observed from the Earth frame) at every collocation point.
+        Movement and, for solvers that model body rotation, due to the body angular rate
+        (omega cross r), at every collocation point (observed from the Earth frame).
 
         :return: None
         """
@@ -943,27 +1007,29 @@ class UnsteadyRingVortexLatticeMethodSolver:
             self._currentVInf_GP1__E,
         )
 
-        # Get the current apparent velocities at each Panel's collocation point due
-        # to any motion defined in Movement (in the first Airplane's geometry axes,
-        # observed from the Earth frame).
-        currentStackMovementV_GP1_E = (
-            self._calculate_current_movement_velocities_at_collocation_points()
+        # Get the current apparent velocities at each Panel's collocation point due to
+        # any motion defined in Movement and, for solvers that model body rotation, due
+        # to the body angular rate (omega cross r), in the first Airplane's geometry
+        # axes, observed from the Earth frame.
+        currentStackApparentV_GP1_E = self._apply_body_rate(
+            self.stackCpp_GP1_CgP1,
+            self._calculate_current_movement_velocities_at_collocation_points(),
         )
 
-        # Get the current motion influence coefficients at each Panel's collocation
-        # point (observed from the Earth frame) by taking a batch dot product.
-        currentStackMovementInfluences__E = np.einsum(
+        # Get the current apparent-motion influence coefficients at each Panel's
+        # collocation point (observed from the Earth frame) by taking a batch dot product.
+        currentStackApparentInfluences__E = np.einsum(
             "ij,ij->i",
             self.stackUnitNormals_GP1,
-            currentStackMovementV_GP1_E,
+            currentStackApparentV_GP1_E,
         )
 
         # Calculate the total current freestream Wing influence coefficients by
-        # summing the freestream-only influence coefficients and the motion influence
-        # coefficients (all observed from the Earth frame).
+        # summing the freestream-only influence coefficients and the apparent-motion
+        # influence coefficients (all observed from the Earth frame).
         self._currentStackFreestreamWingInfluences__E = (
             currentStackFreestreamOnlyWingInfluences__E
-            + currentStackMovementInfluences__E
+            + currentStackApparentInfluences__E
         )
 
     def _calculate_wake_wing_influences(self) -> None:
@@ -1341,40 +1407,46 @@ class UnsteadyRingVortexLatticeMethodSolver:
 
         # Calculate the velocity (in the first Airplane's geometry axes, observed
         # from the Earth frame) at the center of every Panels' ring vortex's right
-        # line vortex, front line vortex, left line vortex, and back line vortex.
+        # line vortex, front line vortex, left line vortex, and back line vortex. For
+        # solvers that model body rotation, this also includes the body angular rate
+        # (omega cross r) at each leg center.
         bound_singularity_counts = np.zeros(4, dtype=np.int64)
         wake_singularity_counts = np.zeros(4, dtype=np.int64)
-        stackVelocityRightLineVortexCenters_GP1__E = (
+        stackVelocityRightLineVortexCenters_GP1__E = self._apply_body_rate(
+            self.stackCblvpr_GP1_CgP1,
             self.calculate_solution_velocity(
                 stackP_GP1_CgP1=self.stackCblvpr_GP1_CgP1,
                 bound_singularity_counts=bound_singularity_counts,
                 wake_singularity_counts=wake_singularity_counts,
             )
-            + self._calculate_current_movement_velocities_at_right_leg_centers()
+            + self._calculate_current_movement_velocities_at_right_leg_centers(),
         )
-        stackVelocityFrontLineVortexCenters_GP1__E = (
+        stackVelocityFrontLineVortexCenters_GP1__E = self._apply_body_rate(
+            self.stackCblvpf_GP1_CgP1,
             self.calculate_solution_velocity(
                 stackP_GP1_CgP1=self.stackCblvpf_GP1_CgP1,
                 bound_singularity_counts=bound_singularity_counts,
                 wake_singularity_counts=wake_singularity_counts,
             )
-            + self._calculate_current_movement_velocities_at_front_leg_centers()
+            + self._calculate_current_movement_velocities_at_front_leg_centers(),
         )
-        stackVelocityLeftLineVortexCenters_GP1__E = (
+        stackVelocityLeftLineVortexCenters_GP1__E = self._apply_body_rate(
+            self.stackCblvpl_GP1_CgP1,
             self.calculate_solution_velocity(
                 stackP_GP1_CgP1=self.stackCblvpl_GP1_CgP1,
                 bound_singularity_counts=bound_singularity_counts,
                 wake_singularity_counts=wake_singularity_counts,
             )
-            + self._calculate_current_movement_velocities_at_left_leg_centers()
+            + self._calculate_current_movement_velocities_at_left_leg_centers(),
         )
-        stackVelocityBackLineVortexCenters_GP1__E = (
+        stackVelocityBackLineVortexCenters_GP1__E = self._apply_body_rate(
+            self.stackCblvpb_GP1_CgP1,
             self.calculate_solution_velocity(
                 stackP_GP1_CgP1=self.stackCblvpb_GP1_CgP1,
                 bound_singularity_counts=bound_singularity_counts,
                 wake_singularity_counts=wake_singularity_counts,
             )
-            + self._calculate_current_movement_velocities_at_back_leg_centers()
+            + self._calculate_current_movement_velocities_at_back_leg_centers(),
         )
 
         unexpected_bound_singularity_counts = np.copy(bound_singularity_counts)

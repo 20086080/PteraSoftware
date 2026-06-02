@@ -156,8 +156,8 @@ class MuJoCoModel:
 
         vCgX_E__E, vCgY_E__E, vCgZ_E__E = vCg_E__E[:]
 
-        # Gravity in the MuJoCo model is turned off as it is applied by the
-        # FreeFlightSolver.
+        # Gravity in the MuJoCo model is turned off as it is applied by
+        # FreeFlightUnsteadyProblem.initialize_next_problem.
         gravity_str = "0.0 0.0 0.0"
         inertia_str = (
             f"{IXX_BP1_CgP1} {IYY_BP1_CgP1} {IZZ_BP1_CgP1} {IXY_BP1_CgP1} "
