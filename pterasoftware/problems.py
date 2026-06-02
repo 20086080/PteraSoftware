@@ -415,6 +415,7 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
     __slots__ = (
         "_I_BP1_CgP1",
         "_external_forces_fn",
+        "_external_forces_validated",
         "_mujoco_model",
         "forces_W",
         "forceCoefficients_W",
@@ -457,8 +458,11 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
             OperatingPoint and an Airplane and returns a tuple of two (3,) ndarrays of
             floats: the additional force (in wind axes, in Newtons) and the additional
             moment (in wind axes, relative to the first Airplane's CG, in Newton
-            meters). Setting this to None applies no additional forces. The default is
-            None.
+            meters). The return value is validated on the callable's first invocation; a
+            return that is not a pair of (3,) finite numeric vectors raises a
+            descriptive error. The physical correctness of the forces and moments
+            themselves is not checked. Setting this to None applies no additional
+            forces. The default is None.
         :param extra_xml: A dict mapping injection point names to XML fragment strings
             to inject into the MuJoCo model's XML. Supported keys are "default",
             "asset", "visual", "worldbody", and "body". Setting this to None injects no
@@ -504,6 +508,11 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
         if external_forces_fn is not None and not callable(external_forces_fn):
             raise TypeError("external_forces_fn must be callable or None.")
         self._external_forces_fn = external_forces_fn
+
+        # Tracks whether the external_forces_fn's return structure has been validated.
+        # The return contract is static across time steps, so it is checked once, on the
+        # function's first invocation in initialize_next_problem, rather than every step.
+        self._external_forces_validated = False
 
         # Initialize empty lists to hold the loads and load coefficients experienced by
         # each time step's Airplane.
@@ -566,6 +575,41 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
         """
         return cast(free_flight_movement.FreeFlightMovement, self._movement)
 
+    @staticmethod
+    def _validate_external_forces_return(result: object) -> None:
+        """Validates the structure of a value returned by the external_forces_fn.
+
+        The external_forces_fn must return a (force, moment) pair, where each is a (3,)
+        array-like of finite numbers (the force in wind axes in Newtons, the moment in
+        wind axes relative to the first Airplane's CG in Newton meters). This checks
+        only the shape and finiteness of the return value, not the physical correctness
+        of the forces and moments, which cannot be validated in general. It is called
+        once, on the external_forces_fn's first invocation, because the return contract
+        is static across time steps.
+
+        :param result: The object returned by a call to the external_forces_fn.
+        :return: None
+        """
+        if not isinstance(result, (tuple, list, np.ndarray)):
+            raise TypeError(
+                "external_forces_fn must return a (force, moment) pair as a tuple, "
+                f"list, or ndarray, but got {type(result).__name__}."
+            )
+        if len(result) != 2:
+            raise ValueError(
+                "external_forces_fn must return a (force, moment) pair, but its return "
+                f"value had {len(result)} items."
+            )
+
+        # Each component must be a (3,) vector of finite numbers. Defer the shape,
+        # finiteness, and numeric-type checks to the package's standard validator.
+        _parameter_validation.threeD_number_vectorLike_return_float(
+            result[0], "external_forces_fn's returned force"
+        )
+        _parameter_validation.threeD_number_vectorLike_return_float(
+            result[1], "external_forces_fn's returned moment"
+        )
+
     def initialize_next_problem(
         self,
         solver: CoupledUnsteadyRingVortexLatticeMethodSolver,
@@ -602,9 +646,14 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
         if step < self.num_steps - 1:
             # 2. Add external forces if external_forces_fn is set.
             if self._external_forces_fn is not None:
-                externalForces_W, externalMoments_W_CgP1 = self._external_forces_fn(
+                external_result = self._external_forces_fn(
                     current_operating_point, current_airplane
                 )
+                # Validate the return structure once, on the first invocation.
+                if not self._external_forces_validated:
+                    self._validate_external_forces_return(external_result)
+                    self._external_forces_validated = True
+                externalForces_W, externalMoments_W_CgP1 = external_result
                 totalForces_W = aeroForces_W + externalForces_W
                 totalMoments_W_CgP1 = aeroMoments_W_CgP1 + externalMoments_W_CgP1
             else:
