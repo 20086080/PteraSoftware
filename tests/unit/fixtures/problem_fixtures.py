@@ -203,10 +203,13 @@ def make_with_body_rates_unsteady_problem_fixture():
     )
 
 
-def make_basic_free_flight_unsteady_problem_fixture():
+def make_basic_free_flight_unsteady_problem_fixture(base_operating_point=None):
     """This method makes a fixture that is a FreeFlightUnsteadyProblem for general
     testing.
 
+    :param base_operating_point: OperatingPoint or None
+        The base OperatingPoint for the FreeFlightOperatingPointMovement. If None, a
+        basic OperatingPoint with no body rotation is used. The default is None.
     :return basic_free_flight_unsteady_problem_fixture: FreeFlightUnsteadyProblem
         This is the FreeFlightUnsteadyProblem configured for general testing.
     """
@@ -238,11 +241,12 @@ def make_basic_free_flight_unsteady_problem_fixture():
     )
 
     # Create the FreeFlightOperatingPointMovement.
-    basic_operating_point = (
-        operating_point_fixtures.make_basic_operating_point_fixture()
-    )
+    if base_operating_point is None:
+        base_operating_point = (
+            operating_point_fixtures.make_basic_operating_point_fixture()
+        )
     op_movement = ps.movements.free_flight_operating_point_movement.FreeFlightOperatingPointMovement(
-        base_operating_point=basic_operating_point,
+        base_operating_point=base_operating_point,
     )
 
     # Create the FreeFlightMovement.
@@ -262,6 +266,20 @@ def make_basic_free_flight_unsteady_problem_fixture():
     )
 
     return basic_free_flight_unsteady_problem_fixture
+
+
+def make_with_body_rates_free_flight_unsteady_problem_fixture():
+    """This method makes a fixture that is a FreeFlightUnsteadyProblem whose base
+    OperatingPoint carries a non zero omegas_BP1__E, for testing that the free-flight
+    solver permits body rotation.
+
+    :return with_body_rates_free_flight_unsteady_problem_fixture: FreeFlightUnsteadyProblem
+        This is the FreeFlightUnsteadyProblem whose initial OperatingPoint carries a non
+        zero body angular velocity.
+    """
+    return make_basic_free_flight_unsteady_problem_fixture(
+        base_operating_point=operating_point_fixtures.make_with_body_rates_operating_point_fixture()
+    )
 
 
 def make_basic_coupled_unsteady_problem_fixture():

@@ -67,6 +67,9 @@ This package contains the following modules:
     test_free_flight_unsteady_problem.py: This module contains classes to test
     FreeFlightUnsteadyProblems.
 
+    test_free_flight_unsteady_ring_vortex_lattice_method.py: This module contains
+    classes to test FreeFlightUnsteadyRingVortexLatticeMethodSolvers.
+
     test_functions.py: This module contains classes to test shared utility functions.
 
     test_mujoco_model.py: This module contains classes to test MuJoCoModels.
@@ -141,6 +144,7 @@ import tests.unit.test_core_wing_movement
 import tests.unit.test_coupled_unsteady_problem
 import tests.unit.test_coupled_unsteady_ring_vortex_lattice_method
 import tests.unit.test_free_flight_unsteady_problem
+import tests.unit.test_free_flight_unsteady_ring_vortex_lattice_method
 import tests.unit.test_functions
 import tests.unit.test_movement
 import tests.unit.test_mujoco_model

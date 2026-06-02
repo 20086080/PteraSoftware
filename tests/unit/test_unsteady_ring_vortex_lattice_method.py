@@ -3,6 +3,8 @@
 import unittest
 from unittest.mock import patch
 
+import numpy as np
+
 import pterasoftware as ps
 from tests.unit.fixtures import problem_fixtures, solver_fixtures
 
@@ -94,6 +96,27 @@ class TestUnsteadyRingVortexLatticeMethodSolverHookDefaults(unittest.TestCase):
         for step in [0, 1, self.solver.num_steps - 1]:
             with self.subTest(step=step):
                 self.assertIsNone(self.solver._pre_shed_hook(step))
+
+    def test_models_body_rates_default_is_false(self):
+        """Test that the base solver does not model body rates by default."""
+        self.assertFalse(self.solver._models_body_rates)
+
+    def test_current_omegas_rad_default_is_zero(self):
+        """Test that the default _currentOmegasRad_GP1__E returns a zero vector, so the
+        base solver contributes no body-rotation velocity.
+        """
+        omegasRad_GP1__E = self.solver._currentOmegasRad_GP1__E()
+        np.testing.assert_array_equal(omegasRad_GP1__E, np.zeros(3))
+
+    def test_apply_body_rate_without_rotation_is_noop(self):
+        """Test that _apply_body_rate returns the base velocities unchanged when the
+        solver models no body rotation.
+        """
+        points = np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]])
+        base_velocity = np.array([[7.0, 8.0, 9.0], [10.0, 11.0, 12.0]])
+        self.assertIs(
+            self.solver._apply_body_rate(points, base_velocity), base_velocity
+        )
 
 
 if __name__ == "__main__":

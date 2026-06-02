@@ -9,6 +9,9 @@ from pterasoftware._coupled_unsteady_ring_vortex_lattice_method import (
 from pterasoftware.aeroelastic_unsteady_ring_vortex_lattice_method import (
     AeroelasticUnsteadyRingVortexLatticeMethodSolver,
 )
+from pterasoftware.free_flight_unsteady_ring_vortex_lattice_method import (
+    FreeFlightUnsteadyRingVortexLatticeMethodSolver,
+)
 
 from . import problem_fixtures
 
@@ -91,5 +94,23 @@ def make_coupled_unsteady_ring_solver_fixture():
     )
 
     solver = CoupledUnsteadyRingVortexLatticeMethodSolver(coupled_unsteady_problem)
+
+    return solver
+
+
+def make_free_flight_unsteady_ring_solver_fixture():
+    """This method makes a fixture that is a
+    FreeFlightUnsteadyRingVortexLatticeMethodSolver for general testing.
+
+    :return solver: FreeFlightUnsteadyRingVortexLatticeMethodSolver
+        This is the FreeFlightUnsteadyRingVortexLatticeMethodSolver fixture.
+    """
+    free_flight_unsteady_problem = (
+        problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+    )
+
+    solver = FreeFlightUnsteadyRingVortexLatticeMethodSolver(
+        free_flight_unsteady_problem
+    )
 
     return solver
