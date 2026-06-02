@@ -155,7 +155,7 @@ _STEADY_SOLVER_SKIP_SLOTS: frozenset[str] = frozenset(
 
 # Slots on the unsteady solver that are aliases into the UnsteadyProblem graph.
 _UNSTEADY_SOLVER_SKIP_SLOTS: frozenset[str] = frozenset(
-    {"steady_problems", "current_airplanes", "current_operating_point", "panels"}
+    {"current_airplanes", "current_operating_point", "panels"}
 )
 
 # Slots on Movement that are redundant when serialized inside an UnsteadyProblem.
@@ -496,7 +496,6 @@ def _reconstruct_shared_references(obj: object) -> None:
 
     if isinstance(obj, UnsteadyRingVortexLatticeMethodSolver):
         unsteady_problem = obj.unsteady_problem
-        object.__setattr__(obj, "steady_problems", unsteady_problem.steady_problems)
 
         # This module is inherently coupled to class internals (it reads __slots__
         # and writes private backing stores for all classes), so accessing a private

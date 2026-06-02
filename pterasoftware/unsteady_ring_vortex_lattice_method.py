@@ -70,7 +70,6 @@ class UnsteadyRingVortexLatticeMethodSolver:
         "_first_averaging_step",
         "_current_step",
         "_prescribed_wake",
-        "steady_problems",
         "current_airplanes",
         "current_operating_point",
         "num_airplanes",
@@ -173,8 +172,6 @@ class UnsteadyRingVortexLatticeMethodSolver:
         self._first_averaging_step = self.unsteady_problem.first_averaging_step
         self._current_step: int = 0
         self._prescribed_wake: bool = True
-
-        self.steady_problems = self.unsteady_problem.steady_problems
 
         first_steady_problem: problems.SteadyProblem = self._get_steady_problem_at(0)
 
@@ -366,6 +363,19 @@ class UnsteadyRingVortexLatticeMethodSolver:
         self.gridStreamlinePoints_GP1_CgP1: np.ndarray = np.empty((0, 3), dtype=float)
 
         self.ran = False
+
+    @property
+    def steady_problems(self) -> tuple[problems.SteadyProblem, ...]:
+        """The SteadyProblems for this solver's UnsteadyProblem.
+
+        This read-only view always reflects the live state of the underlying
+        UnsteadyProblem. For a standard UnsteadyProblem the tuple is fixed over the
+        solver's lifetime; for a coupled problem it grows as each step is initialized
+        during the run, so successive reads can return different-length tuples.
+
+        :return: A tuple of the SteadyProblems, one per initialized time step.
+        """
+        return self.unsteady_problem.steady_problems
 
     def run(
         self,

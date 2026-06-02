@@ -54,6 +54,15 @@ class TestUnsteadyRingVortexLatticeMethodSolver(unittest.TestCase):
                 rotating_problem
             )
 
+    def test_steady_problems_is_read_only(self):
+        """Test that the steady_problems property cannot be reassigned, since it is a
+        read-only view of the UnsteadyProblem's SteadyProblems. The property is defined
+        on this base solver and inherited by every coupled subclass.
+        """
+        solver = solver_fixtures.make_unsteady_ring_solver_fixture()
+        with self.assertRaises(AttributeError):
+            solver.steady_problems = ()
+
 
 class TestUnsteadyRingVortexLatticeMethodSolverHookDefaults(unittest.TestCase):
     """Tests for the default implementations of the three solver extension hooks

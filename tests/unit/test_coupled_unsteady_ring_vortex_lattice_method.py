@@ -61,21 +61,22 @@ class TestCoupledUnsteadyRingVortexLatticeMethodSolver(unittest.TestCase):
         )
 
     def test_get_steady_problem_at_dispatches_through_coupled_unsteady_problem(self):
-        """Test that _get_steady_problem_at dispatches through
-        _CoupledUnsteadyProblem.get_steady_problem rather than the cached tuple.
+        """Test that both steady_problems and _get_steady_problem_at reflect the
+        problem's growing _steady_problems list.
 
-        The parent solver captures steady_problems as a tuple snapshot at
-        construction time. The coupled subclass must dispatch through the
-        accessor so appends to the problem's _steady_problems backing list are
-        visible at later steps.
+        The coupled problem seeds its backing list with step zero and appends each
+        later step during the solve. The solver's steady_problems property and its
+        _get_steady_problem_at dispatch both read that live list, so an append is
+        visible immediately through either path.
         """
         self.assertEqual(len(self.solver.steady_problems), 1)
 
         next_steady_problem = problem_fixtures.make_basic_steady_problem_fixture()
         self.problem._steady_problems.append(next_steady_problem)
 
-        self.assertEqual(len(self.solver.steady_problems), 1)
+        self.assertEqual(len(self.solver.steady_problems), 2)
         self.assertIs(self.solver._get_steady_problem_at(1), next_steady_problem)
+        self.assertIs(self.solver.steady_problems[1], next_steady_problem)
 
     def test_inherits_empty_slots(self):
         """Test that the subclass declares __slots__ = () so it does not gain an
