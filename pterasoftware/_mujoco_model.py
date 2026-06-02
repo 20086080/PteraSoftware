@@ -396,3 +396,26 @@ class MuJoCoModel:
 
         # Run forward kinematics to update dependent quantities.
         mujoco.mj_forward(self._model, self._data)
+
+    def _rebuild_engine(self) -> None:
+        """Rebuilds the native MuJoCo model and data objects from the stored XML string.
+
+        The serialization layer restores the picklable slots (the XML string, the body
+        and keyframe ids, and the initial qpos and qvel) but cannot restore the live
+        MuJoCo model and data objects, which wrap native MuJoCo state. This recreates
+        them from the XML string and resets the data to the initial keyframe, matching
+        the state established at construction. The live, post-run data state is not
+        restored: the canonical per-step state lives in the FreeFlightUnsteadyProblem's
+        steady problems. Models built with mujoco_assets (such as meshes) cannot be
+        rebuilt, since the assets are not retained, so the XML string's references to
+        them are unresolvable.
+
+        :return: None
+        """
+        # noinspection PyArgumentList
+        model = mujoco.MjModel.from_xml_string(self._xml_str)
+        data = mujoco.MjData(model)
+        mujoco.mj_resetDataKeyframe(model, data, self._initial_key_frame_id)
+        mujoco.mj_forward(model, data)
+        self._model = model
+        self._data = data
