@@ -76,8 +76,8 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
                 I_BP1_CgP1=asymmetric_inertia,
             )
 
-    def test_external_forces_fn_validation(self):
-        """Test that external_forces_fn must be callable or None."""
+    def test_external_loads_fn_validation(self):
+        """Test that external_loads_fn must be callable or None."""
         movement = (
             problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
         )
@@ -85,23 +85,23 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
                 I_BP1_CgP1=np.eye(3, dtype=float),
-                external_forces_fn="not_callable",
+                external_loads_fn="not_callable",
             )
 
-    def test_external_forces_fn_default_none(self):
-        """Test that external_forces_fn defaults to None."""
-        self.assertIsNone(self.problem.external_forces_fn)
+    def test_external_loads_fn_default_none(self):
+        """Test that external_loads_fn defaults to None."""
+        self.assertIsNone(self.problem.external_loads_fn)
 
-    def test_external_forces_fn_stored_when_callable(self):
-        """Test that a callable external_forces_fn is stored and returned."""
+    def test_external_loads_fn_stored_when_callable(self):
+        """Test that a callable external_loads_fn is stored and returned."""
 
-        def external_forces_fn(operating_point, airplane):
+        def external_loads_fn(operating_point, airplane):
             return np.zeros(3, dtype=float), np.zeros(3, dtype=float)
 
         problem = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture(
-            external_forces_fn=external_forces_fn
+            external_loads_fn=external_loads_fn
         )
-        self.assertIs(problem.external_forces_fn, external_forces_fn)
+        self.assertIs(problem.external_loads_fn, external_loads_fn)
 
     def test_only_final_results_forced_false(self):
         """Test that only_final_results is always False for coupled problems."""
@@ -239,18 +239,18 @@ class TestFreeFlightUnsteadyProblemInitializeNextProblem(unittest.TestCase):
         self.problem._mujoco_model = mock_model
         return mock_model
 
-    def _primed_problem_and_solver(self, external_forces_fn):
-        """Build a problem carrying the given external_forces_fn and a primed mock solver.
+    def _primed_problem_and_solver(self, external_loads_fn):
+        """Build a problem carrying the given external_loads_fn and a primed mock solver.
 
         Mirrors setUp's load priming and _mock_mujoco_model, but for a fresh problem that
-        carries an external_forces_fn so its first-invocation return validation can be
+        carries an external_loads_fn so its first-invocation return validation can be
         exercised on a non final step.
 
-        :param external_forces_fn: The external_forces_fn to attach to the problem.
+        :param external_loads_fn: The external_loads_fn to attach to the problem.
         :return: A tuple of the FreeFlightUnsteadyProblem and the primed mock solver.
         """
         problem = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture(
-            external_forces_fn=external_forces_fn
+            external_loads_fn=external_loads_fn
         )
         airplane = problem.steady_problems[0].airplanes[0]
         airplane.forces_W = np.array([1.0, 2.0, 3.0], dtype=float)
@@ -369,86 +369,86 @@ class TestFreeFlightUnsteadyProblemInitializeNextProblem(unittest.TestCase):
 
         self.assertNotEqual(self.problem.forces_W[0][0], 999.0)
 
-    def test_external_forces_fn_invoked_on_non_final_step(self):
-        """Test that a set external_forces_fn is invoked with the current OperatingPoint
+    def test_external_loads_fn_invoked_on_non_final_step(self):
+        """Test that a set external_loads_fn is invoked with the current OperatingPoint
         and Airplane on a non final step.
         """
-        external_forces_fn = MagicMock(
+        external_loads_fn = MagicMock(
             return_value=(np.zeros(3, dtype=float), np.zeros(3, dtype=float))
         )
-        problem, solver = self._primed_problem_and_solver(external_forces_fn)
+        problem, solver = self._primed_problem_and_solver(external_loads_fn)
         airplane = solver.current_airplanes[0]
         operating_point = solver.current_operating_point
 
         problem.initialize_next_problem(solver, step=0)
 
-        external_forces_fn.assert_called_once_with(operating_point, airplane)
+        external_loads_fn.assert_called_once_with(operating_point, airplane)
 
-    def test_external_forces_fn_valid_return_passes(self):
-        """Test that a well formed external_forces_fn return passes validation and marks
+    def test_external_loads_fn_valid_return_passes(self):
+        """Test that a well formed external_loads_fn return passes validation and marks
         the return as validated.
         """
-        external_forces_fn = MagicMock(
+        external_loads_fn = MagicMock(
             return_value=(
                 np.array([1.0, 0.0, 0.0], dtype=float),
                 np.array([0.0, 1.0, 0.0], dtype=float),
             )
         )
-        problem, solver = self._primed_problem_and_solver(external_forces_fn)
+        problem, solver = self._primed_problem_and_solver(external_loads_fn)
 
         problem.initialize_next_problem(solver, step=0)
 
-        self.assertTrue(problem._external_forces_validated)
+        self.assertTrue(problem._external_loads_validated)
 
-    def test_external_forces_fn_wrong_arity_raises(self):
-        """Test that an external_forces_fn returning other than two items raises."""
-        external_forces_fn = MagicMock(return_value=(np.zeros(3, dtype=float),))
-        problem, solver = self._primed_problem_and_solver(external_forces_fn)
+    def test_external_loads_fn_wrong_arity_raises(self):
+        """Test that an external_loads_fn returning other than two items raises."""
+        external_loads_fn = MagicMock(return_value=(np.zeros(3, dtype=float),))
+        problem, solver = self._primed_problem_and_solver(external_loads_fn)
 
         with self.assertRaises(ValueError):
             problem.initialize_next_problem(solver, step=0)
 
-    def test_external_forces_fn_wrong_shape_raises(self):
-        """Test that an external_forces_fn returning a non (3,) component raises."""
-        external_forces_fn = MagicMock(
+    def test_external_loads_fn_wrong_shape_raises(self):
+        """Test that an external_loads_fn returning a non (3,) component raises."""
+        external_loads_fn = MagicMock(
             return_value=(np.zeros(2, dtype=float), np.zeros(3, dtype=float))
         )
-        problem, solver = self._primed_problem_and_solver(external_forces_fn)
+        problem, solver = self._primed_problem_and_solver(external_loads_fn)
 
         with self.assertRaises(ValueError):
             problem.initialize_next_problem(solver, step=0)
 
-    def test_external_forces_fn_non_finite_raises(self):
-        """Test that an external_forces_fn returning a non finite value raises."""
-        external_forces_fn = MagicMock(
+    def test_external_loads_fn_non_finite_raises(self):
+        """Test that an external_loads_fn returning a non finite value raises."""
+        external_loads_fn = MagicMock(
             return_value=(
                 np.array([np.inf, 0.0, 0.0], dtype=float),
                 np.zeros(3, dtype=float),
             )
         )
-        problem, solver = self._primed_problem_and_solver(external_forces_fn)
+        problem, solver = self._primed_problem_and_solver(external_loads_fn)
 
         with self.assertRaises(ValueError):
             problem.initialize_next_problem(solver, step=0)
 
-    def test_external_forces_fn_validated_only_once(self):
-        """Test that the external_forces_fn return is validated only on the first call,
+    def test_external_loads_fn_validated_only_once(self):
+        """Test that the external_loads_fn return is validated only on the first call,
         so a later malformed (but arithmetically broadcastable) return is not re-checked.
         """
-        external_forces_fn = MagicMock(
+        external_loads_fn = MagicMock(
             side_effect=[
                 (np.zeros(3, dtype=float), np.zeros(3, dtype=float)),
                 (np.array([np.inf, 0.0, 0.0], dtype=float), np.zeros(3, dtype=float)),
             ]
         )
-        problem, solver = self._primed_problem_and_solver(external_forces_fn)
+        problem, solver = self._primed_problem_and_solver(external_loads_fn)
 
         # The first call validates and passes; the second is not re-validated, so the
         # non finite return does not raise from validation.
         problem.initialize_next_problem(solver, step=0)
         problem.initialize_next_problem(solver, step=1)
 
-        self.assertEqual(external_forces_fn.call_count, 2)
+        self.assertEqual(external_loads_fn.call_count, 2)
 
 
 class TestFreeFlightUnsteadyProblemImmutability(unittest.TestCase):
@@ -475,10 +475,10 @@ class TestFreeFlightUnsteadyProblemImmutability(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.problem.I_BP1_CgP1[0, 0] = 999.0
 
-    def test_immutable_external_forces_fn_property(self):
-        """Test that the external_forces_fn property is read only."""
+    def test_immutable_external_loads_fn_property(self):
+        """Test that the external_loads_fn property is read only."""
         with self.assertRaises(AttributeError):
-            self.problem.external_forces_fn = None
+            self.problem.external_loads_fn = None
 
     def test_immutable_mujoco_model_property(self):
         """Test that the mujoco_model property is read only."""

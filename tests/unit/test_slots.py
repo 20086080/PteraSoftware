@@ -814,7 +814,7 @@ class TestFreeFlightUnsteadyProblemSlots(unittest.TestCase):
         """Test that FreeFlightUnsteadyProblem-specific properties are accessible."""
         self.assertIsInstance(self.problem.I_BP1_CgP1, np.ndarray)
         self.assertEqual(self.problem.I_BP1_CgP1.shape, (3, 3))
-        self.assertIsNone(self.problem.external_forces_fn)
+        self.assertIsNone(self.problem.external_loads_fn)
         self.assertIsInstance(self.problem.mujoco_model, _mujoco_model.MuJoCoModel)
         self.assertIsInstance(self.problem.forces_W, list)
         self.assertIsInstance(self.problem.forceCoefficients_W, list)

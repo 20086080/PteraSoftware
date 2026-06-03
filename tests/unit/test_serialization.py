@@ -2113,7 +2113,7 @@ class TestFreeFlightUnsteadyProblemRoundTrip(unittest.TestCase):
         self.assertEqual(result.num_steps, problem.num_steps)
         self.assertEqual(len(result.steady_problems), len(problem.steady_problems))
         npt.assert_array_equal(result.I_BP1_CgP1, problem.I_BP1_CgP1)
-        self.assertIsNone(result.external_forces_fn)
+        self.assertIsNone(result.external_loads_fn)
         self.assertIsInstance(result.mujoco_model, MuJoCoModel)
         # The rebuilt MuJoCoModel is functional.
         result.mujoco_model.step()
@@ -2133,18 +2133,18 @@ class TestFreeFlightUnsteadyProblemRoundTrip(unittest.TestCase):
         npt.assert_array_equal(result.forces_W[0], problem.forces_W[0])
         npt.assert_array_equal(result.moments_W_Cg[0], problem.moments_W_Cg[0])
 
-    def test_custom_external_forces_fn_is_not_serializable(self):
-        """Tests that a FreeFlightUnsteadyProblem with a custom external_forces_fn raises
+    def test_custom_external_loads_fn_is_not_serializable(self):
+        """Tests that a FreeFlightUnsteadyProblem with a custom external_loads_fn raises
         on serialization, matching the custom-callable disposition used elsewhere.
 
         :return: None
         """
 
-        def external_forces_fn(operating_point, airplane):
+        def external_loads_fn(operating_point, airplane):
             return np.zeros(3, dtype=float), np.zeros(3, dtype=float)
 
         problem = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture(
-            external_forces_fn=external_forces_fn
+            external_loads_fn=external_loads_fn
         )
         with self.assertRaises(ValueError):
             _serialize_value(problem)
