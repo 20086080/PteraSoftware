@@ -241,3 +241,22 @@ def make_unsteady_ring_vortex_lattice_method_free_air_solver():
     )
 
     return solver
+
+
+def make_simple_glider_free_flight_solver():
+    """This function creates the simple glider's free flight solver to be used as a
+    fixture.
+
+    :return simple_glider_free_flight_solver: FreeFlightUnsteadyRingVortexLatticeMethodSolver
+        This is the simple glider FreeFlightUnsteadyRingVortexLatticeMethodSolver
+        fixture.
+    """
+    simple_glider_free_flight_problem = (
+        problem_fixtures.make_simple_glider_free_flight_problem()
+    )
+
+    simple_glider_free_flight_solver = ps.free_flight_unsteady_ring_vortex_lattice_method.FreeFlightUnsteadyRingVortexLatticeMethodSolver(
+        simple_glider_free_flight_problem
+    )
+
+    return simple_glider_free_flight_solver

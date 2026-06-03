@@ -616,12 +616,15 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
     ) -> None:
         """Initializes the next time step's SteadyProblem from rigid body dynamics.
 
-        On every step except the last one, transforms aerodynamic loads into Earth axes,
-        applies them (along with weight and any external forces) to the MuJoCo model,
-        steps the dynamics forward, extracts the new state, and creates the next
-        SteadyProblem with the new OperatingPoint and the prescribed Airplane geometry
-        for the next step. On every step (including the last one), records the current
-        step's loads in the load history lists.
+        On every step except the last one, steps the MuJoCo dynamics forward, extracts
+        the new state, and creates the next SteadyProblem with the new OperatingPoint
+        and the prescribed Airplane geometry for the next step. During the free flight
+        phase (once the step index reaches the movement's prescribed_num_steps), it
+        first transforms the aerodynamic loads into Earth axes and applies them, along
+        with weight and any external loads, to the MuJoCo model before stepping. During
+        the prescribed phase, those loads are withheld so the body coasts at its initial
+        trimmed condition while the wake develops. On every step (including the last
+        one), records the current step's loads in the load history lists.
 
         :param solver: The CoupledUnsteadyRingVortexLatticeMethodSolver instance
             providing aerodynamic data from the current time step.
@@ -643,49 +646,73 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
         aeroMoments_W_CgP1 = current_airplane.moments_W_CgP1
 
         if step < self.num_steps - 1:
-            # 2. Add external loads if external_loads_fn is set.
-            if self._external_loads_fn is not None:
-                external_result = self._external_loads_fn(
-                    current_operating_point, current_airplane
+            in_free_phase = step >= self._free_flight_movement.prescribed_num_steps
+
+            if in_free_phase:
+                # 2. In the free flight phase, assemble the loads to apply. Start from the
+                # aerodynamic loads and add any external loads from the external_loads_fn.
+                if self._external_loads_fn is not None:
+                    external_result = self._external_loads_fn(
+                        current_operating_point, current_airplane
+                    )
+                    # Validate the return structure once, on the first invocation.
+                    if not self._external_loads_validated:
+                        self._validate_external_loads_return(external_result)
+                        self._external_loads_validated = True
+                    externalForces_W, externalMoments_W_CgP1 = external_result
+                    totalForces_W = aeroForces_W + externalForces_W
+                    totalMoments_W_CgP1 = aeroMoments_W_CgP1 + externalMoments_W_CgP1
+                else:
+                    totalForces_W = aeroForces_W
+                    totalMoments_W_CgP1 = aeroMoments_W_CgP1
+
+                # 3. Transform loads from wind axes to Earth axes.
+                T_pas_W_CgP1_to_E_CgP1 = current_operating_point.T_pas_W_CgP1_to_E_CgP1
+                totalForces_E = _transformations.apply_T_to_vectors(
+                    T_pas_W_CgP1_to_E_CgP1, totalForces_W, has_point=False
                 )
-                # Validate the return structure once, on the first invocation.
+                totalMoments_E_CgP1 = _transformations.apply_T_to_vectors(
+                    T_pas_W_CgP1_to_E_CgP1, totalMoments_W_CgP1, has_point=True
+                )
+
+                # 4. Add the weight force in Earth axes.
+                g_E = current_operating_point.g_E
+                totalForces_E = (
+                    totalForces_E + current_airplane.weight * g_E / np.linalg.norm(g_E)
+                )
+
+                # 5. Apply the loads to MuJoCo.
+                self._mujoco_model.apply_loads(totalForces_E, totalMoments_E_CgP1)
+            elif step == 0 and self._external_loads_fn is not None:
+                # In the prescribed phase the loads are withheld so the body coasts at its
+                # initial trimmed condition (MuJoCo's internal gravity is off and weight
+                # is applied through the loads, so withholding them leaves zero net force
+                # and the body keeps its initial velocity and orientation). This lets the
+                # wake develop at a steady operating condition before the rigid body
+                # dynamics are released for the free flight phase. The external_loads_fn
+                # is still invoked once, on the first step, so its return structure is
+                # validated fail-fast rather than only when the free flight phase begins.
                 if not self._external_loads_validated:
-                    self._validate_external_loads_return(external_result)
+                    self._validate_external_loads_return(
+                        self._external_loads_fn(
+                            current_operating_point, current_airplane
+                        )
+                    )
                     self._external_loads_validated = True
-                externalForces_W, externalMoments_W_CgP1 = external_result
-                totalForces_W = aeroForces_W + externalForces_W
-                totalMoments_W_CgP1 = aeroMoments_W_CgP1 + externalMoments_W_CgP1
-            else:
-                totalForces_W = aeroForces_W
-                totalMoments_W_CgP1 = aeroMoments_W_CgP1
 
-            # 3. Transform loads from wind axes to Earth axes.
-            T_pas_W_CgP1_to_E_CgP1 = current_operating_point.T_pas_W_CgP1_to_E_CgP1
-            totalForces_E = _transformations.apply_T_to_vectors(
-                T_pas_W_CgP1_to_E_CgP1, totalForces_W, has_point=False
-            )
-            totalMoments_E_CgP1 = _transformations.apply_T_to_vectors(
-                T_pas_W_CgP1_to_E_CgP1, totalMoments_W_CgP1, has_point=True
-            )
-
-            # 4. Add the weight force in Earth axes.
-            g_E = current_operating_point.g_E
-            totalForces_E = (
-                totalForces_E + current_airplane.weight * g_E / np.linalg.norm(g_E)
-            )
-
-            # 5. Apply loads to MuJoCo and step the dynamics forward.
-            self._mujoco_model.apply_loads(totalForces_E, totalMoments_E_CgP1)
+            # 6. Step the dynamics forward. During the prescribed phase no loads were
+            # applied, so the body coasts; during the free flight phase the loads applied
+            # above drive the dynamics.
             self._mujoco_model.step()
 
-            # 6. Extract the new state from MuJoCo.
+            # 7. Extract the new state from MuJoCo.
             newState = self._mujoco_model.get_state()
             position_E_E = newState["position_E_E"]
             R_pas_E_to_BP1 = newState["R_pas_E_to_BP1"]
             velocity_E__E = newState["velocity_E__E"]
             omegas_BP1__E = newState["omegas_BP1__E"]
 
-            # 7. Derive alpha, beta, and Euler angles from the new state.
+            # 8. Derive alpha, beta, and Euler angles from the new state.
             vCg__E = float(np.linalg.norm(velocity_E__E))
             angles_E_to_BP1_izyx = _transformations.R_to_angles_izyx(R_pas_E_to_BP1)
             T_pas_E_CgP1_to_BP1_CgP1 = _transformations.generate_rot_T(
@@ -702,7 +729,7 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
                 vInf_BP1__E, vCg__E
             )
 
-            # 8. Create the next OperatingPoint.
+            # 9. Create the next OperatingPoint.
             next_operating_point = operating_point_mod.OperatingPoint(
                 rho=current_operating_point.rho,
                 vCg__E=vCg__E,
@@ -721,17 +748,17 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
                 next_operating_point
             )
 
-            # 9. Get the next Airplane from the movement's pregenerated airplanes.
+            # 10. Get the next Airplane from the movement's pregenerated airplanes.
             next_airplane = self._free_flight_movement.airplanes[0][step + 1]
 
-            # 10. Create the next SteadyProblem and append to _steady_problems.
+            # 11. Create the next SteadyProblem and append to _steady_problems.
             next_steady_problem = SteadyProblem(
                 airplanes=[next_airplane],
                 operating_point=next_operating_point,
             )
             self._steady_problems.append(next_steady_problem)
 
-        # 11. Store load history.
+        # 12. Store load history.
         self.forces_W.append(np.copy(aeroForces_W))
         self.forceCoefficients_W.append(np.copy(current_airplane.forceCoefficients_W))
         self.moments_W_Cg.append(np.copy(aeroMoments_W_CgP1))

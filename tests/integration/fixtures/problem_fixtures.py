@@ -1,5 +1,7 @@
 """This module creates problem objects to be used as fixtures."""
 
+import numpy as np
+
 import pterasoftware as ps
 from tests.integration.fixtures import (
     airplane_fixtures,
@@ -185,3 +187,39 @@ def make_surface_effect_free_air_unsteady_problem():
     free_air_unsteady_problem = ps.problems.UnsteadyProblem(movement=free_air_movement)
 
     return free_air_unsteady_problem
+
+
+def make_simple_glider_free_flight_problem():
+    """This function creates the simple glider's FreeFlightUnsteadyProblem to be used as
+    a fixture.
+
+    The inertia matrix is the one tuned alongside the glider's planform geometry for
+    static stability and verified in XFLR5. It is expressed in the first Airplane's body
+    axes relative to the first Airplane's center of gravity, which is at the geometry
+    origin. The off-diagonal terms are the body-axes products of inertia. No external
+    loads are applied, so the glider flies an unpowered glide driven only by its
+    aerodynamics, weight, and inertia.
+
+    :return simple_glider_free_flight_problem: FreeFlightUnsteadyProblem
+        This is the simple glider FreeFlightUnsteadyProblem fixture.
+    """
+    simple_glider_free_flight_movement = (
+        movement_fixtures.make_simple_glider_free_flight_movement()
+    )
+
+    I_BP1_CgP1 = np.array(
+        [
+            [155.614, 0.0, -45.658],
+            [0.0, 398.513, 0.0],
+            [-45.658, 0.0, 508.699],
+        ],
+        dtype=float,
+    )
+
+    simple_glider_free_flight_problem = ps.problems.FreeFlightUnsteadyProblem(
+        movement=simple_glider_free_flight_movement,
+        I_BP1_CgP1=I_BP1_CgP1,
+        external_loads_fn=None,
+    )
+
+    return simple_glider_free_flight_problem

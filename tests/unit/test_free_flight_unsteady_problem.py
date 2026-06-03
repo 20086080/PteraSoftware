@@ -299,11 +299,30 @@ class TestFreeFlightUnsteadyProblemInitializeNextProblem(unittest.TestCase):
 
         self.assertEqual(len(operating_points), before + 1)
 
-    def test_steps_dynamics_on_non_final_step(self):
-        """Test that the MuJoCo model is loaded and stepped on a non final step."""
+    def test_steps_dynamics_but_withholds_loads_on_prescribed_step(self):
+        """Test that on a prescribed phase step the MuJoCo model is stepped but no loads
+        are applied, so the body coasts at its trimmed condition.
+        """
         mock_model = self._mock_mujoco_model()
 
+        # Step 0 is always in the prescribed phase, since prescribed_num_steps is at
+        # least one.
         self.problem.initialize_next_problem(self.solver, step=0)
+
+        mock_model.apply_loads.assert_not_called()
+        mock_model.step.assert_called_once()
+
+    def test_applies_loads_and_steps_dynamics_on_free_step(self):
+        """Test that on a free flight phase step the MuJoCo model is both loaded and
+        stepped, so the rigid body dynamics are integrated.
+        """
+        mock_model = self._mock_mujoco_model()
+
+        # The first free flight step is the one indexed by prescribed_num_steps. For the
+        # basic fixture this is a non final step.
+        first_free_step = self.problem._free_flight_movement.prescribed_num_steps
+
+        self.problem.initialize_next_problem(self.solver, step=first_free_step)
 
         mock_model.apply_loads.assert_called_once()
         mock_model.step.assert_called_once()
@@ -384,6 +403,22 @@ class TestFreeFlightUnsteadyProblemInitializeNextProblem(unittest.TestCase):
 
         external_loads_fn.assert_called_once_with(operating_point, airplane)
 
+    def test_external_loads_fn_not_invoked_on_later_prescribed_step(self):
+        """Test that the external_loads_fn is not invoked on a prescribed phase step
+        after the first, since its loads would be withheld there in any case.
+        """
+        external_loads_fn = MagicMock(
+            return_value=(np.zeros(3, dtype=float), np.zeros(3, dtype=float))
+        )
+        problem, solver = self._primed_problem_and_solver(external_loads_fn)
+
+        # The basic fixture has more than one prescribed step, so step 1 is in the
+        # prescribed phase but is not the first step.
+        self.assertGreater(problem._free_flight_movement.prescribed_num_steps, 1)
+        problem.initialize_next_problem(solver, step=1)
+
+        external_loads_fn.assert_not_called()
+
     def test_external_loads_fn_valid_return_passes(self):
         """Test that a well formed external_loads_fn return passes validation and marks
         the return as validated.
@@ -443,10 +478,13 @@ class TestFreeFlightUnsteadyProblemInitializeNextProblem(unittest.TestCase):
         )
         problem, solver = self._primed_problem_and_solver(external_loads_fn)
 
-        # The first call validates and passes; the second is not re-validated, so the
-        # non finite return does not raise from validation.
+        # The external_loads_fn is invoked once on the first step (in the prescribed
+        # phase) to validate its return fail-fast, and again on the first free flight step
+        # to apply its loads. The first call validates and passes; the second is not
+        # re-validated, so the non finite return does not raise from validation.
+        first_free_step = problem._free_flight_movement.prescribed_num_steps
         problem.initialize_next_problem(solver, step=0)
-        problem.initialize_next_problem(solver, step=1)
+        problem.initialize_next_problem(solver, step=first_free_step)
 
         self.assertEqual(external_loads_fn.call_count, 2)
 

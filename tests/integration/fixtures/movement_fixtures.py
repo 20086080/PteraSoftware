@@ -476,3 +476,61 @@ def make_multiple_wing_variable_validation_movement():
     )
 
     return unsteady_validation_movement
+
+
+def make_simple_glider_free_flight_movement():
+    """This function creates the simple glider's FreeFlightMovement to be used as a
+    fixture.
+
+    The motion is static (the prescribed geometry does not deform or flap), so the only
+    motion in the simulation comes from the rigid body dynamics during the free flight
+    phase. The glider first holds its trimmed condition for prescribed_num_steps time
+    steps so the wake can develop, then the solver releases the rigid body dynamics for
+    the remaining free_num_steps time steps.
+
+    :return simple_glider_free_flight_movement: FreeFlightMovement
+        This is the simple glider FreeFlightMovement fixture.
+    """
+    simple_glider_airplane = airplane_fixtures.make_simple_glider_airplane()
+    simple_glider_operating_point = (
+        operating_point_fixtures.make_simple_glider_operating_point()
+    )
+
+    # Build a static FreeFlightWingMovement for each of the glider's three Wings.
+    wing_movements = []
+    for wing in simple_glider_airplane.wings:
+        wing_cross_section_movements = [
+            ps.movements.free_flight_wing_cross_section_movement.FreeFlightWingCrossSectionMovement(
+                base_wing_cross_section=wing_cross_section
+            )
+            for wing_cross_section in wing.wing_cross_sections
+        ]
+        wing_movements.append(
+            ps.movements.free_flight_wing_movement.FreeFlightWingMovement(
+                base_wing=wing,
+                wing_cross_section_movements=wing_cross_section_movements,
+            )
+        )
+
+    simple_glider_airplane_movement = (
+        ps.movements.free_flight_airplane_movement.FreeFlightAirplaneMovement(
+            base_airplane=simple_glider_airplane,
+            wing_movements=wing_movements,
+        )
+    )
+
+    simple_glider_operating_point_movement = ps.movements.free_flight_operating_point_movement.FreeFlightOperatingPointMovement(
+        base_operating_point=simple_glider_operating_point,
+    )
+
+    simple_glider_free_flight_movement = (
+        ps.movements.free_flight_movement.FreeFlightMovement(
+            airplane_movements=[simple_glider_airplane_movement],
+            operating_point_movement=simple_glider_operating_point_movement,
+            delta_time=0.01292,
+            prescribed_num_steps=15,
+            free_num_steps=10,
+        )
+    )
+
+    return simple_glider_free_flight_movement

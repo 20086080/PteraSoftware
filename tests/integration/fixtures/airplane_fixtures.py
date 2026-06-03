@@ -431,6 +431,126 @@ def make_symmetric_multiple_wing_unsteady_validation_airplane():
     return symmetric_multiple_wing_steady_validation_airplane
 
 
+def make_simple_glider_airplane():
+    """This function creates the simple glider Airplane used for free flight testing.
+
+    The simple glider is a three-wing aircraft (cambered main wing, symmetric
+    horizontal stabilizer with negative incidence, and a single vertical stabilizer)
+    whose planform geometry, center of gravity, and inertia were tuned for static pitch
+    and yaw stability and verified in XFLR5. The negative horizontal stabilizer
+    incidence relative to the main wing provides the restoring pitch moment that makes
+    the glider statically stable, so that it flies a bounded, damped free flight
+    trajectory rather than diverging. The center of gravity is left at the geometry
+    origin (the default), which is the reference point for the matching inertia matrix
+    in make_simple_glider_free_flight_problem.
+
+    The mesh densities here are coarser than the converged values from the original
+    convergence study. The static stability that this fixture relies on is a property of
+    the continuous planform, center of gravity, and inertia, not of the discretization,
+    so the coarser mesh keeps the free flight integration test affordable while
+    preserving the stable behavior.
+
+    :return simple_glider_airplane: Airplane
+        This is the simple glider Airplane fixture.
+    """
+    simple_glider_airplane = ps.geometry.airplane.Airplane(
+        wings=[
+            ps.geometry.wing.Wing(
+                wing_cross_sections=[
+                    ps.geometry.wing_cross_section.WingCrossSection(
+                        airfoil=ps.geometry.airfoil.Airfoil(name="naca2412"),
+                        num_spanwise_panels=10,
+                        chord=1.0,
+                        Lp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+                        control_surface_symmetry_type="symmetric",
+                        spanwise_spacing="cosine",
+                    ),
+                    ps.geometry.wing_cross_section.WingCrossSection(
+                        airfoil=ps.geometry.airfoil.Airfoil(name="naca2412"),
+                        num_spanwise_panels=None,
+                        chord=1.0,
+                        Lp_Wcsp_Lpp=(0.0, 5.0, 0.0),
+                        control_surface_symmetry_type="symmetric",
+                        spanwise_spacing=None,
+                    ),
+                ],
+                name="Main Wing",
+                Ler_Gs_Cgs=(0.0, 0.0, 0.0),
+                angles_Gs_to_Wn_ixyz=(0.0, 0.0, 0.0),
+                symmetric=True,
+                mirror_only=False,
+                symmetryNormal_G=(0.0, 1.0, 0.0),
+                symmetryPoint_G_Cg=(0.0, 0.0, 0.0),
+                num_chordwise_panels=4,
+                chordwise_spacing="uniform",
+            ),
+            ps.geometry.wing.Wing(
+                wing_cross_sections=[
+                    ps.geometry.wing_cross_section.WingCrossSection(
+                        airfoil=ps.geometry.airfoil.Airfoil(name="naca0012"),
+                        num_spanwise_panels=6,
+                        chord=1.0,
+                        Lp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+                        control_surface_symmetry_type="symmetric",
+                        spanwise_spacing="cosine",
+                    ),
+                    ps.geometry.wing_cross_section.WingCrossSection(
+                        airfoil=ps.geometry.airfoil.Airfoil(name="naca0012"),
+                        num_spanwise_panels=None,
+                        chord=1.0,
+                        Lp_Wcsp_Lpp=(0.0, 1.0, 0.0),
+                        control_surface_symmetry_type="symmetric",
+                        spanwise_spacing=None,
+                    ),
+                ],
+                name="Horizontal Stabilizer",
+                Ler_Gs_Cgs=(5.0, 0.0, 0.5),
+                angles_Gs_to_Wn_ixyz=(0.0, -5.0, 0.0),
+                symmetric=True,
+                mirror_only=False,
+                symmetryNormal_G=(0.0, 1.0, 0.0),
+                symmetryPoint_G_Cg=(0.0, 0.0, 0.0),
+                num_chordwise_panels=4,
+                chordwise_spacing="uniform",
+            ),
+            ps.geometry.wing.Wing(
+                wing_cross_sections=[
+                    ps.geometry.wing_cross_section.WingCrossSection(
+                        airfoil=ps.geometry.airfoil.Airfoil(name="naca0012"),
+                        num_spanwise_panels=6,
+                        chord=1.0,
+                        Lp_Wcsp_Lpp=(0.0, 0.0, 0.0),
+                        spanwise_spacing="cosine",
+                    ),
+                    ps.geometry.wing_cross_section.WingCrossSection(
+                        airfoil=ps.geometry.airfoil.Airfoil(name="naca0012"),
+                        num_spanwise_panels=None,
+                        chord=1.0,
+                        Lp_Wcsp_Lpp=(0.0, 2.0, 0.0),
+                        spanwise_spacing=None,
+                    ),
+                ],
+                name="Vertical Stabilizer",
+                Ler_Gs_Cgs=(5.0, 0.0, 1.0),
+                angles_Gs_to_Wn_ixyz=(90.0, 0.0, 0.0),
+                symmetric=False,
+                mirror_only=False,
+                symmetryNormal_G=None,
+                symmetryPoint_G_Cg=None,
+                num_chordwise_panels=4,
+                chordwise_spacing="uniform",
+            ),
+        ],
+        name="Simple Glider",
+        Cg_GP1_CgP1=(0.0, 0.0, 0.0),
+        weight=420.0,
+        s_ref=None,
+        c_ref=None,
+        b_ref=None,
+    )
+    return simple_glider_airplane
+
+
 def make_surface_effect_airplane():
     """This function creates a simple single-wing Airplane for surface effect testing.
 
