@@ -346,7 +346,6 @@ autoapi_ignore = [
     "*/ui_resources/*",
     "*/airfoils/*",
     "*/models/*",
-    "*/movements/free_flight_*",
 ]
 autoapi_options = [
     "members",
