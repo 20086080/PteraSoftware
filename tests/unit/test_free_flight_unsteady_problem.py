@@ -302,7 +302,7 @@ class TestFreeFlightUnsteadyProblemInitializeNextProblem(unittest.TestCase):
         """
         mock_model = MagicMock()
         mock_model.get_state.return_value = {
-            "position_E_E": np.array([1.0, 0.0, 0.0], dtype=float),
+            "position_E_Eo": np.array([1.0, 0.0, 0.0], dtype=float),
             "R_pas_E_to_BP1": np.eye(3, dtype=float),
             "velocity_E__E": np.array([10.0, 0.0, 0.0], dtype=float),
             "omegas_BP1__E": np.zeros(3, dtype=float),
@@ -336,7 +336,7 @@ class TestFreeFlightUnsteadyProblemInitializeNextProblem(unittest.TestCase):
 
         mock_model = MagicMock()
         mock_model.get_state.return_value = {
-            "position_E_E": np.array([1.0, 0.0, 0.0], dtype=float),
+            "position_E_Eo": np.array([1.0, 0.0, 0.0], dtype=float),
             "R_pas_E_to_BP1": np.eye(3, dtype=float),
             "velocity_E__E": np.array([10.0, 0.0, 0.0], dtype=float),
             "omegas_BP1__E": np.zeros(3, dtype=float),

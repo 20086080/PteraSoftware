@@ -13,7 +13,7 @@ from . import _transformations
 class _MuJoCoState(TypedDict):
     """The state returned by MuJoCoModel.get_state."""
 
-    position_E_E: np.ndarray
+    position_E_Eo: np.ndarray
     R_pas_E_to_BP1: np.ndarray
     velocity_E__E: np.ndarray
     omegas_BP1__E: np.ndarray
@@ -129,7 +129,6 @@ class MuJoCoModel:
 
         R_act_E_to_BP1 = R_act_BP1_to_E.T
 
-        # REFACTOR: Add section on quaternions to ANGLES_VECTORS_AND_TRANSFORMATIONS.md.
         quat_act_E_to_BP1_wxyz = _transformations.R_to_quat_wxyz(R_act_E_to_BP1)
 
         IXX_BP1_CgP1, IXY_BP1_CgP1, IXZ_BP1_CgP1 = I_BP1_CgP1[0]
@@ -318,7 +317,7 @@ class MuJoCoModel:
 
         **Notes:**
 
-        qpos[0:3] = position_E_E: The current position of the first Airplane's CG (in
+        qpos[0:3] = position_E_Eo: The current position of the first Airplane's CG (in
         Earth axes, relative to the Earth origin) in meters.
 
         qvel[0:3] = velocity_E__E: The current velocity of the first Airplane's CG (in
@@ -333,7 +332,7 @@ class MuJoCoModel:
 
         We define MuJoCo world coordinates to be identical to Ptera Software Earth axes.
 
-        :return: A dictionary containing the following keys: ``position_E_E``, a (3,)
+        :return: A dictionary containing the following keys: ``position_E_Eo``, a (3,)
             ndarray of floats representing the current position of the first Airplane's
             CG (in Earth axes, relative to the Earth origin) in meters;
             ``R_pas_E_to_BP1``, a (3,3) ndarray of floats representing the current
@@ -355,7 +354,7 @@ class MuJoCoModel:
         R_pas_E_to_BP1 = R_pas_BP1_to_E.T
 
         return {
-            "position_E_E": np.copy(self._data.qpos[0:3]),
+            "position_E_Eo": np.copy(self._data.qpos[0:3]),
             "R_pas_E_to_BP1": np.copy(R_pas_E_to_BP1),
             "velocity_E__E": np.copy(self._data.qvel[0:3]),
             "omegas_BP1__E": np.rad2deg(np.copy(self._data.qvel[3:6])),

@@ -313,7 +313,7 @@ class TestMuJoCoModelGetState(unittest.TestCase):
         """Test that get_state returns all expected keys."""
         state = self.model.get_state()
         expected_keys = {
-            "position_E_E",
+            "position_E_Eo",
             "R_pas_E_to_BP1",
             "velocity_E__E",
             "omegas_BP1__E",
@@ -322,9 +322,9 @@ class TestMuJoCoModelGetState(unittest.TestCase):
         self.assertEqual(set(state.keys()), expected_keys)
 
     def test_position_shape(self):
-        """Test that position_E_E has shape (3,)."""
+        """Test that position_E_Eo has shape (3,)."""
         state = self.model.get_state()
-        self.assertEqual(state["position_E_E"].shape, (3,))
+        self.assertEqual(state["position_E_Eo"].shape, (3,))
 
     def test_rotation_matrix_shape(self):
         """Test that R_pas_E_to_BP1 has shape (3,3)."""
@@ -349,7 +349,7 @@ class TestMuJoCoModelGetState(unittest.TestCase):
     def test_initial_position_at_origin(self):
         """Test that the initial position is at the origin."""
         state = self.model.get_state()
-        npt.assert_allclose(state["position_E_E"], [0.0, 0.0, 0.0], atol=1e-14)
+        npt.assert_allclose(state["position_E_Eo"], [0.0, 0.0, 0.0], atol=1e-14)
 
     def test_initial_time_is_zero(self):
         """Test that the initial time is zero."""
@@ -369,9 +369,9 @@ class TestMuJoCoModelGetState(unittest.TestCase):
     def test_get_state_returns_copies(self):
         """Test that get_state returns copies that do not alias internal data."""
         state1 = self.model.get_state()
-        state1["position_E_E"][0] = 999.0
+        state1["position_E_Eo"][0] = 999.0
         state2 = self.model.get_state()
-        self.assertNotAlmostEqual(state2["position_E_E"][0], 999.0)
+        self.assertNotAlmostEqual(state2["position_E_Eo"][0], 999.0)
 
 
 class TestMuJoCoModelReset(unittest.TestCase):
@@ -425,7 +425,7 @@ class TestMuJoCoModelReset(unittest.TestCase):
         reset_state = self.model.get_state()
 
         npt.assert_allclose(
-            reset_state["position_E_E"], initial_state["position_E_E"], atol=1e-14
+            reset_state["position_E_Eo"], initial_state["position_E_Eo"], atol=1e-14
         )
         npt.assert_allclose(
             reset_state["velocity_E__E"], initial_state["velocity_E__E"], atol=1e-14

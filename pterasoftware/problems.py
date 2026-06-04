@@ -758,7 +758,7 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
 
             # 7. Extract the new state from MuJoCo.
             newState = self._mujoco_model.get_state()
-            position_E_E = newState["position_E_E"]
+            position_E_Eo = newState["position_E_Eo"]
             R_pas_E_to_BP1 = newState["R_pas_E_to_BP1"]
             velocity_E__E = newState["velocity_E__E"]
             omegas_BP1__E = newState["omegas_BP1__E"]
@@ -787,7 +787,7 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
                 alpha=alpha,
                 beta=beta,
                 angles_E_to_BP1_izyx=angles_E_to_BP1_izyx,
-                CgP1_E_Eo=position_E_E,
+                CgP1_E_Eo=position_E_Eo,
                 surfaceNormal_E=current_operating_point.surfaceNormal_E,
                 surfacePoint_E_Eo=current_operating_point.surfacePoint_E_Eo,
                 externalFX_W=current_operating_point.externalFX_W,

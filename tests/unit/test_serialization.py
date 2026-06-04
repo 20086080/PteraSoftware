@@ -2010,7 +2010,7 @@ class TestMuJoCoModelRoundTrip(unittest.TestCase):
         self.assertEqual(
             set(state.keys()),
             {
-                "position_E_E",
+                "position_E_Eo",
                 "R_pas_E_to_BP1",
                 "velocity_E__E",
                 "omegas_BP1__E",
