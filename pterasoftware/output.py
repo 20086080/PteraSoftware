@@ -119,7 +119,7 @@ _marker_spacing = 1.0 / _num_markers
 # render geometry in Earth axes (so the body flies through the scene in its true pose)
 # and use this view-up so that down appears downward on screen. This is a rendering
 # setting, not an axis system.
-_free_flight_view_up_E = (0.0, 0.0, -1.0)
+_free_flight_view_up_E = np.array([0.0, 0.0, -1.0], dtype=float)
 
 # Define the camera's view direction for free flight visualizations, given as the offset
 # from the focal point to the camera position (in Earth axes). This views the scene
@@ -785,12 +785,14 @@ def animate(
         image_surface_mesh = None
         image_surface_texture = None
 
-    # For free flight, compute a fixed camera that frames the whole trajectory and a
-    # clipping range wide enough to keep every frame visible. The body moves through the
-    # scene, so a camera fitted only to the first frame would clip the later frames.
+    # For free flight, compute a fixed camera that frames the whole trajectory. The body
+    # moves through the scene, so the camera is centered on the trajectory's midpoint and
+    # the parallel scale is fit to the projected extent of the trajectory's geometry so
+    # the whole glide stays in view. The clipping range is sized later, after the user has
+    # oriented the view, so it tracks the user's chosen camera rather than the default.
     free_flight_cpos: list | None = None
     free_flight_parallel_scale = 0.0
-    free_flight_clipping_range: tuple[float, float] = (0.0, 0.0)
+    free_flight_clip_meshes: list = []
     if is_free_flight:
         initialPosition_E_Eo = unsteady_solver.steady_problems[
             0
@@ -801,17 +803,22 @@ def animate(
             np.linalg.norm(finalPosition_E_Eo - initialPosition_E_Eo)
         )
 
-        # Use the first frame's bounding diagonal in Earth axes as a scale reference so
-        # the padding adapts to the aircraft's size.
+        # Map the first and last frames' Panel surfaces into Earth axes. These two frames
+        # bound the trajectory, so their combined extent frames the whole glide.
         first_step_panel_surfaces = _transform_mesh(
             _get_panel_surfaces(step_airplanes[0]), step_transforms[0]
+        )
+        last_step_panel_surfaces = _transform_mesh(
+            _get_panel_surfaces(step_airplanes[last_step]),
+            step_transforms[last_step],
         )
         airplane_bounds = np.array(first_step_panel_surfaces.bounds, dtype=float)
         airplane_diagonal = float(
             np.linalg.norm(airplane_bounds[1::2] - airplane_bounds[::2])
         )
 
-        # Pad the camera distance so the body and its wake stay in frame at both ends.
+        # Aim the camera along the Earth-axes view direction with physical up, centered on
+        # the trajectory's midpoint and far enough back to clear the geometry at both ends.
         padding = max(2.0 * airplane_diagonal, 0.5 * trajectory_extent)
         camera_distance = trajectory_extent + padding
         cameraPosition_E_Eo = (
@@ -822,33 +829,31 @@ def animate(
             tuple(trajectoryMidpoint_E_Eo),
             _free_flight_view_up_E,
         ]
-        free_flight_parallel_scale = 0.6 * camera_distance
 
-        # Determine a clipping range that covers the first and last frames by temporarily
-        # adding both (plus the last frame's wake and the static image surface, if shown),
-        # then restore an empty Plotter for the frame-by-frame rendering below.
-        last_step_panel_surfaces = _transform_mesh(
-            _get_panel_surfaces(step_airplanes[last_step]),
-            step_transforms[last_step],
-        )
-        plotter.add_mesh(first_step_panel_surfaces)
-        plotter.add_mesh(last_step_panel_surfaces)
+        # Collect the geometry that frames the trajectory: the body at both ends, plus the
+        # last frame's wake (the largest) if it is shown. The last frame's surfaces are
+        # reused below to size the clipping range after the user orients the view.
+        framing_meshes = [first_step_panel_surfaces, last_step_panel_surfaces]
+        free_flight_clip_meshes = [last_step_panel_surfaces]
         if show_wake_vortices:
             last_step_wake_surfaces = _transform_mesh(
                 _get_wake_ring_vortex_surfaces(unsteady_solver, last_step),
                 step_transforms[last_step],
             )
             if last_step_wake_surfaces.n_points > 0:
-                plotter.add_mesh(last_step_wake_surfaces)
-        if image_surface_mesh is not None:
-            plotter.add_mesh(image_surface_mesh)
-        plotter.camera.position = free_flight_cpos[0]
-        plotter.camera.focal_point = free_flight_cpos[1]
-        plotter.camera.up = free_flight_cpos[2]
-        plotter.camera.parallel_scale = free_flight_parallel_scale
-        plotter.reset_camera_clipping_range()
-        free_flight_clipping_range = plotter.camera.clipping_range
-        plotter.clear()
+                framing_meshes.append(last_step_wake_surfaces)
+                free_flight_clip_meshes.append(last_step_wake_surfaces)
+
+        # Fit the parallel scale (half the viewport height in world units, since the
+        # projection is parallel) to the projected extent of that geometry about the focal
+        # point. This frames the glide snugly; the user can rescale interactively before
+        # the animation is captured.
+        free_flight_parallel_scale = _free_flight_fit_parallel_scale(
+            framing_meshes,
+            trajectoryMidpoint_E_Eo,
+            _free_flight_view_direction_E,
+            _free_flight_view_up_E,
+        )
 
     # If saving the animation, add text that displays its speed.
     if save:
@@ -950,13 +955,20 @@ def animate(
             plotter.camera.up = (0, 0, 1)
             plotter.reset_camera(bounds=image_surface_geometry_bounds)  # type: ignore[call-arg]
 
-    # Choose the camera position. Free flight uses the precomputed trajectory-framing
-    # camera. The standard rendering views geometry axes from (-1, -1, 1), unless an
-    # image surface is present, in which case the camera was already fitted above and
-    # cpos is left None so show() does not auto-fit to the large image surface plane.
+    # Choose the camera position. Free flight sets its trajectory-framing camera
+    # explicitly (rather than through show()'s cpos) so it survives the mesh additions
+    # above and becomes the default for the held first frame; cpos is then left None so
+    # show() does not reset it, which lets the user's interactive reorientation and
+    # rescaling carry through to the animation. The standard rendering views geometry axes
+    # from (-1, -1, 1), unless an image surface is present, in which case the camera was
+    # already fitted above and cpos is left None so show() does not auto-fit to the large
+    # image surface plane.
     animate_cpos: tuple | list | None
     if is_free_flight:
-        animate_cpos = free_flight_cpos
+        assert free_flight_cpos is not None
+        plotter.camera_position = free_flight_cpos
+        plotter.camera.parallel_scale = free_flight_parallel_scale
+        animate_cpos = None
     elif image_surface_mesh is None:
         animate_cpos = (-1, -1, 1)
     else:
@@ -988,14 +1000,19 @@ def animate(
         )
         time.sleep(1)
 
-    # show() fits the camera to the first frame, so for free flight re-apply the
-    # precomputed trajectory framing and clipping range before capturing any frames.
+    # The user may have reoriented or rescaled the view during the held first frame.
+    # Preserve that camera and only size the clipping range so every frame stays visible:
+    # temporarily add the last frame's geometry (the first frame's is already present), fit
+    # the clipping range to both, then remove the temporary actors. The body moves through
+    # the scene, so a clipping range fit to the first frame alone would clip later frames.
     if is_free_flight:
-        assert free_flight_cpos is not None
-        plotter.camera.position = free_flight_cpos[0]
-        plotter.camera.focal_point = free_flight_cpos[1]
-        plotter.camera.up = free_flight_cpos[2]
-        plotter.camera.parallel_scale = free_flight_parallel_scale
+        temporary_actors = [
+            plotter.add_mesh(clip_mesh) for clip_mesh in free_flight_clip_meshes
+        ]
+        plotter.reset_camera_clipping_range()
+        free_flight_clipping_range = plotter.camera.clipping_range
+        for temporary_actor in temporary_actors:
+            plotter.remove_actor(temporary_actor)
         plotter.camera.clipping_range = free_flight_clipping_range
 
     # Start a list to hold a WebP Image of each frame. To start, take a screenshot,
@@ -1956,6 +1973,66 @@ def _reflect_mesh(
     :return: A new PolyData mesh with all points reflected across the image surface.
     """
     return _transform_mesh(mesh, T_reflect)
+
+
+def _free_flight_fit_parallel_scale(
+    meshes: list[pv.PolyData],
+    focalPoint_E_Eo: np.ndarray,
+    viewDirection_E: np.ndarray,
+    viewUp_E: np.ndarray,
+    margin: float = 1.15,
+) -> float:
+    """Returns a parallel-projection scale that frames a set of meshes about a focal
+    point.
+
+    The scale is half the viewport's height in world units (the convention for a
+    parallel projection). It is sized to the largest projection of the meshes' bounding-
+    box corners onto the camera's screen-right and screen-up axes, measured from the
+    focal point, so everything stays in view regardless of the viewport's aspect ratio.
+    A margin leaves a little space around the geometry.
+
+    :param meshes: The PolyData meshes to frame.
+    :param focalPoint_E_Eo: A (3,) ndarray of floats locating the camera's focal point
+        (in Earth axes, relative to the Earth origin). Extents are measured from this
+        point, since it projects to the center of the viewport.
+    :param viewDirection_E: A (3,) ndarray of floats giving the offset from the focal
+        point to the camera position (in Earth axes). The camera looks back along it.
+    :param viewUp_E: A (3,) ndarray of floats giving the camera's up direction (in Earth
+        axes).
+    :param margin: A factor (at least 1.0) by which to pad the fitted scale. The default
+        is 1.15.
+    :return: The parallel-projection scale.
+    """
+    # Build the camera's screen right and up axes in Earth axes. The camera looks from its
+    # position back toward the focal point, i.e. along the negative view direction. The up
+    # axis is the supplied up made orthogonal to that look direction.
+    lookDirection_E = -viewDirection_E
+    lookDirection_E = lookDirection_E / np.linalg.norm(lookDirection_E)
+    upDirection_E = viewUp_E - np.dot(viewUp_E, lookDirection_E) * lookDirection_E
+    upDirection_E = upDirection_E / np.linalg.norm(upDirection_E)
+    rightDirection_E = np.cross(lookDirection_E, upDirection_E)
+    rightDirection_E = rightDirection_E / np.linalg.norm(rightDirection_E)
+
+    # Collect every mesh's eight bounding-box corners, measured from the focal point.
+    corners_E_Eo: list[list[float]] = []
+    for mesh in meshes:
+        bounds = np.array(mesh.bounds, dtype=float)
+        corners_E_Eo.extend(
+            [float(x), float(y), float(z)]
+            for x in bounds[0:2]
+            for y in bounds[2:4]
+            for z in bounds[4:6]
+        )
+    corners_E = np.array(corners_E_Eo) - focalPoint_E_Eo
+
+    # Each matrix-vector product is a batch of dot products, one per corner: the (N, 3)
+    # array of corners times a (3,) screen axis gives an (N,) array whose entries are each
+    # corner's signed distance from the focal point along that axis (the axes are unit
+    # vectors, so the dot product is the scalar projection). Take the largest magnitude
+    # along either axis so neither screen dimension is clipped.
+    half_extent_right = float(np.abs(corners_E @ rightDirection_E).max())
+    half_extent_up = float(np.abs(corners_E @ upDirection_E).max())
+    return margin * max(half_extent_right, half_extent_up)
 
 
 def _mute_color(
