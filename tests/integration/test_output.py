@@ -195,3 +195,74 @@ class TestOutputSurfaceEffect(unittest.TestCase):
             save=False,
             testing=True,
         )
+
+
+class TestFreeFlightOutput(unittest.TestCase):
+    """This is a class with functions to test the output module's free flight
+    visualization, which renders each time step's geometry in Earth axes so the body
+    flies through the scene."""
+
+    @classmethod
+    def setUpClass(cls):
+        """Set up test fixtures once for all tests in this class.
+
+        :return: None
+        """
+        cls.free_flight_solver = solver_fixtures.make_simple_glider_free_flight_solver()
+        cls.free_flight_solver.run(show_progress=False)
+
+    def test_draw_does_not_throw(self):
+        """This method tests that the draw function does not throw any errors for a
+        free flight solver.
+
+        :return: None
+        """
+        ps.output.draw(
+            solver=self.free_flight_solver,
+            scalar_type=None,
+            show_wake_vortices=False,
+            show_streamlines=False,
+            testing=True,
+        )
+
+    def test_draw_with_wake_vortices_does_not_throw(self):
+        """This method tests that the draw function does not throw any errors for a
+        free flight solver when wake vortices are shown.
+
+        :return: None
+        """
+        ps.output.draw(
+            solver=self.free_flight_solver,
+            scalar_type=None,
+            show_wake_vortices=True,
+            show_streamlines=False,
+            testing=True,
+        )
+
+    def test_animate_does_not_throw(self):
+        """This method tests that the animate function does not throw any errors for a
+        free flight solver.
+
+        :return: None
+        """
+        ps.output.animate(
+            unsteady_solver=self.free_flight_solver,
+            scalar_type=None,
+            show_wake_vortices=False,
+            save=False,
+            testing=True,
+        )
+
+    def test_animate_with_wake_vortices_does_not_throw(self):
+        """This method tests that the animate function does not throw any errors for a
+        free flight solver when wake vortices are shown.
+
+        :return: None
+        """
+        ps.output.animate(
+            unsteady_solver=self.free_flight_solver,
+            scalar_type=None,
+            show_wake_vortices=True,
+            save=False,
+            testing=True,
+        )

@@ -8,10 +8,12 @@ None
 
 draw: Draws a solver's Airplane(s).
 
-animate: Animates an UnsteadyRingVortexLatticeMethodSolver's Airplane(s).
+animate: Animates the Airplane(s) of an UnsteadyRingVortexLatticeMethodSolver or one of
+its subclasses (the aeroelastic or free flight solver).
 
-plot_results_versus_time: Plots an UnsteadyRingVortexLatticeMethodSolver's loads and
-load coefficients as a function of time.
+plot_results_versus_time: Plots the loads and load coefficients of an
+UnsteadyRingVortexLatticeMethodSolver or one of its subclasses (the aeroelastic or free
+flight solver) as a function of time.
 
 log_results: Logs a solver's load and load coefficients.
 """
@@ -31,6 +33,7 @@ from . import (
     _logging,
     _parameter_validation,
     _transformations,
+    free_flight_unsteady_ring_vortex_lattice_method,
     geometry,
 )
 from . import operating_point as operating_point_mod
@@ -111,6 +114,21 @@ _marker_size = 8
 # Calculate the normalized spacing between the markers for the results plots.
 _marker_spacing = 1.0 / _num_markers
 
+# Define the camera's view-up direction for free flight visualizations. Earth axes have
+# +z pointing down, so physical up is the -z direction. The free flight visualizations
+# render geometry in Earth axes (so the body flies through the scene in its true pose)
+# and use this view-up so that down appears downward on screen. This is a rendering
+# setting, not an axis system.
+_free_flight_view_up_E = (0.0, 0.0, -1.0)
+
+# Define the camera's view direction for free flight visualizations, given as the offset
+# from the focal point to the camera position (in Earth axes). This views the scene
+# obliquely from the South, West, and above (Earth -x, -y, and -z).
+_free_flight_view_direction_E = np.array([1.0, -1.0, -1.0], dtype=float)
+_free_flight_view_direction_E = _free_flight_view_direction_E / np.linalg.norm(
+    _free_flight_view_direction_E
+)
+
 
 def draw(
     solver: (
@@ -126,6 +144,11 @@ def draw(
 ) -> None:
     """Draws a solver's Airplane(s).
 
+    For a FreeFlightUnsteadyRingVortexLatticeMethodSolver, the final time step's
+    geometry is rendered in Earth axes at its true position and orientation, so the
+    body's flight attitude is visible, rather than being drawn body-fixed in geometry
+    axes.
+
     **Citation:**
 
     Adapted from: vlm3.draw in AeroSandbox
@@ -134,7 +157,12 @@ def draw(
 
     Date of retrieval: 03/28/2020
 
-    :param solver: The solver whose Airplane(s) will be plotted.
+    :param solver: The solver whose Airplane(s) will be plotted. This can be a
+        SteadyHorseshoeVortexLatticeMethodSolver, a SteadyRingVortexLatticeMethodSolver,
+        or an UnsteadyRingVortexLatticeMethodSolver. The
+        UnsteadyRingVortexLatticeMethodSolver's subclasses, the
+        AeroelasticUnsteadyRingVortexLatticeMethodSolver and the
+        FreeFlightUnsteadyRingVortexLatticeMethodSolver, are also accepted.
     :param scalar_type: Determines how to color the Panels. Setting this to None colors
         the Panels uniformly. If the solver has been run, it can also be "induced drag",
         "side force", or "lift", which respectively use each Panel's induced drag, side
@@ -216,6 +244,17 @@ def draw(
     plotter = pv.Plotter(window_size=_window_size, lighting=None)
     plotter.enable_parallel_projection()  # type: ignore[call-arg]
 
+    # For a free flight solver, geometry is rendered in its true Earth-frame pose so the
+    # body flies through the scene. T_pas_GP1_CgP1_to_E_Eo holds the passive
+    # transformation from the first Airplane's geometry axes (relative to its CG) to Earth
+    # axes (relative to the Earth origin) for the drawn time step, and stays None for the
+    # standard body-fixed rendering in geometry axes.
+    is_free_flight = isinstance(
+        solver,
+        free_flight_unsteady_ring_vortex_lattice_method.FreeFlightUnsteadyRingVortexLatticeMethodSolver,
+    )
+    T_pas_GP1_CgP1_to_E_Eo: np.ndarray | None = None
+
     # Get the solver's geometry and OperatingPoint.
     if isinstance(
         solver,
@@ -227,11 +266,18 @@ def draw(
         draw_operating_point = solver.steady_problems[draw_step].operating_point
         qInf__E = draw_operating_point.qInf__E
 
+        if is_free_flight:
+            T_pas_GP1_CgP1_to_E_Eo = _get_T_pas_GP1_CgP1_to_E_Eo(draw_operating_point)
+
         # If showing wake ring vortices, get their surfaces and plot them.
         if show_wake_vortices:
             wake_ring_vortex_surfaces = _get_wake_ring_vortex_surfaces(
                 solver, draw_step
             )
+            if T_pas_GP1_CgP1_to_E_Eo is not None:
+                wake_ring_vortex_surfaces = _transform_mesh(
+                    wake_ring_vortex_surfaces, T_pas_GP1_CgP1_to_E_Eo
+                )
             plotter.add_mesh(
                 wake_ring_vortex_surfaces,
                 show_edges=True,
@@ -243,8 +289,10 @@ def draw(
         draw_operating_point = solver.operating_point
         qInf__E = draw_operating_point.qInf__E
 
-    # Get the Panel surfaces.
+    # Get the Panel surfaces, mapping them into Earth axes for free flight.
     panel_surfaces = _get_panel_surfaces(airplanes)
+    if T_pas_GP1_CgP1_to_E_Eo is not None:
+        panel_surfaces = _transform_mesh(panel_surfaces, T_pas_GP1_CgP1_to_E_Eo)
 
     # Plot the Panels either with scalar coloring or with a uniform color.
     if scalar_type in ("induced drag", "side force", "lift"):
@@ -294,6 +342,17 @@ def draw(
         )
         T_reflect = draw_operating_point.surfaceReflect_T_act_GP1_CgP1
     image_surface_mesh = None
+
+    # For free flight, the active reflection is represented in geometry axes, but the
+    # geometry has been mapped into Earth axes. Re-expressing the reflection in Earth axes
+    # (a change of basis by the same passive transformation) lets the reflected-geometry
+    # code below operate entirely in Earth axes.
+    if T_pas_GP1_CgP1_to_E_Eo is not None and T_reflect is not None:
+        T_reflect = (
+            T_pas_GP1_CgP1_to_E_Eo
+            @ T_reflect
+            @ _transformations.invert_T_pas(T_pas_GP1_CgP1_to_E_Eo)
+        )
 
     # If an image surface is defined, add reflected geometry. The image surface plane
     # is added later, after the geometry bounds are captured.
@@ -353,6 +412,15 @@ def draw(
                     point = stackStreamlinePoints_GP1_CgP1[point_index, :]
                     last_point = stackStreamlinePoints_GP1_CgP1[point_index - 1, :]
 
+                    # For free flight, map the segment into Earth axes.
+                    if T_pas_GP1_CgP1_to_E_Eo is not None:
+                        point = _transformations.apply_T_to_vectors(
+                            T_pas_GP1_CgP1_to_E_Eo, point, has_point=True
+                        )
+                        last_point = _transformations.apply_T_to_vectors(
+                            T_pas_GP1_CgP1_to_E_Eo, last_point, has_point=True
+                        )
+
                     # Add a line to make this segment of the streamline.
                     plotter.add_mesh(
                         pv.Line(
@@ -397,21 +465,67 @@ def draw(
     # (including the image surface).
     if T_reflect is not None:
         geometry_bounds = plotter.bounds
-        image_surface_result = _get_image_surface_mesh_and_texture(
-            draw_operating_point, geometry_bounds
-        )
-        assert image_surface_result is not None
-        image_surface_mesh, image_surface_texture = image_surface_result
+        if T_pas_GP1_CgP1_to_E_Eo is not None:
+            # The image surface helper builds the plane from geometry-axis quantities, so
+            # it needs geometry-axis bounds. Build the plane there, then map it into Earth
+            # axes to match the rendered geometry.
+            geometry_axis_bounds = _get_panel_surfaces(airplanes).bounds
+            image_surface_result = _get_image_surface_mesh_and_texture(
+                draw_operating_point, geometry_axis_bounds
+            )
+            assert image_surface_result is not None
+            image_surface_mesh, image_surface_texture = image_surface_result
+            image_surface_mesh = _transform_mesh(
+                image_surface_mesh, T_pas_GP1_CgP1_to_E_Eo
+            )
+        else:
+            image_surface_result = _get_image_surface_mesh_and_texture(
+                draw_operating_point, geometry_bounds
+            )
+            assert image_surface_result is not None
+            image_surface_mesh, image_surface_texture = image_surface_result
         plotter.add_mesh(
             image_surface_mesh,
             texture=image_surface_texture,
             opacity=_image_surface_opacity,
             smooth_shading=True,
         )
-        plotter.camera.position = (-1, -1, 1)
-        plotter.camera.focal_point = (0, 0, 0)
-        plotter.camera.up = (0, 0, 1)
-        plotter.reset_camera(bounds=geometry_bounds)  # type: ignore[call-arg]
+
+        # For the standard body-fixed rendering, fit the camera to the geometry bounds
+        # so the much larger image surface plane does not dominate the view. Free flight
+        # uses its own Earth-axes camera, computed below.
+        if T_pas_GP1_CgP1_to_E_Eo is None:
+            plotter.camera.position = (-1, -1, 1)
+            plotter.camera.focal_point = (0, 0, 0)
+            plotter.camera.up = (0, 0, 1)
+            plotter.reset_camera(bounds=geometry_bounds)  # type: ignore[call-arg]
+
+    # Choose the camera position. Free flight frames the body in Earth axes with physical
+    # up as Earth -z. The standard rendering views geometry axes from (-1, -1, 1), unless
+    # an image surface is present, in which case the camera was already fitted above and
+    # cpos is left None so show() does not auto-fit to the large image surface plane.
+    draw_cpos: tuple | None
+    if is_free_flight:
+        # Aim the camera along the Earth-axes view direction with physical up, then fit
+        # the parallel projection to the rendered geometry. The camera is set explicitly
+        # here (rather than via cpos) so that show() preserves the fit, since passing a
+        # full position to cpos would not set the parallel projection's scale.
+        airplane_bounds = np.array(panel_surfaces.bounds, dtype=float)
+        center_E_Eo = 0.5 * (airplane_bounds[1::2] + airplane_bounds[::2])
+        airplane_diagonal = float(
+            np.linalg.norm(airplane_bounds[1::2] - airplane_bounds[::2])
+        )
+        plotter.camera.focal_point = tuple(center_E_Eo)
+        plotter.camera.position = tuple(
+            center_E_Eo + 3.0 * airplane_diagonal * _free_flight_view_direction_E
+        )
+        plotter.camera.up = _free_flight_view_up_E
+        plotter.reset_camera()  # type: ignore[call-arg]
+        draw_cpos = None
+    elif image_surface_mesh is None:
+        draw_cpos = (-1, -1, 1)
+    else:
+        draw_cpos = None
 
     # Set the Plotter's background color.
     plotter.set_background(color=_plotter_background_color)  # type: ignore[call-arg]
@@ -421,7 +535,7 @@ def draw(
         # it can later be saved as an image if desired.
         plotter.show(
             title="Orient the view, then press any key to continue.",
-            cpos=(-1, -1, 1) if image_surface_mesh is None else None,
+            cpos=draw_cpos,
             full_screen=False,
             auto_close=False,
         )
@@ -429,7 +543,7 @@ def draw(
         # Show the Plotter for 1 second, then proceed automatically. This is useful
         # for testing.
         plotter.show(
-            cpos=(-1, -1, 1) if image_surface_mesh is None else None,
+            cpos=draw_cpos,
             full_screen=False,
             interactive=False,
             auto_close=False,
@@ -464,10 +578,18 @@ def animate(
     save: bool | np.bool_ = False,
     testing: bool | np.bool_ = False,
 ) -> None:
-    """Animates an UnsteadyRingVortexLatticeMethodSolver's Airplane(s).
+    """Animates the Airplane(s) of an UnsteadyRingVortexLatticeMethodSolver or one of
+    its subclasses (the aeroelastic or free flight solver).
+
+    For a FreeFlightUnsteadyRingVortexLatticeMethodSolver, each time step's geometry is
+    rendered in Earth axes at its true position and orientation, so the body flies
+    through the scene along its trajectory rather than staying fixed while the wake
+    streams behind it. The camera frames the whole trajectory.
 
     :param unsteady_solver: The UnsteadyRingVortexLatticeMethodSolver whose Airplane(s)
-        will be animated.
+        will be animated. Its subclasses, the
+        AeroelasticUnsteadyRingVortexLatticeMethodSolver and the
+        FreeFlightUnsteadyRingVortexLatticeMethodSolver, are also accepted.
     :param scalar_type: Determines how to color the Panels. Setting this to None colors
         the Panels uniformly. If the solver has been run, it can also be "induced drag",
         "side force", or "lift", which respectively use each Panel's induced drag, side
@@ -475,8 +597,9 @@ def animate(
     :param show_wake_vortices: Set this to True to show any wake ring vortices. If True,
         the solver must have already been run. Can be a bool or a numpy bool and will be
         converted internally to a bool. The default is False.
-    :param save: Set this to True to save the image as a WebP. It can be a bool or a
-        numpy bool and will be converted internally to a bool. The default is False.
+    :param save: Set this to True to save the animation as an animated WebP. It can be a
+        bool or a numpy bool and will be converted internally to a bool. The default is
+        False.
     :param testing: Set this to True to start the animation after one second, which is
         useful for running test suites. It can be a bool or a numpy bool and will be
         converted internally to a bool. The default is False.
@@ -523,6 +646,22 @@ def animate(
     step_airplanes = []
     for steady_problem in unsteady_solver.steady_problems:
         step_airplanes.append(steady_problem.airplanes)
+
+    # For a free flight solver, each time step's geometry is rendered in its true Earth-
+    # frame pose so the body flies through the scene. step_transforms holds, per time
+    # step, the passive transformation from the first Airplane's geometry axes (relative
+    # to its CG) to Earth axes (relative to the Earth origin). It stays empty for the
+    # standard body-fixed rendering in geometry axes.
+    is_free_flight = isinstance(
+        unsteady_solver,
+        free_flight_unsteady_ring_vortex_lattice_method.FreeFlightUnsteadyRingVortexLatticeMethodSolver,
+    )
+    step_transforms: list[np.ndarray] = []
+    if is_free_flight:
+        step_transforms = [
+            _get_T_pas_GP1_CgP1_to_E_Eo(steady_problem.operating_point)
+            for steady_problem in unsteady_solver.steady_problems
+        ]
 
     # Scale down the true-speed frames per second to at most 50 fps. This is the
     # maximum speed at which some programs can render WebPs.
@@ -592,7 +731,29 @@ def animate(
     ].operating_point
     T_reflect = last_step_operating_point.surfaceReflect_T_act_GP1_CgP1
     animate_text_color = _text_color_surface if T_reflect is not None else _text_color
-    if T_reflect is not None:
+    image_surface_geometry_bounds = None
+    if is_free_flight:
+        if T_reflect is not None:
+            # The image surface is fixed in the world, so build its plane once from the
+            # last step's geometry-axis quantities, then map it into Earth axes. Re-
+            # expressing the reflection in Earth axes (a change of basis by the same
+            # passive transformation) lets the reflected geometry be built from the
+            # Earth-axes panels each frame.
+            T_pas_last = step_transforms[last_step]
+            geometry_axis_bounds = _get_panel_surfaces(step_airplanes[last_step]).bounds
+            image_surface_result = _get_image_surface_mesh_and_texture(
+                last_step_operating_point, geometry_axis_bounds
+            )
+            assert image_surface_result is not None
+            image_surface_mesh, image_surface_texture = image_surface_result
+            image_surface_mesh = _transform_mesh(image_surface_mesh, T_pas_last)
+            T_reflect = (
+                T_pas_last @ T_reflect @ _transformations.invert_T_pas(T_pas_last)
+            )
+        else:
+            image_surface_mesh = None
+            image_surface_texture = None
+    elif T_reflect is not None:
         last_step_panel_surfaces = _get_panel_surfaces(step_airplanes[last_step])
         reflected_last_step_panel_surfaces = _reflect_mesh(
             last_step_panel_surfaces, T_reflect
@@ -623,7 +784,71 @@ def animate(
     else:
         image_surface_mesh = None
         image_surface_texture = None
-        image_surface_geometry_bounds = None
+
+    # For free flight, compute a fixed camera that frames the whole trajectory and a
+    # clipping range wide enough to keep every frame visible. The body moves through the
+    # scene, so a camera fitted only to the first frame would clip the later frames.
+    free_flight_cpos: list | None = None
+    free_flight_parallel_scale = 0.0
+    free_flight_clipping_range: tuple[float, float] = (0.0, 0.0)
+    if is_free_flight:
+        initialPosition_E_Eo = unsteady_solver.steady_problems[
+            0
+        ].operating_point.CgP1_E_Eo
+        finalPosition_E_Eo = last_step_operating_point.CgP1_E_Eo
+        trajectoryMidpoint_E_Eo = 0.5 * (initialPosition_E_Eo + finalPosition_E_Eo)
+        trajectory_extent = float(
+            np.linalg.norm(finalPosition_E_Eo - initialPosition_E_Eo)
+        )
+
+        # Use the first frame's bounding diagonal in Earth axes as a scale reference so
+        # the padding adapts to the aircraft's size.
+        first_step_panel_surfaces = _transform_mesh(
+            _get_panel_surfaces(step_airplanes[0]), step_transforms[0]
+        )
+        airplane_bounds = np.array(first_step_panel_surfaces.bounds, dtype=float)
+        airplane_diagonal = float(
+            np.linalg.norm(airplane_bounds[1::2] - airplane_bounds[::2])
+        )
+
+        # Pad the camera distance so the body and its wake stay in frame at both ends.
+        padding = max(2.0 * airplane_diagonal, 0.5 * trajectory_extent)
+        camera_distance = trajectory_extent + padding
+        cameraPosition_E_Eo = (
+            trajectoryMidpoint_E_Eo + camera_distance * _free_flight_view_direction_E
+        )
+        free_flight_cpos = [
+            tuple(cameraPosition_E_Eo),
+            tuple(trajectoryMidpoint_E_Eo),
+            _free_flight_view_up_E,
+        ]
+        free_flight_parallel_scale = 0.6 * camera_distance
+
+        # Determine a clipping range that covers the first and last frames by temporarily
+        # adding both (plus the last frame's wake and the static image surface, if shown),
+        # then restore an empty Plotter for the frame-by-frame rendering below.
+        last_step_panel_surfaces = _transform_mesh(
+            _get_panel_surfaces(step_airplanes[last_step]),
+            step_transforms[last_step],
+        )
+        plotter.add_mesh(first_step_panel_surfaces)
+        plotter.add_mesh(last_step_panel_surfaces)
+        if show_wake_vortices:
+            last_step_wake_surfaces = _transform_mesh(
+                _get_wake_ring_vortex_surfaces(unsteady_solver, last_step),
+                step_transforms[last_step],
+            )
+            if last_step_wake_surfaces.n_points > 0:
+                plotter.add_mesh(last_step_wake_surfaces)
+        if image_surface_mesh is not None:
+            plotter.add_mesh(image_surface_mesh)
+        plotter.camera.position = free_flight_cpos[0]
+        plotter.camera.focal_point = free_flight_cpos[1]
+        plotter.camera.up = free_flight_cpos[2]
+        plotter.camera.parallel_scale = free_flight_parallel_scale
+        plotter.reset_camera_clipping_range()
+        free_flight_clipping_range = plotter.camera.clipping_range
+        plotter.clear()
 
     # If saving the animation, add text that displays its speed.
     if save:
@@ -635,8 +860,11 @@ def animate(
             color=animate_text_color,
         )
 
-    # Get the Panel surfaces of the first time step's Airplane(s).
+    # Get the Panel surfaces of the first time step's Airplane(s), mapping them into
+    # Earth axes for free flight.
     panel_surfaces = _get_panel_surfaces(step_airplanes[0])
+    if is_free_flight:
+        panel_surfaces = _transform_mesh(panel_surfaces, step_transforms[0])
 
     # Plot the first time step's Airplanes' Panels either with scalar coloring or
     # with a uniform color.
@@ -712,10 +940,27 @@ def animate(
             opacity=_image_surface_opacity,
             smooth_shading=True,
         )
-        plotter.camera.position = (-1, -1, 1)
-        plotter.camera.focal_point = (0, 0, 0)
-        plotter.camera.up = (0, 0, 1)
-        plotter.reset_camera(bounds=image_surface_geometry_bounds)  # type: ignore[call-arg]
+
+        # For the standard body-fixed rendering, fit the camera to the geometry bounds
+        # so the much larger image surface plane does not dominate the view. Free flight
+        # uses its own trajectory-framing camera, applied below.
+        if not is_free_flight:
+            plotter.camera.position = (-1, -1, 1)
+            plotter.camera.focal_point = (0, 0, 0)
+            plotter.camera.up = (0, 0, 1)
+            plotter.reset_camera(bounds=image_surface_geometry_bounds)  # type: ignore[call-arg]
+
+    # Choose the camera position. Free flight uses the precomputed trajectory-framing
+    # camera. The standard rendering views geometry axes from (-1, -1, 1), unless an
+    # image surface is present, in which case the camera was already fitted above and
+    # cpos is left None so show() does not auto-fit to the large image surface plane.
+    animate_cpos: tuple | list | None
+    if is_free_flight:
+        animate_cpos = free_flight_cpos
+    elif image_surface_mesh is None:
+        animate_cpos = (-1, -1, 1)
+    else:
+        animate_cpos = None
 
     # Set the Plotter's background color.
     plotter.set_background(color=_plotter_background_color)  # type: ignore[call-arg]
@@ -727,7 +972,7 @@ def animate(
     if not testing:
         plotter.show(
             title="Orient the view, then press any key to produce the animation.",
-            cpos=(-1, -1, 1) if image_surface_mesh is None else None,
+            cpos=animate_cpos,
             full_screen=False,
             auto_close=False,
         )
@@ -736,12 +981,22 @@ def animate(
     else:
         plotter.show(
             title="Rendering speed not to scale.",
-            cpos=(-1, -1, 1) if image_surface_mesh is None else None,
+            cpos=animate_cpos,
             full_screen=False,
             interactive=False,
             auto_close=False,
         )
         time.sleep(1)
+
+    # show() fits the camera to the first frame, so for free flight re-apply the
+    # precomputed trajectory framing and clipping range before capturing any frames.
+    if is_free_flight:
+        assert free_flight_cpos is not None
+        plotter.camera.position = free_flight_cpos[0]
+        plotter.camera.focal_point = free_flight_cpos[1]
+        plotter.camera.up = free_flight_cpos[2]
+        plotter.camera.parallel_scale = free_flight_parallel_scale
+        plotter.camera.clipping_range = free_flight_clipping_range
 
     # Start a list to hold a WebP Image of each frame. To start, take a screenshot,
     # convert it to a ndarray, and convert that to an Image.
@@ -765,8 +1020,13 @@ def animate(
         # Clear the Plotter.
         plotter.clear()
 
-        # Get the Panel surfaces of this time step's Airplane(s).
+        # Get the Panel surfaces of this time step's Airplane(s), mapping them into Earth
+        # axes for free flight.
         panel_surfaces = _get_panel_surfaces(airplanes)
+        if is_free_flight:
+            panel_surfaces = _transform_mesh(
+                panel_surfaces, step_transforms[current_step]
+            )
 
         # If saving the animation, add text that displays its speed.
         if save:
@@ -783,6 +1043,10 @@ def animate(
             wake_ring_vortex_surfaces = _get_wake_ring_vortex_surfaces(
                 unsteady_solver, current_step
             )
+            if is_free_flight:
+                wake_ring_vortex_surfaces = _transform_mesh(
+                    wake_ring_vortex_surfaces, step_transforms[current_step]
+                )
             plotter.add_mesh(
                 wake_ring_vortex_surfaces,
                 show_edges=True,
@@ -909,11 +1173,14 @@ def plot_results_versus_time(
     show: bool | np.bool_ = True,
     save: bool | np.bool_ = False,
 ) -> None:
-    """Plots an UnsteadyRingVortexLatticeMethodSolver's loads and load coefficients as a
-    function of time.
+    """Plots the loads and load coefficients of an UnsteadyRingVortexLatticeMethodSolver
+    or one of its subclasses (the aeroelastic or free flight solver) as a function of
+    time.
 
     :param unsteady_solver: The UnsteadyRingVortexLatticeMethodSolver whose loads and
-        load coefficients will be plotted.
+        load coefficients will be plotted. Its subclasses, the
+        AeroelasticUnsteadyRingVortexLatticeMethodSolver and the
+        FreeFlightUnsteadyRingVortexLatticeMethodSolver, are also accepted.
     :param show: Set this to True to show the plots. It can be a bool or a numpy bool
         and will be converted internally to a bool. The default is True.
     :param save: Set this to True to save the plots as PNGs. It can be a bool or a numpy
@@ -1246,7 +1513,13 @@ def log_results(
     The logging level must be set to INFO or lower in order to see results. See
     set_up_logging for details on configuring the logging level.
 
-    :param solver: The solver whose load and load coefficients will be logged.
+    :param solver: The solver whose load and load coefficients will be logged. This can
+        be a SteadyHorseshoeVortexLatticeMethodSolver, a
+        SteadyRingVortexLatticeMethodSolver, or an
+        UnsteadyRingVortexLatticeMethodSolver. The
+        UnsteadyRingVortexLatticeMethodSolver's subclasses, the
+        AeroelasticUnsteadyRingVortexLatticeMethodSolver and the
+        FreeFlightUnsteadyRingVortexLatticeMethodSolver, are also accepted.
     :return: None
     """
     if isinstance(
@@ -1614,6 +1887,61 @@ def _get_image_surface_mesh_and_texture(
     return mesh, texture
 
 
+def _get_T_pas_GP1_CgP1_to_E_Eo(
+    this_operating_point: operating_point_mod.OperatingPoint,
+) -> np.ndarray:
+    """Returns the passive transformation from the first Airplane's geometry axes,
+    relative to the first Airplane's CG, to Earth axes, relative to the Earth origin.
+
+    Free flight visualizations render each time step's geometry in its true Earth-frame
+    position and orientation, so the body translates and rotates through the scene. This
+    transformation chains the per-step geometry-to-Earth rotation with the translation
+    from the first Airplane's CG to the Earth origin.
+
+    :param this_operating_point: The OperatingPoint whose Earth-frame position and
+        orientation define the transformation.
+    :return: A (4,4) ndarray of floats representing the passive transformation from the
+        first Airplane's geometry axes, relative to the first Airplane's CG, to Earth
+        axes, relative to the Earth origin.
+    """
+    # Translate from Earth axes relative to the first Airplane's CG to Earth axes
+    # relative to the Earth origin. For a passive translation, the parameter is the
+    # position of the final reference point (the Earth origin) relative to the initial
+    # one (the first Airplane's CG), which is the negative of the CG's position relative
+    # to the Earth origin.
+    T_pas_E_CgP1_to_E_Eo = _transformations.generate_trans_T(
+        translations=-this_operating_point.CgP1_E_Eo,
+        passive=True,
+    )
+
+    # Chain geometry-to-Earth (relative to the CG) with the CG-to-origin translation.
+    return _transformations.compose_T_pas(
+        this_operating_point.T_pas_GP1_CgP1_to_E_CgP1,
+        T_pas_E_CgP1_to_E_Eo,
+    )
+
+
+def _transform_mesh(
+    mesh: pv.PolyData,
+    T_pas: np.ndarray,
+) -> pv.PolyData:
+    """Returns a copy of a PolyData mesh with its points mapped through a passive
+    transformation.
+
+    :param mesh: The PolyData mesh to transform.
+    :param T_pas: A (4,4) ndarray of floats representing the passive transformation to
+        apply to the mesh's points.
+    :return: A new PolyData mesh with all points mapped through the transformation.
+    """
+    transformed = mesh.copy()
+    transformed.points = _transformations.apply_T_to_vectors(
+        T_pas,
+        mesh.points,
+        has_point=True,
+    )
+    return transformed
+
+
 def _reflect_mesh(
     mesh: pv.PolyData,
     T_reflect: np.ndarray,
@@ -1627,13 +1955,7 @@ def _reflect_mesh(
         first Airplane's CG).
     :return: A new PolyData mesh with all points reflected across the image surface.
     """
-    reflected = mesh.copy()
-    reflected.points = _transformations.apply_T_to_vectors(
-        T_reflect,
-        mesh.points,
-        has_point=True,
-    )
-    return reflected
+    return _transform_mesh(mesh, T_reflect)
 
 
 def _mute_color(
