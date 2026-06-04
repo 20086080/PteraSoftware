@@ -86,44 +86,6 @@ class TestMuJoCoModelInit(unittest.TestCase):
         """Test that gravity is set to zero in the MuJoCo model."""
         npt.assert_array_equal(self.model.model.opt.gravity, [0.0, 0.0, 0.0])
 
-    def test_accepts_list_inputs(self):
-        """Test that MuJoCoModel accepts list inputs for array parameters."""
-        model = _mujoco_model.MuJoCoModel(
-            name="list_test",
-            weight=9.80665,
-            omegas_BP1__E=[0.0, 0.0, 0.0],
-            g_E=[0.0, 0.0, 9.80665],
-            T_pas_BP1_CgP1_to_E_CgP1=[
-                [1.0, 0.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0, 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ],
-            vCg_E__E=[10.0, 0.0, 0.0],
-            I_BP1_CgP1=[[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
-            delta_time=0.01,
-        )
-        self.assertIsInstance(model, _mujoco_model.MuJoCoModel)
-
-    def test_accepts_tuple_inputs(self):
-        """Test that MuJoCoModel accepts tuple inputs for array parameters."""
-        model = _mujoco_model.MuJoCoModel(
-            name="tuple_test",
-            weight=9.80665,
-            omegas_BP1__E=(0.0, 0.0, 0.0),
-            g_E=(0.0, 0.0, 9.80665),
-            T_pas_BP1_CgP1_to_E_CgP1=(
-                (1.0, 0.0, 0.0, 0.0),
-                (0.0, 1.0, 0.0, 0.0),
-                (0.0, 0.0, 1.0, 0.0),
-                (0.0, 0.0, 0.0, 1.0),
-            ),
-            vCg_E__E=(10.0, 0.0, 0.0),
-            I_BP1_CgP1=((1.0, 0.0, 0.0), (0.0, 1.0, 0.0), (0.0, 0.0, 1.0)),
-            delta_time=0.01,
-        )
-        self.assertIsInstance(model, _mujoco_model.MuJoCoModel)
-
     def test_accepts_extra_xml(self):
         """Test that MuJoCoModel accepts extra_xml and injects it into the XML."""
         extra_xml = {"visual": '<visual><quality shadowsize="2048"/></visual>'}
@@ -192,48 +154,6 @@ class TestMuJoCoModelInit(unittest.TestCase):
         model = mujoco_model_fixtures.make_rotated_mujoco_model_fixture()
         state = model.get_state()
         npt.assert_allclose(state["omegas_BP1__E"], [0.0, 0.0, 10.0], atol=1e-10)
-
-    def test_invalid_omegas_raises_type_error(self):
-        """Test that invalid omegas_BP1__E raises TypeError."""
-        with self.assertRaises(TypeError):
-            _mujoco_model.MuJoCoModel(
-                name="test",
-                weight=9.80665,
-                omegas_BP1__E="invalid",
-                g_E=(0.0, 0.0, 9.80665),
-                T_pas_BP1_CgP1_to_E_CgP1=np.eye(4, dtype=float),
-                vCg_E__E=(10.0, 0.0, 0.0),
-                I_BP1_CgP1=np.eye(3, dtype=float),
-                delta_time=0.01,
-            )
-
-    def test_invalid_I_BP1_CgP1_shape_raises_value_error(self):
-        """Test that wrong shaped I_BP1_CgP1 raises ValueError."""
-        with self.assertRaises(ValueError):
-            _mujoco_model.MuJoCoModel(
-                name="test",
-                weight=9.80665,
-                omegas_BP1__E=(0.0, 0.0, 0.0),
-                g_E=(0.0, 0.0, 9.80665),
-                T_pas_BP1_CgP1_to_E_CgP1=np.eye(4, dtype=float),
-                vCg_E__E=(10.0, 0.0, 0.0),
-                I_BP1_CgP1=np.eye(4, dtype=float),
-                delta_time=0.01,
-            )
-
-    def test_invalid_T_pas_shape_raises_value_error(self):
-        """Test that wrong shaped T_pas_BP1_CgP1_to_E_CgP1 raises ValueError."""
-        with self.assertRaises(ValueError):
-            _mujoco_model.MuJoCoModel(
-                name="test",
-                weight=9.80665,
-                omegas_BP1__E=(0.0, 0.0, 0.0),
-                g_E=(0.0, 0.0, 9.80665),
-                T_pas_BP1_CgP1_to_E_CgP1=np.eye(3, dtype=float),
-                vCg_E__E=(10.0, 0.0, 0.0),
-                I_BP1_CgP1=np.eye(3, dtype=float),
-                delta_time=0.01,
-            )
 
     def test_symmetrizes_inertia_matrix(self):
         """Test that an asymmetric inertia matrix is symmetrized."""
@@ -332,18 +252,6 @@ class TestMuJoCoModelApplyLoads(unittest.TestCase):
         applied = self.model.data.xfrc_applied[self.model.body_id]
         npt.assert_allclose(applied[3:6], moments_E_CgP1, atol=1e-14)
 
-    def test_apply_loads_accepts_lists(self):
-        """Test that apply_loads accepts list inputs."""
-        self.model.apply_loads([1.0, 0.0, 0.0], [0.0, 0.0, 0.0])
-        applied = self.model.data.xfrc_applied[self.model.body_id]
-        self.assertAlmostEqual(applied[0], 1.0, places=14)
-
-    def test_apply_loads_accepts_tuples(self):
-        """Test that apply_loads accepts tuple inputs."""
-        self.model.apply_loads((1.0, 0.0, 0.0), (0.0, 0.0, 0.0))
-        applied = self.model.data.xfrc_applied[self.model.body_id]
-        self.assertAlmostEqual(applied[0], 1.0, places=14)
-
     def test_apply_loads_overwrites_previous(self):
         """Test that apply_loads overwrites previously applied loads."""
         self.model.apply_loads([1.0, 2.0, 3.0], [4.0, 5.0, 6.0])
@@ -352,16 +260,6 @@ class TestMuJoCoModelApplyLoads(unittest.TestCase):
         applied = self.model.data.xfrc_applied[self.model.body_id]
         npt.assert_allclose(applied[0:3], [10.0, 0.0, 0.0], atol=1e-14)
         npt.assert_allclose(applied[3:6], [0.0, 0.0, 0.0], atol=1e-14)
-
-    def test_apply_loads_invalid_forces_raises_type_error(self):
-        """Test that invalid forces input raises TypeError."""
-        with self.assertRaises(TypeError):
-            self.model.apply_loads("invalid", [0.0, 0.0, 0.0])
-
-    def test_apply_loads_invalid_moments_raises_type_error(self):
-        """Test that invalid moments input raises TypeError."""
-        with self.assertRaises(TypeError):
-            self.model.apply_loads([0.0, 0.0, 0.0], "invalid")
 
 
 class TestMuJoCoModelStep(unittest.TestCase):

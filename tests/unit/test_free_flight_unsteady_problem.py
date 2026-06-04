@@ -88,6 +88,78 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
                 external_loads_fn="not_callable",
             )
 
+    def test_extra_xml_type_validation(self):
+        """Test that extra_xml must be a dict or None."""
+        movement = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
+        )
+        with self.assertRaises(TypeError):
+            ps.problems.FreeFlightUnsteadyProblem(
+                movement=movement,
+                I_BP1_CgP1=np.eye(3, dtype=float),
+                extra_xml="invalid",
+            )
+
+    def test_extra_xml_key_validation(self):
+        """Test that an extra_xml key must be a permitted injection point."""
+        movement = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
+        )
+        with self.assertRaises(ValueError):
+            ps.problems.FreeFlightUnsteadyProblem(
+                movement=movement,
+                I_BP1_CgP1=np.eye(3, dtype=float),
+                extra_xml={"wordbody": "<geom/>"},
+            )
+
+    def test_extra_xml_value_validation(self):
+        """Test that an extra_xml value must be a str."""
+        movement = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
+        )
+        with self.assertRaises(TypeError):
+            ps.problems.FreeFlightUnsteadyProblem(
+                movement=movement,
+                I_BP1_CgP1=np.eye(3, dtype=float),
+                extra_xml={"visual": 123},
+            )
+
+    def test_mujoco_assets_type_validation(self):
+        """Test that mujoco_assets must be a dict or None."""
+        movement = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
+        )
+        with self.assertRaises(TypeError):
+            ps.problems.FreeFlightUnsteadyProblem(
+                movement=movement,
+                I_BP1_CgP1=np.eye(3, dtype=float),
+                mujoco_assets="invalid",
+            )
+
+    def test_mujoco_assets_key_validation(self):
+        """Test that a mujoco_assets key must be a str."""
+        movement = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
+        )
+        with self.assertRaises(TypeError):
+            ps.problems.FreeFlightUnsteadyProblem(
+                movement=movement,
+                I_BP1_CgP1=np.eye(3, dtype=float),
+                mujoco_assets={123: b"data"},
+            )
+
+    def test_mujoco_assets_value_validation(self):
+        """Test that a mujoco_assets value must be bytes."""
+        movement = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
+        )
+        with self.assertRaises(TypeError):
+            ps.problems.FreeFlightUnsteadyProblem(
+                movement=movement,
+                I_BP1_CgP1=np.eye(3, dtype=float),
+                mujoco_assets={"dummy.stl": "not bytes"},
+            )
+
     def test_external_loads_fn_default_none(self):
         """Test that external_loads_fn defaults to None."""
         self.assertIsNone(self.problem.external_loads_fn)

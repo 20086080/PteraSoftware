@@ -373,6 +373,14 @@ class _CoupledUnsteadyProblem(_core.CoreUnsteadyProblem):
         raise NotImplementedError("Subclasses must implement initialize_next_problem.")
 
 
+# The permitted top-level keys for FreeFlightUnsteadyProblem's extra_xml injection-point
+# dict. Each maps to an XML fragment that MuJoCoModel injects into the generated model
+# XML at the matching location.
+_EXTRA_XML_INJECTION_POINTS = frozenset(
+    {"default", "asset", "visual", "worldbody", "body"}
+)
+
+
 class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
     """A class used to contain problems with coupled unsteady aerodynamics and rigid
     body dynamics.
@@ -465,10 +473,15 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
         :param extra_xml: A dict mapping injection point names to XML fragment strings
             to inject into the MuJoCo model's XML. Supported keys are "default",
             "asset", "visual", "worldbody", and "body". Setting this to None injects no
-            extra XML. The default is None.
+            extra XML. The default is None. The argument is checked to be a dict (or
+            None) whose keys are supported injection points and whose values are
+            strings; the XML fragments themselves are not validated, which is left to
+            MuJoCo, so this is an advanced-user parameter.
         :param mujoco_assets: A dict mapping virtual filenames to their binary contents
             for the MuJoCo model. Setting this to None provides no extra assets. The
-            default is None.
+            default is None. The argument is checked to be a dict (or None) mapping
+            string filenames to bytes; whether a referenced asset is actually supplied
+            is left to MuJoCo, so this is an advanced-user parameter.
         :return: None
         """
         if not isinstance(movement, free_flight_movement.FreeFlightMovement):
@@ -519,6 +532,44 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
         self.forceCoefficients_W: list[np.ndarray] = []
         self.moments_W_Cg: list[np.ndarray] = []
         self.momentCoefficients_W_Cg: list[np.ndarray] = []
+
+        # Validate the extra_xml injection-point dict (it must be a dict, or None, whose
+        # keys are permitted injection points and whose values are XML fragment strings)
+        # and rebuild it from the validated values. Deeper XML correctness is left to
+        # MuJoCo's own parser. These two arguments are the only raw user input forwarded
+        # to the MuJoCoModel, which performs no validation of its own.
+        if extra_xml is not None:
+            if not isinstance(extra_xml, dict):
+                raise TypeError("extra_xml must be a dict or None.")
+            validated_extra_xml: dict[str, str] = {}
+            for key, value in extra_xml.items():
+                if key not in _EXTRA_XML_INJECTION_POINTS:
+                    raise ValueError(
+                        f"extra_xml key '{key}' is not a permitted injection point; "
+                        f"expected one of {sorted(_EXTRA_XML_INJECTION_POINTS)}."
+                    )
+                validated_extra_xml[key] = _parameter_validation.str_return_str(
+                    value, f"extra_xml['{key}']"
+                )
+            extra_xml = validated_extra_xml
+
+        # Validate the mujoco_assets dict (it must be a dict, or None, mapping str
+        # filenames to bytes). Whether a referenced asset is actually supplied is left to
+        # MuJoCo's own parser.
+        if mujoco_assets is not None:
+            if not isinstance(mujoco_assets, dict):
+                raise TypeError("mujoco_assets must be a dict or None.")
+            for filename, contents in mujoco_assets.items():
+                if not isinstance(filename, str):
+                    raise TypeError(
+                        "mujoco_assets keys must be str filenames, not "
+                        f"{type(filename).__name__}."
+                    )
+                if not isinstance(contents, bytes):
+                    raise TypeError(
+                        f"mujoco_assets['{filename}'] must be bytes, not "
+                        f"{type(contents).__name__}."
+                    )
 
         self._mujoco_model = _mujoco_model.MuJoCoModel(
             name=initial_airplane.name,

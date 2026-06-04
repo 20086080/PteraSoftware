@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import TypedDict
 
 import mujoco
 import numpy as np
 
-from . import _parameter_validation, _transformations
+from . import _transformations
 
 
 class _MuJoCoState(TypedDict):
@@ -41,6 +40,16 @@ class MuJoCoModel:
     Wraps MuJoCo models and data objects to provide a clean interface for applying
     aerodynamic loads to the first Airplane, advancing the MuJoCo simulation, and
     extracting the current state of the first Airplane.
+
+    MuJoCoModel performs no input validation. It is private and constructed only by
+    FreeFlightUnsteadyProblem, which supplies already-validated inputs; see that class
+    for the validation of its constructor arguments.
+
+    The model integrates the rigid-body dynamics freely and has no awareness of any
+    aerodynamic image surface (the method-of-images ground or water plane the
+    aerodynamics reflect across). Any surface effect reaches the body only through the
+    aerodynamic loads passed to apply_loads; the surface is not modeled as a collision
+    boundary, so nothing in the dynamics prevents the body from passing through it.
     """
 
     __slots__ = (
@@ -57,72 +66,56 @@ class MuJoCoModel:
         self,
         name: str,
         weight: float | int,
-        omegas_BP1__E: np.ndarray | Sequence[float | int],
-        g_E: np.ndarray | Sequence[float | int],
-        T_pas_BP1_CgP1_to_E_CgP1: np.ndarray | Sequence[Sequence[float | int]],
-        vCg_E__E: np.ndarray | Sequence[float | int],
-        I_BP1_CgP1: np.ndarray | Sequence[Sequence[float | int]],
+        omegas_BP1__E: np.ndarray,
+        g_E: np.ndarray,
+        T_pas_BP1_CgP1_to_E_CgP1: np.ndarray,
+        vCg_E__E: np.ndarray,
+        I_BP1_CgP1: np.ndarray,
         delta_time: float | int,
         extra_xml: dict[str, str] | None = None,
         mujoco_assets: dict[str, bytes] | None = None,
     ) -> None:
         """The initialization method.
 
-        :param name: The name of the Airplane. Used as the MuJoCo body name.
-        :param weight: The weight of the Airplane in Newtons.
-        :param omegas_BP1__E: An array-like of 3 numbers (int or float) representing the
-            initial angular velocity of the first Airplane's body axes (in the first
-            Airplane's body axes, observed from the Earth frame). Can be a tuple, list,
-            or ndarray. Values are converted to floats internally. The units are in
-            degrees per second.
-        :param g_E: An array-like of 3 numbers (int or float) representing the
-            gravitational acceleration vector (in Earth axes). Can be a tuple, list, or
-            ndarray. Values are converted to floats internally. The units are in meters
-            per second squared.
-        :param T_pas_BP1_CgP1_to_E_CgP1: A (4,4) array-like of numbers (int or float)
-            representing the passive transformation matrix from the first Airplane's
-            body axes, relative to the first Airplane's CG, to Earth axes, relative to
-            the first Airplane's CG. Can be a nested tuple, list, or ndarray. Values are
-            converted to floats internally.
-        :param vCg_E__E: An array-like of 3 numbers (int or float) representing the
-            initial velocity of the first Airplane's CG (in Earth axes, observed from
-            the Earth frame). Can be a tuple, list, or ndarray. Values are converted to
-            floats internally. The units are in meters per second.
-        :param I_BP1_CgP1: A (3,3) array-like of numbers (int or float) representing the
-            inertia matrix of the first Airplane. It is in the first Airplane's body
-            axes, relative to the first Airplane's CG. Can be a nested tuple, list, or
-            ndarray. Values are converted to floats internally. The units are in
-            kilogram meters squared.
-        :param delta_time: The time, in seconds, between each time step. It must be a
-            positive number (int or float).
-        :param extra_xml: A dict mapping injection point names to XML fragment strings
-            to inject into the generated MuJoCo XML. Supported keys are "default",
-            "asset", and "visual" (inserted as top level elements), "worldbody"
-            (inserted inside the worldbody element, before the body), and "body"
-            (inserted inside the body element, after the inertial element). The default
+        :param name: The name of the Airplane, used as the MuJoCo body name. Supplied by
+            FreeFlightUnsteadyProblem from the Airplane.
+        :param weight: The weight of the Airplane in Newtons. Supplied by
+            FreeFlightUnsteadyProblem from the Airplane.
+        :param omegas_BP1__E: A (3,) ndarray of floats representing the initial angular
+            velocity of the first Airplane's body axes (in the first Airplane's body
+            axes, observed from the Earth frame), in degrees per second. Supplied by
+            FreeFlightUnsteadyProblem from the OperatingPoint.
+        :param g_E: A (3,) ndarray of floats representing the gravitational acceleration
+            vector (in Earth axes), in meters per second squared. Supplied by
+            FreeFlightUnsteadyProblem from the OperatingPoint.
+        :param T_pas_BP1_CgP1_to_E_CgP1: A (4,4) ndarray of floats representing the
+            passive transformation matrix from the first Airplane's body axes, relative
+            to the first Airplane's CG, to Earth axes, relative to the first Airplane's
+            CG. Supplied by FreeFlightUnsteadyProblem from the OperatingPoint.
+        :param vCg_E__E: A (3,) ndarray of floats representing the initial velocity of
+            the first Airplane's CG (in Earth axes, observed from the Earth frame), in
+            meters per second. Computed by FreeFlightUnsteadyProblem from the
+            OperatingPoint.
+        :param I_BP1_CgP1: A (3,3) ndarray of floats representing the inertia matrix of
+            the first Airplane (in the first Airplane's body axes, relative to the first
+            Airplane's CG), in kilogram square meters. Supplied by
+            FreeFlightUnsteadyProblem, which validates that it is symmetric.
+        :param delta_time: The time, in seconds, between each time step. Supplied by
+            FreeFlightUnsteadyProblem from the Movement.
+        :param extra_xml: A dict (or None) mapping injection point names to XML fragment
+            strings to inject into the generated MuJoCo XML. Supported keys are
+            "default", "asset", and "visual" (inserted as top level elements),
+            "worldbody" (inserted inside the worldbody element, before the body), and
+            "body" (inserted inside the body element, after the inertial element).
+            Validated by FreeFlightUnsteadyProblem before being passed here. The default
             is None, which injects no extra XML.
-        :param mujoco_assets: A dict mapping virtual filenames to their binary contents.
-            These are passed to MuJoCo's from_xml_string as the assets parameter,
-            allowing meshes and other binary files to be loaded without writing to disk.
-            The default is None, which provides no extra assets.
+        :param mujoco_assets: A dict (or None) mapping virtual filenames to their binary
+            contents. These are passed to MuJoCo's from_xml_string as the assets
+            parameter, allowing meshes and other binary files to be loaded without
+            writing to disk. Validated by FreeFlightUnsteadyProblem before being passed
+            here. The default is None, which provides no extra assets.
         :return: None
         """
-        omegas_BP1__E = _parameter_validation.threeD_number_vectorLike_return_float(
-            omegas_BP1__E, "omegas_BP1__E"
-        )
-        g_E = _parameter_validation.threeD_number_vectorLike_return_float(g_E, "g_E")
-        T_pas_BP1_CgP1_to_E_CgP1 = (
-            _parameter_validation.fourByFour_number_arrayLike_return_float(
-                T_pas_BP1_CgP1_to_E_CgP1, "T_pas_BP1_CgP1_to_E_CgP1"
-            )
-        )
-        vCg_E__E = _parameter_validation.threeD_number_vectorLike_return_float(
-            vCg_E__E, "vCg_E__E"
-        )
-        I_BP1_CgP1 = _parameter_validation.m_by_n_number_arrayLike_return_float(
-            I_BP1_CgP1, "I_BP1_CgP1", 3, 3
-        )
-
         start_key_frame_name: str = "start"
 
         omegasRad_BP1__E = np.deg2rad(omegas_BP1__E)
@@ -278,8 +271,8 @@ class MuJoCoModel:
     # --- Other methods ---
     def apply_loads(
         self,
-        forces_E: np.ndarray | Sequence[float | int],
-        moments_E_CgP1: np.ndarray | Sequence[float | int],
+        forces_E: np.ndarray,
+        moments_E_CgP1: np.ndarray,
     ) -> None:
         """Applies loads to the model.
 
@@ -295,24 +288,15 @@ class MuJoCoModel:
         The loads will persist until the next call to apply_loads or until they are
         explicitly cleared.
 
-        :param forces_E: An array-like of 3 numbers (int or float) representing the
-            forces (in Earth axes) to apply to the first Airplane at the first
-            Airplane's CG. Can be a tuple, list, or ndarray. Values are converted to
-            floats internally. The units are in Newtons.
-        :param moments_E_CgP1: An array-like of 3 numbers (int or float) representing
-            the moments (in Earth axes, relative to the first Airplane's CG) to apply to
-            the first Airplane at the first Airplane's CG. Can be a tuple, list, or
-            ndarray. Values are converted to floats internally. The units are in Newton
-            meters.
+        :param forces_E: A (3,) ndarray of floats representing the forces (in Earth
+            axes) to apply to the first Airplane at the first Airplane's CG, in Newtons.
+            Supplied by FreeFlightUnsteadyProblem.initialize_next_problem.
+        :param moments_E_CgP1: A (3,) ndarray of floats representing the moments (in
+            Earth axes, relative to the first Airplane's CG) to apply to the first
+            Airplane at the first Airplane's CG, in Newton meters. Supplied by
+            FreeFlightUnsteadyProblem.initialize_next_problem.
         :return: None
         """
-        forces_E = _parameter_validation.threeD_number_vectorLike_return_float(
-            forces_E, "forces_E"
-        )
-        moments_E_CgP1 = _parameter_validation.threeD_number_vectorLike_return_float(
-            moments_E_CgP1, "moments_E_CgP1"
-        )
-
         # Pack the force and moment into the model's 6-element xfrc_applied array.
         self._data.xfrc_applied[self._body_id][:] = np.hstack(
             [forces_E, moments_E_CgP1]

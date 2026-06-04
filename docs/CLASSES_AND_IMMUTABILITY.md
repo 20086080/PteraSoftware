@@ -40,7 +40,7 @@ Most attribute falls into one of these categories:
 
 A constructor parameter is not always retained as an attribute. Some parameters shape how an object is built but are deliberately discarded once construction finishes: they have no `__slots__` entry, appear in no attribute-category table, and are not serialized or deep copied, because nothing reads them after `__init__`. They are still validated exactly like their stored counterparts.
 
-`Wing`'s `explode_into_strips` is the current example. When True, it triggers `Wing.explode_wing` to replace the supplied wing cross sections with single-strip cross sections, then plays no further role. Storing it would only create a stale provenance flag, since an exploded Wing is indistinguishable from one defined with single-strip cross sections directly. So the validated value lives in a local variable inside `__init__` and is never assigned to `self`, while still passing through `boolLike_return_bool`, the same check applied to the stored bool-likes `symmetric` and `mirror_only`.
+`Wing`'s `explode_into_strips` is one example. When True, it triggers `Wing.explode_wing` to replace the supplied wing cross sections with single-strip cross sections, then plays no further role. Storing it would only create a stale provenance flag, since an exploded Wing is indistinguishable from one defined with single-strip cross sections directly. So the validated value lives in a local variable inside `__init__` and is never assigned to `self`, while still passing through `boolLike_return_bool`, the same check applied to the stored bool-likes `symmetric` and `mirror_only`.
 
 ### Key Decisions
 
@@ -225,6 +225,10 @@ These are allocated in `__init__` (the four load-history lists as empty lists, t
 | `moments_W_Cg`              | `list[np.ndarray]` | Per-step aerodynamic moment history, in wind axes about the CG                                             |
 | `momentCoefficients_W_Cg`   | `list[np.ndarray]` | Per-step aerodynamic moment coefficient history                                                            |
 | `_external_loads_validated` | `bool`             | Once-only guard; flips to `True` after the `external_loads_fn` return is validated on its first invocation |
+
+#### Construction-only parameters
+
+`extra_xml` and `mujoco_assets` are constructor parameters, not attributes: both are validated here for structural shape (each a dict or None; `extra_xml` keys restricted to the permitted injection points and values to strings; `mujoco_assets` mapping string filenames to bytes), then forwarded to the `MuJoCoModel` constructed in `__init__` and not stored on the problem, so neither has a slot or an attribute-category entry above. They are the only raw user input reaching the `MuJoCoModel`, which performs no validation of its own; deeper XML and asset-reference correctness is left to MuJoCo. See Construction-Only Parameters under Design Principles.
 
 ## CoreMovement / Movement Class (`_core.py`, `movements/movement.py`)
 
@@ -701,6 +705,10 @@ These are allocated in `__init__` (the four load-history lists as empty lists, t
 | Attribute | Type            | Notes                                                   |
 |-----------|-----------------|---------------------------------------------------------|
 | `data`    | `mujoco.MjData` | Mutated by `apply_loads`, `step`, `reset`, `mj_forward` |
+
+#### Construction-only parameters
+
+`extra_xml` and `mujoco_assets` are constructor parameters, not attributes: both shape the generated model during initialization and are then discarded, so neither has a slot or an attribute-category entry above. `extra_xml` is folded into `xml_str`, so its content survives indirectly through the stored XML, while `mujoco_assets` is passed to MuJoCo's `from_xml_string` and not retained at all, which is why an asset-based model cannot be rebuilt from `xml_str` alone. `MuJoCoModel` does not validate them: it is private and validates nothing, so they arrive already validated for structural shape from `FreeFlightUnsteadyProblem` (the only constructor), with deeper XML and asset-reference correctness left to MuJoCo. See Construction-Only Parameters under Design Principles.
 
 ---
 
