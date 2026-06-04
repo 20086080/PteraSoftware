@@ -13,6 +13,8 @@ Ptera Software is a fast, easy-to-use, and open-source package for analyzing fla
 - **High-Speed Computing**: JIT compilation via Numba for fast simulations
 - **Trim Analysis**: Automatic search for trim operating points
 - **Convergence Analysis**: Automatic search for converged parameters
+- **Aeroelasticity**: First-order structural wing deformation coupled to the UVLM via a torsional spring-mass-damper model (beta)
+- **Free Flight**: Six-degree-of-freedom flight dynamics from UVLM aerodynamics coupled to MuJoCo rigid-body dynamics (beta)
 - **GUI Interface**: Basic GUI available (beta stage)
 - **Visualization Tools**: 3D mesh visualization and 2D plotting of results
 - **Save and Load**: JSON serialization of solved simulations without pickle security risks
@@ -64,6 +66,7 @@ Requires Python 3.11, but active development is done in 3.13
     - `AXES_POINTS_AND_FRAMES.md`: Conventions and definitions for axis systems, points, and reference points: **READ BEFORE CONTRIBUTING ANY CODE, PARTICIPATING IN DISCUSSIONS REGARDING, OR PLANNING RELATED TO VECTOR-VALUED VARIABLES**
     - `CLASSES_AND_IMMUTABILITY.md`: Description of class structure and attribute immutability.
     - `CODE_STYLE.md`: Code style guidelines: **READ BEFORE CONTRIBUTING ANY CODE**
+    - `MUJOCO_CONVENTIONS.md`: Definitive interpretation of MuJoCo state variables and their mapping to Ptera Software's axes, points, frames, and transformations
     - `RUNNING_TESTS_AND_TYPE_CHECKS.md`: Instructions for running tests and type checks **READ BEFORE RUNNING TESTS OR TYPE CHECKS LOCALLY**
     - `TYPE_HINT_AND_DOCSTRING_STYLE.md`: Guidelines for type hinting and docstring formatting: **READ BEFORE CONTRIBUTING ANY CODE OR WRITING ANY DOCSTRINGS**
     - `WRITING_STYLE.md`: Guidelines for writing style in comments and documentation: **READ BEFORE WRITING ANY DOCUMENTATION, DOCSTRINGS, OR COMMENTS**
@@ -78,17 +81,17 @@ Requires Python 3.11, but active development is done in 3.13
         - `wing.py`: Wing class with symmetry processing
         - `wing_cross_section.py`: WingCrossSection class with validation
     - `movements/`: Package with movement classes (definitions for time-dependent motion)
-        - `aeroelastic_airplane_movement.py`: AeroelasticAirplaneMovement skeleton
-        - `aeroelastic_movement.py`: AeroelasticMovement skeleton
-        - `aeroelastic_operating_point_movement.py`: AeroelasticOperatingPointMovement skeleton
-        - `aeroelastic_wing_cross_section_movement.py`: AeroelasticWingCrossSectionMovement skeleton
-        - `aeroelastic_wing_movement.py`: AeroelasticWingMovement skeleton
+        - `aeroelastic_airplane_movement.py`: AeroelasticAirplaneMovement class
+        - `aeroelastic_movement.py`: AeroelasticMovement class
+        - `aeroelastic_operating_point_movement.py`: AeroelasticOperatingPointMovement class
+        - `aeroelastic_wing_cross_section_movement.py`: AeroelasticWingCrossSectionMovement class
+        - `aeroelastic_wing_movement.py`: AeroelasticWingMovement class
         - `airplane_movement.py`: AirplaneMovement class
-        - `free_flight_airplane_movement.py`: FreeFlightAirplaneMovement skeleton
-        - `free_flight_movement.py`: FreeFlightMovement skeleton
-        - `free_flight_operating_point_movement.py`: FreeFlightOperatingPointMovement skeleton
-        - `free_flight_wing_cross_section_movement.py`: FreeFlightWingCrossSectionMovement skeleton
-        - `free_flight_wing_movement.py`: FreeFlightWingMovement skeleton
+        - `free_flight_airplane_movement.py`: FreeFlightAirplaneMovement class
+        - `free_flight_movement.py`: FreeFlightMovement class
+        - `free_flight_operating_point_movement.py`: FreeFlightOperatingPointMovement class
+        - `free_flight_wing_cross_section_movement.py`: FreeFlightWingCrossSectionMovement class
+        - `free_flight_wing_movement.py`: FreeFlightWingMovement class
         - `movement.py`: Movement class
         - `operating_point_movement.py`: OperatingPointMovement class
         - `wing_cross_section_movement.py`: WingCrossSectionMovement class
@@ -104,7 +107,9 @@ Requires Python 3.11, but active development is done in 3.13
     - `_parameter_validation.py`: Input validation functions
     - `_serialization.py`: JSON serialization and deserialization (save/load)
     - `_transformations.py`: Coordinate transformations and rotations
+    - `aeroelastic_unsteady_ring_vortex_lattice_method.py`: Aeroelastic UVLM solver subclass with first-order structural deformation
     - `convergence.py`: Convergence analysis tools
+    - `free_flight_unsteady_ring_vortex_lattice_method.py`: Free flight UVLM solver subclass with six-DOF MuJoCo coupling
     - `operating_point.py`: OperatingPoint class
     - `output.py`: Visualization and results processing
     - `problems.py`: SteadyProblem and UnsteadyProblem classes
@@ -122,6 +127,8 @@ Requires Python 3.11, but active development is done in 3.13
             - `operating_point_fixtures.py`
             - `problem_fixtures.py`
             - `solver_fixtures.py`
+        - `test_aeroelastic_unsteady_ring_vortex_lattice_method.py`
+        - `test_free_flight_unsteady_ring_vortex_lattice_method.py`
         - `test_output.py`
         - `test_serialization_output.py`
         - `test_steady_convergence.py`
@@ -140,12 +147,21 @@ Requires Python 3.11, but active development is done in 3.13
     - `unit/`: Unit tests for individual classes and functions
         - `fixtures/`: Fixtures for unit tests
             - `aerodynamics_functions_fixtures.py`
+            - `aeroelastic_airplane_movement_fixtures.py`
+            - `aeroelastic_operating_point_movement_fixtures.py`
+            - `aeroelastic_wing_cross_section_movement_fixtures.py`
+            - `aeroelastic_wing_movement_fixtures.py`
             - `airplane_movement_fixtures.py`
             - `core_airplane_movement_fixtures.py`
             - `core_movement_fixtures.py`
             - `core_operating_point_movement_fixtures.py`
             - `core_wing_cross_section_movement_fixtures.py`
             - `core_wing_movement_fixtures.py`
+            - `free_flight_airplane_movement_fixtures.py`
+            - `free_flight_movement_fixtures.py`
+            - `free_flight_operating_point_movement_fixtures.py`
+            - `free_flight_wing_cross_section_movement_fixtures.py`
+            - `free_flight_wing_movement_fixtures.py`
             - `geometry_fixtures.py`
             - `movement_fixtures.py`
             - `mujoco_model_fixtures.py`
@@ -160,6 +176,13 @@ Requires Python 3.11, but active development is done in 3.13
             - `wing_cross_section_movement_fixtures.py`
             - `wing_movement_fixtures.py`
         - `test_aerodynamics_functions.py`
+        - `test_aeroelastic_airplane_movement.py`
+        - `test_aeroelastic_movement.py`
+        - `test_aeroelastic_operating_point_movement.py`
+        - `test_aeroelastic_unsteady_problem.py`
+        - `test_aeroelastic_unsteady_ring_vortex_lattice_method.py`
+        - `test_aeroelastic_wing_cross_section_movement.py`
+        - `test_aeroelastic_wing_movement.py`
         - `test_airfoil.py`
         - `test_airplane.py`
         - `test_airplane_movement.py`
@@ -172,6 +195,13 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_core_wing_movement.py`
         - `test_coupled_unsteady_problem.py`
         - `test_coupled_unsteady_ring_vortex_lattice_method.py`
+        - `test_free_flight_airplane_movement.py`
+        - `test_free_flight_movement.py`
+        - `test_free_flight_operating_point_movement.py`
+        - `test_free_flight_unsteady_problem.py`
+        - `test_free_flight_unsteady_ring_vortex_lattice_method.py`
+        - `test_free_flight_wing_cross_section_movement.py`
+        - `test_free_flight_wing_movement.py`
         - `test_functions.py`
         - `test_logging.py`
         - `test_movement.py`
@@ -185,6 +215,8 @@ Requires Python 3.11, but active development is done in 3.13
         - `test_problems.py`
         - `test_serialization.py`
         - `test_slots.py`
+        - `test_steady_horseshoe_vortex_lattice_method.py`
+        - `test_steady_ring_vortex_lattice_method.py`
         - `test_transformations.py`
         - `test_unsteady_ring_vortex_lattice_method.py`
         - `test_wing.py`
