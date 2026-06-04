@@ -441,5 +441,101 @@ class TestMuJoCoModelReset(unittest.TestCase):
         self.assertAlmostEqual(reset_state["time"], initial_state["time"], places=14)
 
 
+class TestMuJoCoModelConventions(unittest.TestCase):
+    """This class contains methods verifying the MuJoCo axis conventions documented in
+    MUJOCO_CONVENTIONS.md.
+
+    Each test runs through MuJoCoModel's own translation between MuJoCo's freejoint state
+    and Ptera Software's conventions (the qpos quaternion construction, get_state's xmat
+    handling, and apply_loads's xfrc_applied packing), so it pins that contract rather
+    than just MuJoCo. The model is pitched 90 degrees about the y axis, which places the
+    body's +x direction along Earth -z, so a body-axes quantity and its Earth-axes
+    counterpart point in clearly different directions. Assertions are directional rather
+    than exact to stay robust to the integrator's small numerical drift.
+    """
+
+    def setUp(self):
+        """Set up a pitched MuJoCoModel at rest for the convention tests."""
+        self.model = mujoco_model_fixtures.make_pitched_mujoco_model_fixture()
+
+    def test_xmat_columns_are_body_axes_in_earth_axes(self):
+        """Test that xmat's columns are the body axes expressed in Earth axes.
+
+        With a 90 degree pitch about the y axis, the body's +x direction points along
+        Earth -z, its +y direction along Earth +y, and its +z direction along Earth +x.
+        """
+        xmat = self.model.data.xmat[self.model.body_id].reshape(3, 3)
+        npt.assert_allclose(xmat[:, 0], [0.0, 0.0, -1.0], atol=1e-10)
+        npt.assert_allclose(xmat[:, 1], [0.0, 1.0, 0.0], atol=1e-10)
+        npt.assert_allclose(xmat[:, 2], [1.0, 0.0, 0.0], atol=1e-10)
+
+    def test_angular_velocity_qvel_is_in_body_axes(self):
+        """Test that qvel[3:6] is interpreted in body axes, not Earth axes.
+
+        An angular velocity along the body's +x direction is applied to the pitched
+        model, where the body's +x direction points along Earth -z. If qvel[3:6] were in
+        Earth axes the body would spin about Earth +x; because it is in body axes, the
+        body spins about Earth -z.
+        """
+        model = mujoco_model_fixtures.make_pitched_mujoco_model_fixture(
+            omegas_BP1__E=(90.0, 0.0, 0.0)
+        )
+
+        for _ in range(20):
+            model.step()
+
+        state = model.get_state()
+        R_pas_BP1_to_E = state["R_pas_E_to_BP1"].T
+        omegas_E__E = R_pas_BP1_to_E @ state["omegas_BP1__E"]
+
+        # The spin is about Earth -z, so the Earth-axes angular velocity is dominated by
+        # a negative z component with negligible x and y components.
+        self.assertLess(omegas_E__E[2], 0.0)
+        self.assertGreater(abs(omegas_E__E[2]), 10.0 * abs(omegas_E__E[0]))
+        self.assertGreater(abs(omegas_E__E[2]), 10.0 * abs(omegas_E__E[1]))
+
+    def test_applied_torque_is_in_earth_axes(self):
+        """Test that an applied torque is in Earth axes, independent of orientation.
+
+        A torque about Earth +x is applied to the pitched model. If the torque were in
+        body axes it would act about the body's +x direction (Earth -z); because it is in
+        Earth axes, the body accelerates about Earth +x regardless of its orientation.
+        """
+        self.model.apply_loads([0.0, 0.0, 0.0], [1.0, 0.0, 0.0])
+
+        for _ in range(20):
+            self.model.step()
+
+        state = self.model.get_state()
+        R_pas_BP1_to_E = state["R_pas_E_to_BP1"].T
+        omegas_E__E = R_pas_BP1_to_E @ state["omegas_BP1__E"]
+
+        # The body spins up about Earth +x, so the Earth-axes angular velocity is
+        # dominated by a positive x component with negligible y and z components.
+        self.assertGreater(omegas_E__E[0], 0.0)
+        self.assertGreater(abs(omegas_E__E[0]), 10.0 * abs(omegas_E__E[1]))
+        self.assertGreater(abs(omegas_E__E[0]), 10.0 * abs(omegas_E__E[2]))
+
+    def test_applied_force_is_in_earth_axes(self):
+        """Test that an applied force is in Earth axes, independent of orientation.
+
+        A force along Earth +x is applied to the pitched model. If the force were in body
+        axes it would act along the body's +x direction (Earth -z); because it is in
+        Earth axes, the body accelerates along Earth +x regardless of its orientation.
+        """
+        self.model.apply_loads([1.0, 0.0, 0.0], [0.0, 0.0, 0.0])
+
+        for _ in range(20):
+            self.model.step()
+
+        velocity_E__E = self.model.get_state()["velocity_E__E"]
+
+        # The body accelerates along Earth +x, so the velocity is dominated by a positive
+        # x component with negligible y and z components.
+        self.assertGreater(velocity_E__E[0], 0.0)
+        self.assertGreater(abs(velocity_E__E[0]), 10.0 * abs(velocity_E__E[1]))
+        self.assertGreater(abs(velocity_E__E[0]), 10.0 * abs(velocity_E__E[2]))
+
+
 if __name__ == "__main__":
     unittest.main()
