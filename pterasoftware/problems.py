@@ -111,16 +111,16 @@ class SteadyProblem:
 
                 for panel in np.ravel(wing.panels):
                     panel.Frpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
-                        T_pas_G_Cg_to_GP1_CgP1, panel.Frpp_G_Cg, has_point=True
+                        T_pas_G_Cg_to_GP1_CgP1, panel.Frpp_G_Cg, is_position=True
                     )
                     panel.Flpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
-                        T_pas_G_Cg_to_GP1_CgP1, panel.Flpp_G_Cg, has_point=True
+                        T_pas_G_Cg_to_GP1_CgP1, panel.Flpp_G_Cg, is_position=True
                     )
                     panel.Blpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
-                        T_pas_G_Cg_to_GP1_CgP1, panel.Blpp_G_Cg, has_point=True
+                        T_pas_G_Cg_to_GP1_CgP1, panel.Blpp_G_Cg, is_position=True
                     )
                     panel.Brpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
-                        T_pas_G_Cg_to_GP1_CgP1, panel.Brpp_G_Cg, has_point=True
+                        T_pas_G_Cg_to_GP1_CgP1, panel.Brpp_G_Cg, is_position=True
                     )
 
     # --- Immutable: read only properties ---
@@ -616,7 +616,7 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
             * _transformations.apply_T_to_vectors(
                 initial_operating_point.T_pas_GP1_CgP1_to_E_CgP1,
                 initial_operating_point.vInf_GP1__E,
-                has_point=False,
+                is_position=False,
             ),
             I_BP1_CgP1=self._I_BP1_CgP1,
             delta_time=movement.delta_time,
@@ -759,10 +759,10 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
                 # 3. Transform loads from wind axes to Earth axes.
                 T_pas_W_CgP1_to_E_CgP1 = current_operating_point.T_pas_W_CgP1_to_E_CgP1
                 totalForces_E = _transformations.apply_T_to_vectors(
-                    T_pas_W_CgP1_to_E_CgP1, totalForces_W, has_point=False
+                    T_pas_W_CgP1_to_E_CgP1, totalForces_W, is_position=False
                 )
                 totalMoments_E_CgP1 = _transformations.apply_T_to_vectors(
-                    T_pas_W_CgP1_to_E_CgP1, totalMoments_W_CgP1, has_point=True
+                    T_pas_W_CgP1_to_E_CgP1, totalMoments_W_CgP1, is_position=False
                 )
 
                 # 4. Add the weight force in Earth axes. The gravitational force is
@@ -811,7 +811,7 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
             )
             vInf_E__E = -velocity_E__E
             vInf_BP1__E = _transformations.apply_T_to_vectors(
-                T_pas_E_CgP1_to_BP1_CgP1, vInf_E__E, has_point=False
+                T_pas_E_CgP1_to_BP1_CgP1, vInf_E__E, is_position=False
             )
             alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(
                 vInf_BP1__E, vCg__E

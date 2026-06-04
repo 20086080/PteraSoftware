@@ -980,7 +980,7 @@ class TestComposeTPas(unittest.TestCase):
         )
 
         c_B_b = _transformations.apply_T_to_vectors(
-            T_pas_A_a_to_B_b, c_A_a, has_point=True
+            T_pas_A_a_to_B_b, c_A_a, is_position=True
         )
 
         # Expected value calculated using CAD model
@@ -1142,7 +1142,7 @@ class TestComposeTAct(unittest.TestCase):
 
         T_act = _transformations.compose_T_act(rot_T_act, trans_T_act)
 
-        cPrime_G = _transformations.apply_T_to_vectors(T_act, c_G, has_point=True)
+        cPrime_G = _transformations.apply_T_to_vectors(T_act, c_G, is_position=True)
 
         # Expected known value. If this expected value is confusing to you, and you
         # expect it to instead by np.array([-2.0, 11.0, 3.0]), see the note in the
@@ -1436,7 +1436,7 @@ class TestApplyTToVectors(unittest.TestCase):
     """This class contains methods for testing the apply_T_to_vectors function."""
 
     def test_position_vector_transformation(self):
-        """Tests transformation of position vectors (has_point=True).
+        """Tests transformation of position vectors (is_position=True).
 
         :return: None
         """
@@ -1453,7 +1453,7 @@ class TestApplyTToVectors(unittest.TestCase):
         npt.assert_array_equal(transformed_position, expected)
 
     def test_direction_vector_transformation(self):
-        """Tests transformation of direction vectors (has_point=False).
+        """Tests transformation of direction vectors (is_position=False).
 
         :return: None
         """
@@ -1574,7 +1574,7 @@ class TestApplyTToVectors(unittest.TestCase):
         self.assertEqual(result_single.shape, (3,))
         self.assertIsInstance(result_single, np.ndarray)
 
-        # Test consistency between has_point=True and has_point=False
+        # Test consistency between is_position=True and is_position=False
         result_position = _transformations.apply_T_to_vectors(T, single_vector, True)
         result_direction = _transformations.apply_T_to_vectors(T, single_vector, False)
         self.assertEqual(len(result_position), 3)
@@ -1619,7 +1619,7 @@ class TestApplyTToVectors(unittest.TestCase):
         self.assertEqual(result_3d.shape, (2, 2, 3))
 
     def test_position_vs_direction_arrays(self):
-        """Tests that has_point parameter works correctly with arrays.
+        """Tests that is_position parameter works correctly with arrays.
 
         :return: None
         """

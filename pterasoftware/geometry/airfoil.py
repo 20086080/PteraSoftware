@@ -322,13 +322,13 @@ class Airfoil:
             _transformations.apply_T_to_vectors(
                 postHingeFlippedUpperOutline_T_act,
                 postHingeFlippedUpperOutline_Wcs_lp,
-                has_point=True,
+                is_position=True,
             )
         )[:, [0, 2]]
         flappedPostHingeLowerOutline_A_lp = _transformations.apply_T_to_vectors(
             postHingeLowerOutline_T_act,
             postHingeLowerOutline_Wcs_lp,
-            has_point=True,
+            is_position=True,
         )[:, [0, 2]]
 
         flappedFlippedUpperOutline_A_lp = np.vstack(

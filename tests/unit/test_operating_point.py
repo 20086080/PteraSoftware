@@ -1478,7 +1478,7 @@ class TestOperatingPoint(unittest.TestCase):
     def test_surfaceNormal_GP1_translation_does_not_affect_normal(self):
         """Test that changing CgP1_E_Eo does not affect surfaceNormal_GP1.
 
-        The normal is a free vector, so it should be independent of the CG
+        The normal is a non-position vector, so it should be independent of the CG
         position.
         """
         op_no_offset = ps.operating_point.OperatingPoint(
@@ -1613,7 +1613,7 @@ class TestOperatingPoint(unittest.TestCase):
         # A test point in GP1_CgP1.
         point = np.array([1.0, 2.0, 3.0])
 
-        reflected = _transformations.apply_T_to_vectors(T, point, has_point=True)
+        reflected = _transformations.apply_T_to_vectors(T, point, is_position=True)
 
         # The surface point in GP1_CgP1 is at z = -10 (10 meters below CgP1 in
         # GP1 z, corresponding to the ground at z = 0 in Earth). The surface
@@ -1624,9 +1624,9 @@ class TestOperatingPoint(unittest.TestCase):
         npt.assert_allclose(reflected, expected, atol=1e-12)
 
     def test_surfaceReflect_T_act_GP1_CgP1_reflects_velocity(self):
-        """Test that the reflection matrix correctly reflects a free vector.
+        """Test that the reflection matrix correctly reflects a non-position vector.
 
-        Free vector reflection should only negate the component along the
+        Non-position vector reflection should only negate the component along the
         surface normal, with no translational contribution.
         """
         from pterasoftware import _transformations
@@ -1637,7 +1637,7 @@ class TestOperatingPoint(unittest.TestCase):
         # The surface normal in GP1 is (0, 0, 1) for this fixture. Reflecting
         # a velocity vector should negate only the z component.
         velocity = np.array([5.0, -3.0, 7.0])
-        reflected = _transformations.apply_T_to_vectors(T, velocity, has_point=False)
+        reflected = _transformations.apply_T_to_vectors(T, velocity, is_position=False)
 
         expected = np.array([5.0, -3.0, -7.0])
         npt.assert_allclose(reflected, expected, atol=1e-12)
@@ -1650,8 +1650,8 @@ class TestOperatingPoint(unittest.TestCase):
         T = op.surfaceReflect_T_act_GP1_CgP1
 
         point = np.array([1.0, 2.0, 3.0])
-        once = _transformations.apply_T_to_vectors(T, point, has_point=True)
-        twice = _transformations.apply_T_to_vectors(T, once, has_point=True)
+        once = _transformations.apply_T_to_vectors(T, point, is_position=True)
+        twice = _transformations.apply_T_to_vectors(T, once, is_position=True)
 
         npt.assert_allclose(twice, point, atol=1e-12)
 
@@ -1689,7 +1689,7 @@ class TestOperatingPoint(unittest.TestCase):
         # Reflecting it should return the same point.
         surface_point = op.surfacePoint_GP1_CgP1
         reflected = _transformations.apply_T_to_vectors(
-            T, surface_point, has_point=True
+            T, surface_point, is_position=True
         )
         npt.assert_allclose(reflected, surface_point, atol=1e-12)
 

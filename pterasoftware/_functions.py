@@ -296,10 +296,10 @@ def process_solver_loads(
         theseMoments_GP1_CgP1 = stackPanelMoments_GP1_CgP1[panel_num, :]
 
         theseForces_W = _transformations.apply_T_to_vectors(
-            T_pas_GP1_CgP1_to_W_CgP1, theseForces_GP1, has_point=False
+            T_pas_GP1_CgP1_to_W_CgP1, theseForces_GP1, is_position=False
         )
         theseMoments_W_CgP1 = _transformations.apply_T_to_vectors(
-            T_pas_GP1_CgP1_to_W_CgP1, theseMoments_GP1_CgP1, has_point=True
+            T_pas_GP1_CgP1_to_W_CgP1, theseMoments_GP1_CgP1, is_position=False
         )
 
         # Update this Panel's loads.
@@ -325,12 +325,12 @@ def process_solver_loads(
         airplane.forces_W = _transformations.apply_T_to_vectors(
             T_pas_GP1_CgP1_to_W_CgP1,
             stackAirplaneForces_GP1[airplane_num],
-            has_point=False,
+            is_position=False,
         )
         airplane.moments_W_CgP1 = _transformations.apply_T_to_vectors(
             T_pas_GP1_CgP1_to_W_CgP1,
             stackAirplaneMoments_GP1_CgP1[airplane_num],
-            has_point=True,
+            is_position=False,
         )
 
     # Iterate through the Airplanes and calculate each one's load coefficients.

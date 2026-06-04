@@ -326,7 +326,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
             stackReflectedCpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 self._stackCpp_GP1_CgP1,
-                has_point=True,
+                is_position=True,
             )
             gridImageVIndCpp_GP1__E = (
                 _aerodynamics_functions.expanded_velocities_from_horseshoe_vortices(
@@ -344,7 +344,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
             gridNormVIndCpp_GP1__E += _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 gridImageVIndCpp_GP1__E,
-                has_point=False,
+                is_position=False,
             )
 
         unexpected_singularity_counts = np.copy(singularity_counts)
@@ -439,7 +439,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
             stackReflectedP_GP1_CgP1 = _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 stackP_GP1_CgP1,
-                has_point=True,
+                is_position=True,
             )
             stackImageVInd_GP1__E = (
                 _aerodynamics_functions.collapsed_velocities_from_horseshoe_vortices(
@@ -457,7 +457,7 @@ class SteadyHorseshoeVortexLatticeMethodSolver:
             stackVInd_GP1__E += _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 stackImageVInd_GP1__E,
-                has_point=False,
+                is_position=False,
             )
 
         return cast(np.ndarray, stackVInd_GP1__E + self.vInf_GP1__E)

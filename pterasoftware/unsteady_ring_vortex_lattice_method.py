@@ -904,7 +904,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             stackReflectedCpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 self.stackCpp_GP1_CgP1,
-                has_point=True,
+                is_position=True,
             )
             gridImageVIndCpp_GP1__E = (
                 _aerodynamics_functions.expanded_velocities_from_ring_vortices(
@@ -923,7 +923,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             gridNormVIndCpp_GP1_E += _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 gridImageVIndCpp_GP1__E,
-                has_point=False,
+                is_position=False,
             )
 
         unexpected_singularity_counts = np.copy(singularity_counts)
@@ -1086,7 +1086,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
                 stackReflectedCpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
                     surfaceReflect_T_act_GP1_CgP1,
                     self.stackCpp_GP1_CgP1,
-                    has_point=True,
+                    is_position=True,
                 )
                 currentStackImageWakeV_GP1_E = (
                     _aerodynamics_functions.collapsed_velocities_from_ring_vortices(
@@ -1105,7 +1105,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
                 currentStackWakeV_GP1_E += _transformations.apply_T_to_vectors(
                     surfaceReflect_T_act_GP1_CgP1,
                     currentStackImageWakeV_GP1_E,
-                    has_point=False,
+                    is_position=False,
                 )
 
             unexpected_singularity_counts = np.copy(singularity_counts)
@@ -1231,7 +1231,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             stackReflectedP_GP1_CgP1 = _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 stackP_GP1_CgP1,
-                has_point=True,
+                is_position=True,
             )
             stackImageBoundRingVInd_GP1_E = (
                 _aerodynamics_functions.collapsed_velocities_from_ring_vortices(
@@ -1250,7 +1250,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             stackBoundRingVInd_GP1_E += _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 stackImageBoundRingVInd_GP1_E,
-                has_point=False,
+                is_position=False,
             )
             stackImageWakeRingVInd_GP1_E = (
                 _aerodynamics_functions.collapsed_velocities_from_ring_vortices(
@@ -1269,7 +1269,7 @@ class UnsteadyRingVortexLatticeMethodSolver:
             stackWakeRingVInd_GP1_E += _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 stackImageWakeRingVInd_GP1_E,
-                has_point=False,
+                is_position=False,
             )
 
         return cast(

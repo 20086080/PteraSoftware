@@ -415,10 +415,10 @@ def draw(
                     # For free flight, map the segment into Earth axes.
                     if T_pas_GP1_CgP1_to_E_Eo is not None:
                         point = _transformations.apply_T_to_vectors(
-                            T_pas_GP1_CgP1_to_E_Eo, point, has_point=True
+                            T_pas_GP1_CgP1_to_E_Eo, point, is_position=True
                         )
                         last_point = _transformations.apply_T_to_vectors(
-                            T_pas_GP1_CgP1_to_E_Eo, last_point, has_point=True
+                            T_pas_GP1_CgP1_to_E_Eo, last_point, is_position=True
                         )
 
                     # Add a line to make this segment of the streamline.
@@ -439,12 +439,12 @@ def draw(
                         reflected_point = _transformations.apply_T_to_vectors(
                             T_reflect,
                             point,
-                            has_point=True,
+                            is_position=True,
                         )
                         reflected_last_point = _transformations.apply_T_to_vectors(
                             T_reflect,
                             last_point,
-                            has_point=True,
+                            is_position=True,
                         )
                         plotter.add_mesh(
                             pv.Line(
@@ -1954,7 +1954,7 @@ def _transform_mesh(
     transformed.points = _transformations.apply_T_to_vectors(
         T_pas,
         mesh.points,
-        has_point=True,
+        is_position=True,
     )
     return transformed
 

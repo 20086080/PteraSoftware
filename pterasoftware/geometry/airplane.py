@@ -576,10 +576,10 @@ class Airplane:
 
                 assert wing.T_pas_Wn_Ler_to_G_Cg is not None
                 airfoilOutline_G_Cg = _transformations.apply_T_to_vectors(
-                    wing.T_pas_Wn_Ler_to_G_Cg, airfoilOutline_Wn_ler, has_point=True
+                    wing.T_pas_Wn_Ler_to_G_Cg, airfoilOutline_Wn_ler, is_position=True
                 )
                 airfoilMcl_G_Cg = _transformations.apply_T_to_vectors(
-                    wing.T_pas_Wn_Ler_to_G_Cg, airfoilMcl_Wn_ler, has_point=True
+                    wing.T_pas_Wn_Ler_to_G_Cg, airfoilMcl_Wn_ler, is_position=True
                 )
 
                 these_airfoilOutlines_G_Cg.append(airfoilOutline_G_Cg)
@@ -828,7 +828,7 @@ class Airplane:
                     passive=False,
                 ),
                 GY_G,
-                has_point=False,
+                is_position=False,
             )
             WnY_G = _transformations.apply_T_to_vectors(
                 _transformations.generate_rot_T(
@@ -838,7 +838,7 @@ class Airplane:
                     order="xyz",
                 ),
                 GsY_G,
-                has_point=False,
+                is_position=False,
             )
 
             # If symmetryNormal_G is parallel with WnY_G, their cross product will be

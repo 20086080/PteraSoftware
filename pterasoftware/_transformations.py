@@ -21,22 +21,23 @@ _QUAT_BRANCH_THRESHOLD = 0.0
 _GIMBAL_LOCK_THRESHOLD = 1.0 - 1.0e-12
 
 
-def _generate_homogs(vectors_A: np.ndarray, has_point: bool) -> np.ndarray:
+def _generate_homogs(vectors_A: np.ndarray, is_position: bool) -> np.ndarray:
     """Converts 3D vector(s) to homogeneous coordinates for use with (4,4)
     transformation matrices.
 
     Homogeneous coordinates extend 3D vectors to 4D by adding a fourth component. For
-    vectors relative to a reference point (has_point=True), such as position vectors,
-    the fourth component is 1.0. For free vectors (has_point=False), such as velocity or
-    force vectors, the fourth component is 0.0. This allows (4,4) transformation
-    matrices to handle both translations and rotations in a unified framework.
+    position vectors (is_position=True), which represent a point, the fourth component
+    is 1.0 so the transform's translation applies. Otherwise (is_position=False, for
+    example a velocity, force, or moment), the fourth component is 0.0 so only the
+    rotation applies. This allows (4,4) transformation matrices to handle both
+    translations and rotations in a unified framework.
 
     This function handles both single vectors and arrays of vectors efficiently.
 
     :param vectors_A: A (...,3) ndarray of floats representing the vector(s) to convert
         to homogeneous coordinates.
-    :param has_point: Set this to True for vectors that are relative to a reference
-        point, or False for free vectors
+    :param is_position: True if the vector is a position (a point), False otherwise (for
+        example a velocity, force, or moment).
     :return: A (...,4) ndarray of floats (with same leading dimensions as the input)
         representing the vector(s) in homogeneous coordinates.
     """
@@ -47,7 +48,7 @@ def _generate_homogs(vectors_A: np.ndarray, has_point: bool) -> np.ndarray:
     vectorsHomog_A[..., :3] = vectors_A
 
     # Set the homogeneous coordinate.
-    if has_point:
+    if is_position:
         vectorsHomog_A[..., -1] = 1.0
 
     return vectorsHomog_A
@@ -63,25 +64,25 @@ def generate_rot_T(
 
     **Passive Use-Case:**
 
-    Let ``r_A`` be a free vector in "A" axes, but we want to find ``r_B``, which is the
-    same vector, but expressed in "B" axes. The orientation of "B" axes relative to "A"
-    axes is defined by the angle vector ``angles`` (with rotations in order and type
-    defined by the variables ``order`` and ``intrinsic``). Then:
+    Let ``r_A`` be a non-position vector in "A" axes, but we want to find ``r_B``, which
+    is the same vector, but expressed in "B" axes. The orientation of "B" axes relative
+    to "A" axes is defined by the angle vector ``angles`` (with rotations in order and
+    type defined by the variables ``order`` and ``intrinsic``). Then:
 
     | ``T_pas_A_to_B=generate_rot_T(angles,True,intrinsic,order)``
 
-    | ``r_B=apply_T_to_vectors(T_pas_A_to_B,r_A,has_point=False)``
+    | ``r_B=apply_T_to_vectors(T_pas_A_to_B,r_A,is_position=False)``
 
     **Active Use-Case:**
 
-    Let ``r_A`` be a free vector in "A" axes, but we want to find ``rPrime_A``, which is
-    ``r_A`` rotated by the specified sequence: about the fixed "A" axes if
+    Let ``r_A`` be a non-position vector in "A" axes, but we want to find ``rPrime_A``,
+    which is ``r_A`` rotated by the specified sequence: about the fixed "A" axes if
     ``intrinsic=False``, or about the current, newly-rotated axes if ``intrinsic=True``,
     with angles given by ``angles`` and the sequence defined by ``order``. Then:
 
     | ``rot_T_act=generate_rot_T(angles,False,intrinsic,order)``
 
-    | ``rPrime_A=apply_T_to_vectors(rot_T_act,r_A,has_point=False)``
+    | ``rPrime_A=apply_T_to_vectors(rot_T_act,r_A,is_position=False)``
 
     :param angles: A (3,) ndarray of floats representing the rotation angles, with signs
         defined using the right-hand rule. For `passive=True`, it describes the
@@ -178,9 +179,9 @@ def generate_2D_rot_R(
 
     **Passive Use-Case:**
 
-    Let ``r_A`` be a 2D free vector in "A" axes, but we want to find ``r_B``, which is
-    the same vector, but expressed in "B" axes. The orientation of "B" axes relative to
-    "A" axes is defined by the angle ``angle``. Then:
+    Let ``r_A`` be a 2D non-position vector in "A" axes, but we want to find ``r_B``,
+    which is the same vector, but expressed in "B" axes. The orientation of "B" axes
+    relative to "A" axes is defined by the angle ``angle``. Then:
 
     | ``R_pas_A_to_B=generate_2D_rot_R(angle,True)``
 
@@ -188,8 +189,8 @@ def generate_2D_rot_R(
 
     **Active Use-Case:**
 
-    Let ``r_A`` be a 2D free vector in "A" axes, but we want to find ``rPrime_A``, which
-    is ``r_A`` rotated by ``angle``. Then:
+    Let ``r_A`` be a 2D non-position vector in "A" axes, but we want to find
+    ``rPrime_A``, which is ``r_A`` rotated by ``angle``. Then:
 
     | ``rot_R_act=generate_2D_rot_R(angle,False)``
 
@@ -235,7 +236,7 @@ def generate_trans_T(
 
     | ``T_pas_A_a_to_A_b=generate_trans_T(translations,True)``
 
-    | ``c_A_b=apply_T_to_vectors(T_pas_A_a_to_A_b,c_A_a,has_point=True)``
+    | ``c_A_b=apply_T_to_vectors(T_pas_A_a_to_A_b,c_A_a,is_position=True)``
 
     **Active Use-Case:**
 
@@ -245,7 +246,7 @@ def generate_trans_T(
 
     | ``translate_T_act=generate_trans_T(translations,False)``
 
-    | ``cPrime_A_a=apply_T_to_vectors(translate_T_act,c_A_a,has_point=True)``
+    | ``cPrime_A_a=apply_T_to_vectors(translate_T_act,c_A_a,is_position=True)``
 
     :param translations: A (3,) ndarray of floats representing the translations. For
         ``passive=True``, this is the position of the "b" point (in "A" axes, relative
@@ -285,7 +286,7 @@ def generate_reflect_T(
 
     | ``T_pas_A_a_to_B_b=generate_reflect_T(plane_point_A_a,plane_normal_A,True)``
 
-    | ``c_B_b=apply_T_to_vectors(T_pas_A_a_to_B_b,c_A_a,has_point=True)``
+    | ``c_B_b=apply_T_to_vectors(T_pas_A_a_to_B_b,c_A_a,is_position=True)``
 
     **Active Use-Case:**
 
@@ -296,7 +297,7 @@ def generate_reflect_T(
 
     | ``reflect_T_act=generate_reflect_T(plane_point_A_a,plane_normal_A,False)``
 
-    | ``c_A_a=apply_T_to_vectors(reflect_T_act,c_A_a,has_point=True)``
+    | ``c_A_a=apply_T_to_vectors(reflect_T_act,c_A_a,is_position=True)``
 
     **Notes:**
 
@@ -463,8 +464,8 @@ def invert_T_pas(T_pas: np.ndarray) -> np.ndarray:
 
     **Notes:**
 
-    For vectors relative to a reference point (``has_point=True``), such as position
-    vectors, the translation component matters. For free vectors (``has_point=False``),
+    For position vectors (``is_position=True``), the translation component matters.
+    Otherwise (``is_position=False``, for example a velocity, force, or moment),
     translation has no effect because the homogeneous last coordinate is 0.0.
 
     :param T_pas: A (4,4) ndarray of floats representing a passive homogeneous transform
@@ -480,17 +481,17 @@ def invert_T_act(T_act: np.ndarray) -> np.ndarray:
     """Inverts an active homogeneous transform.
 
     An active transform re-orients and optionally translates a quantity within the same
-    axis system. For example, if ``T_act`` transforms the free vector ``q_A`` (in "A"
-    axes) to the free vector ``qPrime_A`` (in "A" axes), then:
+    axis system. For example, if ``T_act`` transforms the non-position vector ``q_A``
+    (in "A" axes) to the non-position vector ``qPrime_A`` (in "A" axes), then:
 
-    | ``q_A=apply_T_to_vectors(invert_T_act(T_act),qPrime_A,has_point=False)``
+    | ``q_A=apply_T_to_vectors(invert_T_act(T_act),qPrime_A,is_position=False)``
 
     **Notes:**
 
-    For vectors relative to a reference point (``has_point=True``), such as position
-    vectors, both orientation and translation are undone. For free vectors
-    (``has_point=False``), only the orientation is undone; translation has no effect
-    because the homogeneous last coordinate is 0.0.
+    For position vectors (``is_position=True``), both orientation and translation are
+    undone. Otherwise (``is_position=False``, for example a velocity, force, or moment),
+    only the orientation is undone; translation has no effect because the homogeneous
+    last coordinate is 0.0.
 
     :param T_act: A (4,4) ndarray of floats representing an active homogeneous transform
         that operated within the current axis system.
@@ -539,7 +540,7 @@ def convert_T_act_to_T_pas(
 def apply_T_to_vectors(
     T: np.ndarray,
     vectors_A: np.ndarray,
-    has_point: bool,
+    is_position: bool,
 ) -> np.ndarray:
     """Applies a homogeneous transform to 3-element vector(s) and returns 3-element
     vector(s).
@@ -555,12 +556,13 @@ def apply_T_to_vectors(
         passive).
     :param vectors_A: A (...,3) ndarray of floats representing the vector(s) to
         transform. Can be a single (3,) vector or a (...,3) array of vectors.
-    :param has_point: Set this to True for vectors relative to a reference point, such
-        as position vectors, or False for free vectors.
+    :param is_position: True if the vector is a position (a point), so the transform's
+        translation applies. False otherwise (for example a velocity, force, or moment),
+        so only the rotation applies.
     :return: A ndarray of floats with same shape as ``vectors_A`` representing the
         transformed vector(s).
     """
-    vectorsHomog_A = _generate_homogs(vectors_A, has_point)
+    vectorsHomog_A = _generate_homogs(vectors_A, is_position)
     return np.asarray(
         np.einsum("ij,...j->...i", T, vectorsHomog_A)[..., :3], dtype=float
     )

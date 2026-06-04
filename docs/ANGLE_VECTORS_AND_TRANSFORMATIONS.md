@@ -134,7 +134,7 @@ See the section on angle vectors for examples that can be adapted to form text r
 
 * Ptera Software uses two active matrix types:
     * [variable name]\_R\_act: 2x2 or 3x3 rotation matrices that are used to rotate a vector in its current axis system.
-    * [variable name]\_T\_act: 4x4 homogeneous transformation that operates within a single axis system. It applies a rigid orientation change (rotation or reflection) and, for quantities tied to a reference point, may also apply a translation. It never changes which axes a vector is expressed in and never introduces scaling or shear. The translation has no effect on free vectors (e.g., forces).
+    * [variable name]\_T\_act: 4x4 homogeneous transformation that operates within a single axis system. It applies a rigid orientation change (rotation or reflection) and, for quantities tied to a reference point, may also apply a translation. It never changes which axes a vector is expressed in and never introduces scaling or shear. The translation has no effect on non-position vectors (e.g., forces and moments).
 
 #### Active Matrix Name Patterns
 
