@@ -67,11 +67,9 @@ class TestMuJoCoModelInit(unittest.TestCase):
         """
         npt.assert_allclose(self.model.initial_qvel[3:6], [0.0, 0.0, 0.0], atol=1e-14)
 
-    def test_mass_computed_from_weight_and_gravity(self):
-        """Test that the MuJoCo body mass equals weight divided by gravity magnitude."""
-        weight = mujoco_model_fixtures.make_basic_mujoco_model_weight_fixture()
-        g_mag = 9.80665
-        expected_mass = weight / g_mag
+    def test_mass_set_on_model(self):
+        """Test that the MuJoCo body mass equals the supplied mass."""
+        expected_mass = mujoco_model_fixtures.make_basic_mujoco_model_mass_fixture()
 
         body_id = self.model.body_id
         actual_mass = self.model.model.body_mass[body_id]
@@ -91,9 +89,8 @@ class TestMuJoCoModelInit(unittest.TestCase):
         extra_xml = {"visual": '<visual><quality shadowsize="2048"/></visual>'}
         model = _mujoco_model.MuJoCoModel(
             name="extra_xml_test",
-            weight=9.80665,
+            mass=1.0,
             omegas_BP1__E=(0.0, 0.0, 0.0),
-            g_E=(0.0, 0.0, 9.80665),
             T_pas_BP1_CgP1_to_E_CgP1=np.eye(4, dtype=float),
             vCg_E__E=(10.0, 0.0, 0.0),
             I_BP1_CgP1=np.eye(3, dtype=float),
@@ -126,9 +123,8 @@ class TestMuJoCoModelInit(unittest.TestCase):
         }
         model = _mujoco_model.MuJoCoModel(
             name="assets_test",
-            weight=9.80665,
+            mass=1.0,
             omegas_BP1__E=(0.0, 0.0, 0.0),
-            g_E=(0.0, 0.0, 9.80665),
             T_pas_BP1_CgP1_to_E_CgP1=np.eye(4, dtype=float),
             vCg_E__E=(10.0, 0.0, 0.0),
             I_BP1_CgP1=np.eye(3, dtype=float),
@@ -162,9 +158,8 @@ class TestMuJoCoModelInit(unittest.TestCase):
         )
         model = _mujoco_model.MuJoCoModel(
             name="sym_test",
-            weight=9.80665,
+            mass=1.0,
             omegas_BP1__E=(0.0, 0.0, 0.0),
-            g_E=(0.0, 0.0, 9.80665),
             T_pas_BP1_CgP1_to_E_CgP1=np.eye(4, dtype=float),
             vCg_E__E=(10.0, 0.0, 0.0),
             I_BP1_CgP1=I_asymmetric,

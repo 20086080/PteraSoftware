@@ -1694,11 +1694,9 @@ class TestOperatingPoint(unittest.TestCase):
         npt.assert_allclose(reflected, surface_point, atol=1e-12)
 
     def test_g_E_default(self):
-        """Test that g_E defaults to standard gravity pointing along +z in Earth
-        axes (+z is down).
-        """
+        """Test that g_E defaults to no gravitational field (the zero vector)."""
         op = ps.operating_point.OperatingPoint()
-        npt.assert_array_equal(op.g_E, [0.0, 0.0, 9.80665])
+        npt.assert_array_equal(op.g_E, [0.0, 0.0, 0.0])
 
     def test_omegas_BP1__E_default(self):
         """Test that omegas_BP1__E defaults to the zero vector."""

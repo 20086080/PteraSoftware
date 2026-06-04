@@ -15,9 +15,8 @@ def make_basic_mujoco_model_fixture():
     """
     basic_mujoco_model_fixture = _mujoco_model.MuJoCoModel(
         name="test_airplane",
-        weight=9.80665,
+        mass=1.0,
         omegas_BP1__E=(0.0, 0.0, 0.0),
-        g_E=(0.0, 0.0, 9.80665),
         T_pas_BP1_CgP1_to_E_CgP1=np.eye(4, dtype=float),
         vCg_E__E=(10.0, 0.0, 0.0),
         I_BP1_CgP1=np.eye(3, dtype=float),
@@ -41,9 +40,8 @@ def make_rotated_mujoco_model_fixture():
 
     rotated_mujoco_model_fixture = _mujoco_model.MuJoCoModel(
         name="rotated_airplane",
-        weight=19.6133,
+        mass=2.0,
         omegas_BP1__E=(0.0, 0.0, 10.0),
-        g_E=(0.0, 0.0, 9.80665),
         T_pas_BP1_CgP1_to_E_CgP1=T_pas,
         vCg_E__E=(0.0, 5.0, -1.0),
         I_BP1_CgP1=np.diag([2.0, 3.0, 4.0]),
@@ -78,9 +76,8 @@ def make_pitched_mujoco_model_fixture(omegas_BP1__E=(0.0, 0.0, 0.0)):
 
     pitched_mujoco_model_fixture = _mujoco_model.MuJoCoModel(
         name="pitched_airplane",
-        weight=9.80665,
+        mass=1.0,
         omegas_BP1__E=omegas_BP1__E,
-        g_E=(0.0, 0.0, 9.80665),
         T_pas_BP1_CgP1_to_E_CgP1=T_pas_BP1_CgP1_to_E_CgP1,
         vCg_E__E=(0.0, 0.0, 0.0),
         I_BP1_CgP1=np.eye(3, dtype=float),
@@ -100,14 +97,14 @@ def make_basic_mujoco_model_name_fixture():
     return "test_airplane"
 
 
-def make_basic_mujoco_model_weight_fixture():
-    """This method makes a fixture that is the weight used by the basic MuJoCoModel
+def make_basic_mujoco_model_mass_fixture():
+    """This method makes a fixture that is the mass used by the basic MuJoCoModel
     fixture.
 
     :return: float
-        The weight in Newtons.
+        The mass in kilograms.
     """
-    return 9.80665
+    return 1.0
 
 
 def make_basic_mujoco_model_delta_time_fixture():

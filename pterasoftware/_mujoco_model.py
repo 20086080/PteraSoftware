@@ -65,9 +65,8 @@ class MuJoCoModel:
     def __init__(
         self,
         name: str,
-        weight: float | int,
+        mass: float | int,
         omegas_BP1__E: np.ndarray,
-        g_E: np.ndarray,
         T_pas_BP1_CgP1_to_E_CgP1: np.ndarray,
         vCg_E__E: np.ndarray,
         I_BP1_CgP1: np.ndarray,
@@ -79,14 +78,11 @@ class MuJoCoModel:
 
         :param name: The name of the Airplane, used as the MuJoCo body name. Supplied by
             FreeFlightUnsteadyProblem from the Airplane.
-        :param weight: The weight of the Airplane in Newtons. Supplied by
-            FreeFlightUnsteadyProblem from the Airplane.
+        :param mass: The mass of the first Airplane in kilograms. Supplied by
+            FreeFlightUnsteadyProblem.
         :param omegas_BP1__E: A (3,) ndarray of floats representing the initial angular
             velocity of the first Airplane's body axes (in the first Airplane's body
             axes, observed from the Earth frame), in degrees per second. Supplied by
-            FreeFlightUnsteadyProblem from the OperatingPoint.
-        :param g_E: A (3,) ndarray of floats representing the gravitational acceleration
-            vector (in Earth axes), in meters per second squared. Supplied by
             FreeFlightUnsteadyProblem from the OperatingPoint.
         :param T_pas_BP1_CgP1_to_E_CgP1: A (4,4) ndarray of floats representing the
             passive transformation matrix from the first Airplane's body axes, relative
@@ -120,7 +116,6 @@ class MuJoCoModel:
 
         omegasRad_BP1__E = np.deg2rad(omegas_BP1__E)
 
-        mass = weight / np.linalg.norm(g_E)
         omegaXRad_BP1__E, omegaYRad_BP1__E, omegaZRad_BP1__E = omegasRad_BP1__E[:]
 
         R_pas_BP1_to_E = T_pas_BP1_CgP1_to_E_CgP1[:3, :3]

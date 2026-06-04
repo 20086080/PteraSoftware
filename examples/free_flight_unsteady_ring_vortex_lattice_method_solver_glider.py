@@ -217,8 +217,9 @@ del wing_movements
 # orientation (angles_E_to_BP1_izyx) pitches the airplane nose up by the angle of attack
 # with zero sideslip, which places the trim velocity along the horizontal Earth x axis at
 # the start of free flight. No external thrust is applied (externalFX_W=0.0), so the
-# glider flies an unpowered glide. The default gravity (g_E) and zero initial body rates
-# (omegas_BP1__E) are appropriate here, so we leave them at their defaults.
+# glider flies an unpowered glide. Standard gravity is set explicitly via g_E (the
+# default is no gravitational field), while the zero initial body rates (omegas_BP1__E)
+# are left at their default.
 example_operating_point = ps.operating_point.OperatingPoint(
     rho=1.225,
     vCg__E=12.9,
@@ -227,6 +228,7 @@ example_operating_point = ps.operating_point.OperatingPoint(
     angles_E_to_BP1_izyx=(0.0, 3.3, 0.0),
     externalFX_W=0.0,
     nu=15.06e-6,
+    g_E=(0.0, 0.0, 9.80665),
 )
 
 # Define the operating point's FreeFlightOperatingPointMovement. It holds only the
@@ -261,10 +263,14 @@ del operating_point_movement
 # the planform geometry for static stability and verified in XFLR5. It is expressed in
 # the first Airplane's body axes relative to the first Airplane's center of gravity,
 # which is at the geometry origin. The off-diagonal terms are the body-axes products of
-# inertia. No external loads are applied (external_loads_fn=None), so the glider flies an
-# unpowered glide driven only by its aerodynamics, weight, and inertia.
+# inertia. The mass equals the Airplane's weight (420.0 N) divided by the gravitational
+# acceleration magnitude (9.80665 m/s^2), which keeps the weight, mass, and gravity
+# consistent; the solver applies the gravitational force as mass * g_E. No external loads
+# are applied (external_loads_fn=None), so the glider flies an unpowered glide driven only
+# by its aerodynamics, gravity, and inertia.
 example_problem = ps.problems.FreeFlightUnsteadyProblem(
     movement=movement,
+    mass=420.0 / 9.80665,
     I_BP1_CgP1=(
         (155.614, 0.0, -45.658),
         (0.0, 398.513, 0.0),

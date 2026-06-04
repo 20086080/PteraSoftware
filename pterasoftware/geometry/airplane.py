@@ -132,7 +132,10 @@ class Airplane:
             meters. The default is (0.0, 0.0, 0.0).
         :param weight: A number (int or float) representing the weight of the aircraft
             in Newtons. This is used by the trim functions. It must be greater than or
-            equal to zero. The default is 0.0.
+            equal to zero. The default is 0.0. In free flight, it must also be
+            consistent with the FreeFlightUnsteadyProblem's mass and the
+            OperatingPoint's gravitational acceleration, satisfying weight == mass *
+            |g_E| within floating point tolerance.
         :param s_ref: A number (int or float) representing the reference wetted area. If
             not set or set to None (the default), it populates from first Wing. If set,
             it must be greater than zero, and will be converted to a float internally.

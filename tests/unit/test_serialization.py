@@ -2113,6 +2113,7 @@ class TestFreeFlightUnsteadyProblemRoundTrip(unittest.TestCase):
         self.assertEqual(result.num_steps, problem.num_steps)
         self.assertEqual(len(result.steady_problems), len(problem.steady_problems))
         npt.assert_array_equal(result.I_BP1_CgP1, problem.I_BP1_CgP1)
+        self.assertEqual(result.mass, problem.mass)
         self.assertIsNone(result.external_loads_fn)
         self.assertIsInstance(result.mujoco_model, MuJoCoModel)
         # The rebuilt MuJoCoModel is functional.

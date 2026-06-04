@@ -411,6 +411,8 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
     initialize_next_problem: Initializes the next time step's SteadyProblem from rigid
     body dynamics.
 
+    mass: The mass of the Airplane in kilograms.
+
     I_BP1_CgP1: The inertia matrix of the Airplane (in the first Airplane's body axes,
     relative to the first Airplane's CG) in kilogram square meters.
 
@@ -422,6 +424,7 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
 
     __slots__ = (
         "_I_BP1_CgP1",
+        "_mass",
         "_external_loads_fn",
         "_external_loads_validated",
         "_mujoco_model",
@@ -434,6 +437,7 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
     def __init__(
         self,
         movement: movements.free_flight_movement.FreeFlightMovement,
+        mass: float | int,
         I_BP1_CgP1: np.ndarray | Sequence[Sequence[float | int]],
         external_loads_fn: (
             Callable[
@@ -456,6 +460,12 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
             step. The FreeFlightMovement must contain exactly one
             FreeFlightAirplaneMovement; multi-airplane free flight is not supported in
             this release.
+        :param mass: A number (int or float) representing the mass of the Airplane. It
+            must be greater than zero and will be converted internally to a float. The
+            units are in kilograms. It must satisfy weight == mass * |g_E| within
+            floating point tolerance, where weight is the Airplane's weight and g_E is
+            the OperatingPoint's gravitational acceleration, which keeps the Airplane's
+            weight, the supplied mass, and the gravitational field mutually consistent.
         :param I_BP1_CgP1: An array-like object of numbers (int or float) with shape
             (3,3) representing the inertia matrix of the Airplane (in the first
             Airplane's body axes, relative to the first Airplane's CG). It must be
@@ -517,6 +527,32 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
         self._I_BP1_CgP1 = I_BP1_CgP1
         self._I_BP1_CgP1.flags.writeable = False
 
+        self._mass = _parameter_validation.number_in_range_return_float(
+            mass,
+            "mass",
+            min_val=0.0,
+            min_inclusive=False,
+        )
+
+        # The Airplane's weight, the supplied mass, and the gravitational field must be
+        # mutually consistent: weight == mass * |g_E|. The free-flight dynamics derive
+        # the gravitational force as mass * g_E, while the Airplane's weight is used
+        # elsewhere (for example by the trim functions), so a disagreement would be a
+        # silent modeling error. g_E is constant across the run, so checking the initial
+        # OperatingPoint suffices. A zero g_E (the default, no gravitational field)
+        # consistently requires a zero weight.
+        expected_weight = self._mass * float(
+            np.linalg.norm(initial_operating_point.g_E)
+        )
+        if not np.isclose(initial_airplane.weight, expected_weight):
+            raise ValueError(
+                "The Airplane's weight must equal mass * |g_E| within floating point "
+                f"tolerance: the Airplane's weight is {initial_airplane.weight} N, but "
+                f"mass * |g_E| is {expected_weight} N. Set the Airplane's weight, the "
+                "mass, and the OperatingPoint's g_E so they agree (for a zero-gravity "
+                "simulation, leave both g_E and the weight at zero)."
+            )
+
         if external_loads_fn is not None and not callable(external_loads_fn):
             raise TypeError("external_loads_fn must be callable or None.")
         self._external_loads_fn = external_loads_fn
@@ -573,9 +609,8 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
 
         self._mujoco_model = _mujoco_model.MuJoCoModel(
             name=initial_airplane.name,
-            weight=initial_airplane.weight,
+            mass=self._mass,
             omegas_BP1__E=initial_operating_point.omegas_BP1__E,
-            g_E=initial_operating_point.g_E,
             T_pas_BP1_CgP1_to_E_CgP1=initial_operating_point.T_pas_BP1_CgP1_to_E_CgP1,
             vCg_E__E=-1
             * _transformations.apply_T_to_vectors(
@@ -593,6 +628,10 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
     @property
     def I_BP1_CgP1(self) -> np.ndarray:
         return self._I_BP1_CgP1
+
+    @property
+    def mass(self) -> float:
+        return self._mass
 
     @property
     def external_loads_fn(
@@ -726,11 +765,9 @@ class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
                     T_pas_W_CgP1_to_E_CgP1, totalMoments_W_CgP1, has_point=True
                 )
 
-                # 4. Add the weight force in Earth axes.
-                g_E = current_operating_point.g_E
-                totalForces_E = (
-                    totalForces_E + current_airplane.weight * g_E / np.linalg.norm(g_E)
-                )
+                # 4. Add the weight force in Earth axes. The gravitational force is
+                # mass * g_E, which is zero when g_E is zero (no gravitational field).
+                totalForces_E = totalForces_E + self._mass * current_operating_point.g_E
 
                 # 5. Apply the loads to MuJoCo.
                 self._mujoco_model.apply_loads(totalForces_E, totalMoments_E_CgP1)

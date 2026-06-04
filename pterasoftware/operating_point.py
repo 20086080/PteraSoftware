@@ -95,7 +95,7 @@ class OperatingPoint:
         surfacePoint_E_Eo: None | np.ndarray | Sequence[float | int] = None,
         externalFX_W: float | int = 0.0,
         nu: float | int = 15.06e-6,
-        g_E: np.ndarray | Sequence[float | int] = (0.0, 0.0, 9.80665),
+        g_E: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
         omegas_BP1__E: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
     ) -> None:
         """The initialization method.
@@ -163,9 +163,11 @@ class OperatingPoint:
         :param g_E: An array-like of 3 numbers (int or float) representing the
             gravitational acceleration vector (in Earth axes). Can be a tuple, list, or
             ndarray. Values are converted to floats internally. The units are in meters
-            per second squared. The default is (0.0, 0.0, 9.80665), which corresponds to
-            standard gravity pointing along +z in Earth axes. This parameter is only
-            used by the free-flight solver; other solvers ignore it.
+            per second squared. The default is (0.0, 0.0, 0.0), which corresponds to no
+            gravitational field; set it explicitly (for example (0.0, 0.0, 9.80665) for
+            standard gravity pointing along +z in Earth axes) to model a body in a
+            gravitational field. This parameter is only used by the free-flight solver;
+            other solvers ignore it.
         :param omegas_BP1__E: An array-like of 3 numbers (int or float) representing the
             angular velocity of the first Airplane's body axes (observed from the Earth
             frame, expressed in the first Airplane's body axes). Can be a tuple, list,

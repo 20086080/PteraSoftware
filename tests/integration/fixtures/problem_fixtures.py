@@ -198,7 +198,7 @@ def make_simple_glider_free_flight_problem():
     axes relative to the first Airplane's center of gravity, which is at the geometry
     origin. The off-diagonal terms are the body-axes products of inertia. No external
     loads are applied, so the glider flies an unpowered glide driven only by its
-    aerodynamics, weight, and inertia.
+    aerodynamics, gravity, and inertia.
 
     :return simple_glider_free_flight_problem: FreeFlightUnsteadyProblem
         This is the simple glider FreeFlightUnsteadyProblem fixture.
@@ -206,6 +206,17 @@ def make_simple_glider_free_flight_problem():
     simple_glider_free_flight_movement = (
         movement_fixtures.make_simple_glider_free_flight_movement()
     )
+
+    # Derive the mass from the glider's weight and gravitational field so that the
+    # weight == mass * |g_E| consistency holds (the glider's weight and standard gravity
+    # are set on the airplane and operating-point fixtures).
+    base_airplane = simple_glider_free_flight_movement.airplane_movements[
+        0
+    ].base_airplane
+    base_g_E = (
+        simple_glider_free_flight_movement.operating_point_movement.base_operating_point.g_E
+    )
+    mass = base_airplane.weight / float(np.linalg.norm(base_g_E))
 
     I_BP1_CgP1 = np.array(
         [
@@ -218,6 +229,7 @@ def make_simple_glider_free_flight_problem():
 
     simple_glider_free_flight_problem = ps.problems.FreeFlightUnsteadyProblem(
         movement=simple_glider_free_flight_movement,
+        mass=mass,
         I_BP1_CgP1=I_BP1_CgP1,
         external_loads_fn=None,
     )

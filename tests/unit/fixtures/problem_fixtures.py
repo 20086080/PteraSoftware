@@ -246,11 +246,30 @@ def make_basic_free_flight_unsteady_problem_fixture(
         )
     )
 
-    # Create the FreeFlightOperatingPointMovement.
+    # Create the FreeFlightOperatingPointMovement. Free flight requires the Airplane's
+    # weight, the mass, and the gravitational field to agree (weight == mass * |g_E|).
+    # The shared operating-point fixtures default to no gravity, so rebuild the operating
+    # point with standard gravity here (preserving every other field) and derive the
+    # matching mass from the Airplane's weight.
     if base_operating_point is None:
         base_operating_point = (
             operating_point_fixtures.make_basic_operating_point_fixture()
         )
+    base_operating_point = ps.operating_point.OperatingPoint(
+        rho=base_operating_point.rho,
+        vCg__E=base_operating_point.vCg__E,
+        alpha=base_operating_point.alpha,
+        beta=base_operating_point.beta,
+        angles_E_to_BP1_izyx=base_operating_point.angles_E_to_BP1_izyx,
+        CgP1_E_Eo=base_operating_point.CgP1_E_Eo,
+        surfaceNormal_E=base_operating_point.surfaceNormal_E,
+        surfacePoint_E_Eo=base_operating_point.surfacePoint_E_Eo,
+        externalFX_W=base_operating_point.externalFX_W,
+        nu=base_operating_point.nu,
+        g_E=(0.0, 0.0, 9.80665),
+        omegas_BP1__E=base_operating_point.omegas_BP1__E,
+    )
+    mass = base_airplane.weight / 9.80665
     op_movement = ps.movements.free_flight_operating_point_movement.FreeFlightOperatingPointMovement(
         base_operating_point=base_operating_point,
     )
@@ -268,6 +287,7 @@ def make_basic_free_flight_unsteady_problem_fixture(
     # derived from the movement at the first time step.
     basic_free_flight_unsteady_problem_fixture = ps.problems.FreeFlightUnsteadyProblem(
         movement=movement,
+        mass=mass,
         I_BP1_CgP1=np.diag([1.0, 1.0, 1.0]),
         external_loads_fn=external_loads_fn,
     )

@@ -74,5 +74,6 @@ def make_simple_glider_operating_point():
         alpha=3.3,
         beta=0.0,
         angles_E_to_BP1_izyx=(0.0, 3.3, 0.0),
+        g_E=(0.0, 0.0, 9.80665),
     )
     return operating_point_fixture

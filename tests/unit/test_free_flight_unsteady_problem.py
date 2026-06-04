@@ -9,6 +9,19 @@ import pterasoftware as ps
 from tests.unit.fixtures import problem_fixtures
 
 
+def _movement_and_mass():
+    """Return a fresh FreeFlightMovement and the mass consistent with its Airplane's
+    weight and gravitational field (weight == mass * |g_E|).
+
+    The mass is taken from a basic fixture problem, so it stays consistent with whatever
+    weight and gravity the fixture uses.
+
+    :return: A tuple of the FreeFlightMovement and the consistent mass in kilograms.
+    """
+    fixture_problem = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+    return fixture_problem._free_flight_movement, fixture_problem.mass
+
+
 class TestFreeFlightUnsteadyProblem(unittest.TestCase):
     """This is a class with functions to test FreeFlightUnsteadyProblems."""
 
@@ -38,14 +51,13 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
         with self.assertRaises(TypeError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement="not_a_movement",
+                mass=1.0,
                 I_BP1_CgP1=np.eye(3, dtype=float),
             )
 
     def test_single_airplane_movement_validation(self):
         """Test that the FreeFlightMovement has exactly one FreeFlightAirplaneMovement."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         two_airplane_movement = ps.movements.free_flight_movement.FreeFlightMovement(
             airplane_movements=[
                 movement.airplane_movements[0],
@@ -59,103 +71,96 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
         with self.assertRaises(ValueError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=two_airplane_movement,
+                mass=mass,
                 I_BP1_CgP1=np.eye(3, dtype=float),
             )
 
     def test_I_BP1_CgP1_symmetry_validation(self):
         """Test that I_BP1_CgP1 must be symmetric."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         asymmetric_inertia = np.array(
             [[1.0, 0.5, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]], dtype=float
         )
         with self.assertRaises(ValueError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
+                mass=mass,
                 I_BP1_CgP1=asymmetric_inertia,
             )
 
     def test_external_loads_fn_validation(self):
         """Test that external_loads_fn must be callable or None."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         with self.assertRaises(TypeError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
+                mass=mass,
                 I_BP1_CgP1=np.eye(3, dtype=float),
                 external_loads_fn="not_callable",
             )
 
     def test_extra_xml_type_validation(self):
         """Test that extra_xml must be a dict or None."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         with self.assertRaises(TypeError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
+                mass=mass,
                 I_BP1_CgP1=np.eye(3, dtype=float),
                 extra_xml="invalid",
             )
 
     def test_extra_xml_key_validation(self):
         """Test that an extra_xml key must be a permitted injection point."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         with self.assertRaises(ValueError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
+                mass=mass,
                 I_BP1_CgP1=np.eye(3, dtype=float),
                 extra_xml={"wordbody": "<geom/>"},
             )
 
     def test_extra_xml_value_validation(self):
         """Test that an extra_xml value must be a str."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         with self.assertRaises(TypeError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
+                mass=mass,
                 I_BP1_CgP1=np.eye(3, dtype=float),
                 extra_xml={"visual": 123},
             )
 
     def test_mujoco_assets_type_validation(self):
         """Test that mujoco_assets must be a dict or None."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         with self.assertRaises(TypeError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
+                mass=mass,
                 I_BP1_CgP1=np.eye(3, dtype=float),
                 mujoco_assets="invalid",
             )
 
     def test_mujoco_assets_key_validation(self):
         """Test that a mujoco_assets key must be a str."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         with self.assertRaises(TypeError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
+                mass=mass,
                 I_BP1_CgP1=np.eye(3, dtype=float),
                 mujoco_assets={123: b"data"},
             )
 
     def test_mujoco_assets_value_validation(self):
         """Test that a mujoco_assets value must be bytes."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         with self.assertRaises(TypeError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
+                mass=mass,
                 I_BP1_CgP1=np.eye(3, dtype=float),
                 mujoco_assets={"dummy.stl": "not bytes"},
             )
@@ -220,9 +225,7 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
         """Test that I_BP1_CgP1 accepts a nested list and converts it to a float
         ndarray.
         """
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         inertia_list = [
             [2, 0, 0],
             [0, 3, 0],
@@ -230,6 +233,7 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
         ]
         problem = ps.problems.FreeFlightUnsteadyProblem(
             movement=movement,
+            mass=mass,
             I_BP1_CgP1=inertia_list,
         )
         self.assertIsInstance(problem.I_BP1_CgP1, np.ndarray)
@@ -238,12 +242,11 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
 
     def test_I_BP1_CgP1_rejects_wrong_shape(self):
         """Test that I_BP1_CgP1 must have shape (3, 3)."""
-        movement = (
-            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()._free_flight_movement
-        )
+        movement, mass = _movement_and_mass()
         with self.assertRaises(ValueError):
             ps.problems.FreeFlightUnsteadyProblem(
                 movement=movement,
+                mass=mass,
                 I_BP1_CgP1=np.eye(2, dtype=float),
             )
 
@@ -263,6 +266,38 @@ class TestFreeFlightUnsteadyProblem(unittest.TestCase):
         from pterasoftware import _mujoco_model
 
         self.assertIsInstance(self.problem.mujoco_model, _mujoco_model.MuJoCoModel)
+
+    def test_mass_attribute(self):
+        """Test that mass is stored as a float."""
+        movement, mass = _movement_and_mass()
+        problem = ps.problems.FreeFlightUnsteadyProblem(
+            movement=movement,
+            mass=mass,
+            I_BP1_CgP1=np.eye(3, dtype=float),
+        )
+        self.assertIsInstance(problem.mass, float)
+        self.assertAlmostEqual(problem.mass, mass)
+
+    def test_mass_rejects_non_positive(self):
+        """Test that mass must be greater than zero."""
+        movement, mass = _movement_and_mass()
+        for invalid_mass in (0.0, -1.0):
+            with self.assertRaises(ValueError):
+                ps.problems.FreeFlightUnsteadyProblem(
+                    movement=movement,
+                    mass=invalid_mass,
+                    I_BP1_CgP1=np.eye(3, dtype=float),
+                )
+
+    def test_weight_mass_gravity_consistency_validation(self):
+        """Test that the Airplane's weight must equal mass * |g_E| within tolerance."""
+        movement, mass = _movement_and_mass()
+        with self.assertRaises(ValueError):
+            ps.problems.FreeFlightUnsteadyProblem(
+                movement=movement,
+                mass=mass * 2.0,
+                I_BP1_CgP1=np.eye(3, dtype=float),
+            )
 
 
 class TestFreeFlightUnsteadyProblemInitializeNextProblem(unittest.TestCase):
@@ -584,6 +619,11 @@ class TestFreeFlightUnsteadyProblemImmutability(unittest.TestCase):
         """Test that the I_BP1_CgP1 numpy array is not writeable."""
         with self.assertRaises(ValueError):
             self.problem.I_BP1_CgP1[0, 0] = 999.0
+
+    def test_immutable_mass_property(self):
+        """Test that the mass property is read only."""
+        with self.assertRaises(AttributeError):
+            self.problem.mass = 1.0
 
     def test_immutable_external_loads_fn_property(self):
         """Test that the external_loads_fn property is read only."""

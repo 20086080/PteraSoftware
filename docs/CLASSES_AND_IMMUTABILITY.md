@@ -194,7 +194,7 @@ These lists are allocated in `__init__` with one entry per wing in the initial a
 
 ## FreeFlightUnsteadyProblem Class (`problems.py`)
 
-`FreeFlightUnsteadyProblem` extends `_CoupledUnsteadyProblem`. It couples aerodynamic loads with six-degree-of-freedom rigid body dynamics, integrated by a `MuJoCoModel`, so that the Airplane's position, orientation, and velocity at a given time step are driven by the previous step's aerodynamic loads, weight, and any external loads. The wing geometry stays prescribed; it is the per-step `OperatingPoint` (body pose and rates) that the dynamics update. All `_CoupledUnsteadyProblem` and `CoreUnsteadyProblem` attributes (documented in the sections above) are inherited unchanged. The additions are the rigid body configuration (set once at construction) and the per-step aerodynamic load history (populated as the solve advances).
+`FreeFlightUnsteadyProblem` extends `_CoupledUnsteadyProblem`. It couples aerodynamic loads with six-degree-of-freedom rigid body dynamics, integrated by a `MuJoCoModel`, so that the Airplane's position, orientation, and velocity at a given time step are driven by the previous step's aerodynamic loads, gravity, and any external loads. The wing geometry stays prescribed; it is the per-step `OperatingPoint` (body pose and rates) that the dynamics update. All `_CoupledUnsteadyProblem` and `CoreUnsteadyProblem` attributes (documented in the sections above) are inherited unchanged. The additions are the rigid body configuration (set once at construction) and the per-step aerodynamic load history (populated as the solve advances).
 
 ### Attribute Classification
 
@@ -205,6 +205,7 @@ Each is stored in a `_`-prefixed backing slot and exposed through a read-only pr
 | Attribute           | Type               | Backing Slot         | Notes                                                                                                                                   |
 |---------------------|--------------------|----------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
 | `I_BP1_CgP1`        | `np.ndarray`       | `_I_BP1_CgP1`        | Inertia matrix in the first Airplane's body axes about its CG (kg*m^2); the array itself is set read-only                               |
+| `mass`              | `float`            | `_mass`              | Mass of the first Airplane (kg)                                                                                                          |
 | `external_loads_fn` | `Callable \| None` | `_external_loads_fn` | Optional callback returning additional (force, moment) loads to apply each step, or None                                                |
 | `mujoco_model`      | `MuJoCoModel`      | `_mujoco_model`      | Rigid body dynamics engine; the reference is fixed while the engine's own state advances during the solve (see the MuJoCoModel section) |
 

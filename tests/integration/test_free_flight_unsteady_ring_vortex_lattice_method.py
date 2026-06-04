@@ -61,7 +61,7 @@ class TestFreeFlightUnsteadyRingVortexLatticeMethod(unittest.TestCase):
 
         cls.weight = cls.solver.current_airplanes[0].weight
         cls.g_E = operating_points[0].g_E
-        cls.mass = cls.weight / float(np.linalg.norm(cls.g_E))
+        cls.mass = problem.mass
         cls.inertia_matrix = problem.I_BP1_CgP1
 
     def test_run_produces_finite_full_length_history(self):
