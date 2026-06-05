@@ -5,6 +5,7 @@ This document describes the consistent pattern of immutability and lazy caching 
 - `CoreUnsteadyProblem` / `UnsteadyProblem`
 - `_CoupledUnsteadyProblem`
 - `AeroelasticUnsteadyProblem`
+- `FreeFlightUnsteadyProblem`
 - `CoreMovement` / `Movement`
 - `CoreAirplaneMovement` / `AirplaneMovement`
 - `CoreWingMovement` / `WingMovement`
@@ -17,6 +18,7 @@ This document describes the consistent pattern of immutability and lazy caching 
 - `WingCrossSection`
 - `Airfoil`
 - `Panel`
+- `MuJoCoModel`
 
 The `Core*` classes live in `pterasoftware/_core.py` and own the shared slots and properties. The public classes extend their core parents, sometimes adding additional slots and sometimes inheriting everything with an empty `__slots__`. See each class section below for details on which attributes are defined at which level.
 
@@ -38,7 +40,7 @@ Most attribute falls into one of these categories:
 
 A constructor parameter is not always retained as an attribute. Some parameters shape how an object is built but are deliberately discarded once construction finishes: they have no `__slots__` entry, appear in no attribute-category table, and are not serialized or deep copied, because nothing reads them after `__init__`. They are still validated exactly like their stored counterparts.
 
-`Wing`'s `explode_into_strips` is the current example. When True, it triggers `Wing.explode_wing` to replace the supplied wing cross sections with single-strip cross sections, then plays no further role. Storing it would only create a stale provenance flag, since an exploded Wing is indistinguishable from one defined with single-strip cross sections directly. So the validated value lives in a local variable inside `__init__` and is never assigned to `self`, while still passing through `boolLike_return_bool`, the same check applied to the stored bool-likes `symmetric` and `mirror_only`.
+`Wing`'s `explode_into_strips` is one example. When True, it triggers `Wing.explode_wing` to replace the supplied wing cross sections with single-strip cross sections, then plays no further role. Storing it would only create a stale provenance flag, since an exploded Wing is indistinguishable from one defined with single-strip cross sections directly. So the validated value lives in a local variable inside `__init__` and is never assigned to `self`, while still passing through `boolLike_return_bool`, the same check applied to the stored bool-likes `symmetric` and `mirror_only`.
 
 ### Key Decisions
 
@@ -132,7 +134,7 @@ Store collections as tuples internally to prevent external mutation via `.append
 
 ## _CoupledUnsteadyProblem Class (`problems.py`)
 
-`_CoupledUnsteadyProblem` is a private middle-layer class that extends `CoreUnsteadyProblem`. It is the base for concrete subclasses (`AeroelasticUnsteadyProblem`, documented below, and the forthcoming `FreeFlightUnsteadyProblem`) whose geometry at each time step depends on the solver's results from the previous step. Unlike `UnsteadyProblem`, which builds all `SteadyProblem`s up front from a pre-generated `Movement`, the coupled subclasses grow their `SteadyProblem` collection one step at a time during the solve.
+`_CoupledUnsteadyProblem` is a private middle-layer class that extends `CoreUnsteadyProblem`. It is the base for concrete subclasses (`AeroelasticUnsteadyProblem` and `FreeFlightUnsteadyProblem`, both documented below) whose per-step `SteadyProblem` depends on the solver's results from the previous step: deformed wing geometry for aeroelasticity, updated rigid body state for free flight. Unlike `UnsteadyProblem`, which builds all `SteadyProblem`s up front from a pre-generated `Movement`, the coupled subclasses grow their `SteadyProblem` collection one step at a time during the solve.
 
 All `CoreUnsteadyProblem` attributes (documented in the section above) are inherited unchanged. The additions are:
 
@@ -190,6 +192,45 @@ These lists are allocated in `__init__` with one entry per wing in the initial a
 | `flap_points_per_wing`           | `list[list[np.ndarray]]` | Wing deflection offsets, indexed `[wing][step]`        |
 | `base_wing_positions_per_wing`   | `list[np.ndarray]`       | Undeformed baseline panel positions, per wing          |
 
+## FreeFlightUnsteadyProblem Class (`problems.py`)
+
+`FreeFlightUnsteadyProblem` extends `_CoupledUnsteadyProblem`. It couples aerodynamic loads with six-degree-of-freedom rigid body dynamics, integrated by a `MuJoCoModel`, so that the Airplane's position, orientation, and velocity at a given time step are driven by the previous step's aerodynamic loads, gravity, and any external loads. The wing geometry stays prescribed; it is the per-step `OperatingPoint` (body pose and rates) that the dynamics update. All `_CoupledUnsteadyProblem` and `CoreUnsteadyProblem` attributes (documented in the sections above) are inherited unchanged. The additions are the rigid body configuration (set once at construction) and the per-step aerodynamic load history (populated as the solve advances).
+
+### Attribute Classification
+
+#### Immutable (set in `__init__`, never modified)
+
+Each is stored in a `_`-prefixed backing slot and exposed through a read-only property of the unprefixed name.
+
+| Attribute           | Type               | Backing Slot         | Notes                                                                                                                                   |
+|---------------------|--------------------|----------------------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| `I_BP1_CgP1`        | `np.ndarray`       | `_I_BP1_CgP1`        | Inertia matrix in the first Airplane's body axes about its CG (kg*m^2); the array itself is set read-only                               |
+| `mass`              | `float`            | `_mass`              | Mass of the first Airplane (kg)                                                                                                          |
+| `external_loads_fn` | `Callable \| None` | `_external_loads_fn` | Optional callback returning additional (force, moment) loads to apply each step, or None                                                |
+| `mujoco_model`      | `MuJoCoModel`      | `_mujoco_model`      | Rigid body dynamics engine; the reference is fixed while the engine's own state advances during the solve (see the MuJoCoModel section) |
+
+#### Derived from Immutable (read-only property, no backing slot)
+
+| Property                | Depends On  | Notes                                                                                              |
+|-------------------------|-------------|----------------------------------------------------------------------------------------------------|
+| `_free_flight_movement` | `_movement` | Typed-narrow cast of the inherited `_movement` slot to `FreeFlightMovement` (recomputed, uncached) |
+
+#### Mutable (populated by solver)
+
+These are allocated in `__init__` (the four load-history lists as empty lists, the validation guard as `False`) and updated by the problem's `initialize_next_problem` as the solver advances. They are plain slots rather than read-only properties because they must change after construction, mirroring the mutable-result-list treatment on `CoreUnsteadyProblem`.
+
+| Attribute                   | Type               | Notes                                                                                                      |
+|-----------------------------|--------------------|------------------------------------------------------------------------------------------------------------|
+| `forces_W`                  | `list[np.ndarray]` | Per-step aerodynamic force history, in wind axes                                                           |
+| `forceCoefficients_W`       | `list[np.ndarray]` | Per-step aerodynamic force coefficient history                                                             |
+| `moments_W_Cg`              | `list[np.ndarray]` | Per-step aerodynamic moment history, in wind axes about the CG                                             |
+| `momentCoefficients_W_Cg`   | `list[np.ndarray]` | Per-step aerodynamic moment coefficient history                                                            |
+| `_external_loads_validated` | `bool`             | Once-only guard; flips to `True` after the `external_loads_fn` return is validated on its first invocation |
+
+#### Construction-only parameters
+
+`extra_xml` and `mujoco_assets` are constructor parameters, not attributes: both are validated here for structural shape (each a dict or None; `extra_xml` keys restricted to the permitted injection points and values to strings; `mujoco_assets` mapping string filenames to bytes), then forwarded to the `MuJoCoModel` constructed in `__init__` and not stored on the problem, so neither has a slot or an attribute-category entry above. They are the only raw user input reaching the `MuJoCoModel`, which performs no validation of its own; deeper XML and asset-reference correctness is left to MuJoCo. See Construction-Only Parameters under Design Principles.
+
 ## CoreMovement / Movement Class (`_core.py`, `movements/movement.py`)
 
 `Movement` extends `CoreMovement`. `CoreMovement` owns the shared slots (`airplane_movements`, `operating_point_movement`, `delta_time`, `num_steps`, `max_wake_rows`) and derived properties (`lcm_period`, `max_period`, `min_period`, `static`). `Movement` adds cycle/chord counting, wake sizing parameters, and batch pre-generation of `Airplane`s and `OperatingPoint`s.
@@ -222,6 +263,17 @@ These lists are allocated in `__init__` with one entry per wing in the initial a
 | `static`     | `max_period`                                     | `CoreMovement` | Cached |
 
 **Note on `airplanes` and `operating_points`**: These are defined on `Movement` and generated during `__init__` by calling the child movements' `generate_*` methods. They are stored as nested tuples to prevent modification after generation.
+
+#### `FreeFlightMovement` and `AeroelasticMovement` variant additions
+
+`FreeFlightMovement` and `AeroelasticMovement` extend `CoreMovement` directly, as feature-specific siblings of `Movement`. They inherit every attribute above unchanged and add the immutable state below, each stored in a `_`-prefixed backing slot and exposed through a read-only property of the unprefixed name. The pre-generation is asymmetric: `FreeFlightMovement` pre-generates only `Airplane`s (the solver produces `OperatingPoint`s from the rigid body dynamics), while `AeroelasticMovement` pre-generates only `OperatingPoint`s (deformed `Airplane` geometry depends on the solver's structural response).
+
+| Attribute              | Type                               | Defined On            | Notes                                                                           |
+|------------------------|------------------------------------|-----------------------|---------------------------------------------------------------------------------|
+| `prescribed_num_steps` | `int`                              | `FreeFlightMovement`  | Prescribed-flight time steps before the free-flight phase                       |
+| `free_num_steps`       | `int`                              | `FreeFlightMovement`  | Free-flight time steps after the prescribed phase                               |
+| `airplanes`            | `tuple[tuple[Airplane, ...], ...]` | `FreeFlightMovement`  | Pre-generated prescribed Airplane geometry, indexed `[airplane_movement][step]` |
+| `operating_points`     | `tuple[OperatingPoint, ...]`       | `AeroelasticMovement` | Pre-generated prescribed OperatingPoints                                        |
 
 ## CoreAirplaneMovement / AirplaneMovement Class (`_core.py`, `movements/airplane_movement.py`)
 
@@ -276,6 +328,14 @@ These lists are allocated in `__init__` with one entry per wing in the initial a
 | `all_periods` | Own periods + child `all_periods` | Tuple of unique non zero periods (cached) |
 | `max_period`  | Own periods + child `max_period`  | Scalar float, longest period (cached)     |
 
+#### `AeroelasticWingMovement` variant additions
+
+`AeroelasticWingMovement` extends `CoreWingMovement` directly, as a feature-specific sibling of `WingMovement`. It inherits every attribute above unchanged and adds the one immutable slot below, stored in a `_`-prefixed backing slot and exposed through a read-only property of the unprefixed name.
+
+| Attribute                                     | Type                           | Notes                                                                                                                                                                                                          |
+|-----------------------------------------------|--------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `spacingAnglesSecondDerivative_Gs_to_Wn_ixyz` | `tuple[Callable \| None, ...]` | Per-basis-direction (x, y, z) analytical second time derivative of the matching custom angular spacing; an entry is a callable when its `spacingAngles_Gs_to_Wn_ixyz` component is a custom callable, else None |
+
 ## CoreWingCrossSectionMovement / WingCrossSectionMovement Class (`_core.py`, `movements/wing_cross_section_movement.py`)
 
 `WingCrossSectionMovement` extends `CoreWingCrossSectionMovement`. All slots are defined on `CoreWingCrossSectionMovement`; `WingCrossSectionMovement` has empty `__slots__`.
@@ -325,6 +385,14 @@ These lists are allocated in `__init__` with one entry per wing in the initial a
 |--------------|----------------|--------|
 | `max_period` | `periodVCg__E` | Cached |
 
+#### `FreeFlightOperatingPointMovement` variant additions
+
+`FreeFlightOperatingPointMovement` extends `CoreOperatingPointMovement` directly, as a feature-specific sibling of `OperatingPointMovement`. It inherits every attribute above unchanged and adds the one mutable slot below, since its `OperatingPoint`s are produced by the solver's rigid body dynamics integration rather than prescribed.
+
+| Attribute          | Type                   | Notes                                                                                                                                                                                                                                          |
+|--------------------|------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `operating_points` | `list[OperatingPoint]` | Mutable OperatingPoint history; seeded with the base OperatingPoint at step 0, then the solver appends one per step. A plain mutable slot rather than a read-only property, mirroring the mutable-result-list treatment on `CoreUnsteadyProblem` |
+
 ## SteadyProblem Class (`problems.py`)
 
 ### Attribute Classification
@@ -360,6 +428,8 @@ These lists are allocated in `__init__` with one entry per wing in the initial a
 | `surfacePoint_E_Eo`    | `np.ndarray \| None` | Image surface point       |
 | `externalFX_W`         | `float`              | External force            |
 | `nu`                   | `float`              | Kinematic viscosity       |
+| `g_E`                  | `np.ndarray`         | Gravity in Earth axes     |
+| `omegas_BP1__E`        | `np.ndarray`         | Body angular velocity     |
 
 #### Derived from Immutable (use manual lazy caching)
 
@@ -376,6 +446,8 @@ These lists are allocated in `__init__` with one entry per wing in the initial a
 | `T_pas_BP1_CgP1_to_E_CgP1`      | `T_pas_E_CgP1_to_BP1_CgP1`                                   | Inverse of above (cached)         |
 | `T_pas_E_CgP1_to_GP1_CgP1`      | `T_pas_E_CgP1_to_BP1_CgP1`, `T_pas_BP1_CgP1_to_GP1_CgP1`     | Earth-to-geometry matrix (cached) |
 | `T_pas_GP1_CgP1_to_E_CgP1`      | `T_pas_E_CgP1_to_GP1_CgP1`                                   | Inverse of above (cached)         |
+| `T_pas_W_CgP1_to_E_CgP1`        | `T_pas_W_CgP1_to_BP1_CgP1`, `T_pas_BP1_CgP1_to_E_CgP1`       | Wind-to-Earth matrix (cached)     |
+| `T_pas_E_CgP1_to_W_CgP1`        | `T_pas_W_CgP1_to_E_CgP1`                                     | Inverse of above (cached)         |
 | `surfaceNormal_GP1`             | `surfaceNormal_E`, `T_pas_E_CgP1_to_GP1_CgP1`                | Surface normal in GP1 (cached)    |
 | `surfacePoint_GP1_CgP1`         | `surfacePoint_E_Eo`, `CgP1_E_Eo`, `T_pas_E_CgP1_to_GP1_CgP1` | Surface point in GP1 (cached)     |
 | `surfaceReflect_T_act_GP1_CgP1` | `surfacePoint_GP1_CgP1`, `surfaceNormal_GP1`                 | Active reflection matrix (cached) |
@@ -386,7 +458,7 @@ These lists are allocated in `__init__` with one entry per wing in the initial a
 
 **Note on `T_pas_GP1_CgP1_to_BP1_CgP1`**: This matrix is a constant (180-degree rotation about y) and does not depend on any `__init__` parameters. It is still lazily cached for consistency with the overall pattern and to avoid recomputing it on every access.
 
-**Note on transformation decomposition**: The geometry-to-wind transformation (`T_pas_GP1_CgP1_to_W_CgP1`) is composed from `T_pas_GP1_CgP1_to_BP1_CgP1` and `T_pas_BP1_CgP1_to_W_CgP1` via `compose_T_pas`. Similarly, `T_pas_E_CgP1_to_GP1_CgP1` is composed from `T_pas_E_CgP1_to_BP1_CgP1` and `T_pas_BP1_CgP1_to_GP1_CgP1`. Decomposing through body axes enables the Earth transformation chain to reuse the geometry-to-body and body-to-geometry matrices without duplication.
+**Note on transformation decomposition**: The geometry-to-wind transformation (`T_pas_GP1_CgP1_to_W_CgP1`) is composed from `T_pas_GP1_CgP1_to_BP1_CgP1` and `T_pas_BP1_CgP1_to_W_CgP1` via `compose_T_pas`. Similarly, `T_pas_E_CgP1_to_GP1_CgP1` is composed from `T_pas_E_CgP1_to_BP1_CgP1` and `T_pas_BP1_CgP1_to_GP1_CgP1`, and `T_pas_W_CgP1_to_E_CgP1` is composed from `T_pas_W_CgP1_to_BP1_CgP1` and `T_pas_BP1_CgP1_to_E_CgP1`. Decomposing through body axes lets each non-body chain reuse the body-relative matrices rather than computing fresh rotations.
 
 ## Airplane Class (`geometry/airplane.py`)
 
@@ -612,6 +684,38 @@ These lists are allocated in `__init__` with one entry per wing in the initial a
 
 ---
 
+## MuJoCoModel Class (`_mujoco_model.py`)
+
+`MuJoCoModel` is a private class that wraps MuJoCo's `MjModel` and `MjData` objects. It is constructed by `FreeFlightUnsteadyProblem` and provides methods for applying aerodynamic loads, stepping the rigid body dynamics, and extracting the updated state. Users pass raw scalars and arrays to `FreeFlightUnsteadyProblem` and never interact with `MuJoCoModel` directly.
+
+### Attribute Classification
+
+#### Immutable (set in `__init__`, never modified)
+
+| Attribute              | Type             | Notes                                                 |
+|------------------------|------------------|-------------------------------------------------------|
+| `xml_str`              | `str`            | Generated MuJoCo XML                                  |
+| `model`                | `mujoco.MjModel` | Compiled MuJoCo model                                 |
+| `body_id`              | `int`            | MuJoCo body ID for the Airplane                       |
+| `initial_key_frame_id` | `int`            | MuJoCo key frame ID for initial conditions            |
+| `initial_qpos`         | `np.ndarray`     | Initial generalized positions (computed during init)  |
+| `initial_qvel`         | `np.ndarray`     | Initial generalized velocities (computed during init) |
+
+#### Mutable
+
+| Attribute | Type            | Notes                                                   |
+|-----------|-----------------|---------------------------------------------------------|
+| `data`    | `mujoco.MjData` | Mutated by `apply_loads`, `step`, `reset`, `mj_forward` |
+
+#### Construction-only parameters
+
+`extra_xml` and `mujoco_assets` are constructor parameters, not attributes: both shape the generated model during initialization and are then discarded, so neither has a slot or an attribute-category entry above. `extra_xml` is folded into `xml_str`, so its content survives indirectly through the stored XML, while `mujoco_assets` is passed to MuJoCo's `from_xml_string` and not retained at all, which is why an asset-based model cannot be rebuilt from `xml_str` alone. `MuJoCoModel` does not validate them: it is private and validates nothing, so they arrive already validated for structural shape from `FreeFlightUnsteadyProblem` (the only constructor), with deeper XML and asset-reference correctness left to MuJoCo. See Construction-Only Parameters under Design Principles.
+
+---
+
+
 ## Solver Classes (Not Covered Above)
 
-The five solver classes (`SteadyHorseshoeVortexLatticeMethodSolver`, `SteadyRingVortexLatticeMethodSolver`, `UnsteadyRingVortexLatticeMethodSolver`, `CoupledUnsteadyRingVortexLatticeMethodSolver`, and `AeroelasticUnsteadyRingVortexLatticeMethodSolver`) are intentionally omitted from the immutability and lazy caching patterns described in this document. Unlike the data and geometry classes above, the solver classes are algorithmic classes whose attributes are internal mutable working state in a procedural computation pipeline. They are not shared data that external code accesses or modifies, so immutable properties, set once enforcement, and lazy caching would add significant boilerplate with no meaningful safety benefit. The solver classes do still use `__slots__`, like all other classes in the package, to protect against dynamic attribute assignment typos.
+The six solver classes (`SteadyHorseshoeVortexLatticeMethodSolver`, `SteadyRingVortexLatticeMethodSolver`, `UnsteadyRingVortexLatticeMethodSolver`, `CoupledUnsteadyRingVortexLatticeMethodSolver`, `AeroelasticUnsteadyRingVortexLatticeMethodSolver`, and `FreeFlightUnsteadyRingVortexLatticeMethodSolver`) are intentionally omitted from the immutability and lazy caching patterns described in this document. Unlike the data and geometry classes above, the solver classes are algorithmic classes whose attributes are internal mutable working state in a procedural computation pipeline. They are not shared data that external code accesses or modifies, so immutable properties, set once enforcement, and lazy caching would add significant boilerplate with no meaningful safety benefit. The solver classes do still use `__slots__`, like all other classes in the package, to protect against dynamic attribute assignment typos.
+
+One narrow exception is `UnsteadyRingVortexLatticeMethodSolver.steady_problems`. It is not internal working state but results data that external code reads after a run, so rather than holding a separate mutable copy it is a read-only property that returns the underlying `UnsteadyProblem.steady_problems` directly. This keeps the problem as the single source of truth and removes any chance of the solver's view going stale, which matters for coupled problems whose `steady_problems` grows step by step during the solve.

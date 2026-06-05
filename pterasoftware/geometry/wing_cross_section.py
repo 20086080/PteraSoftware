@@ -551,10 +551,10 @@ class WingCrossSection:
         )
 
         airfoilOutline_Wcs_lp = _transformations.apply_T_to_vectors(
-            airfoilScalingMatrix, airfoilNonScaledOutline_Wcs_lp, has_point=True
+            airfoilScalingMatrix, airfoilNonScaledOutline_Wcs_lp, is_position=True
         )
         airfoilMcl_Wcs_lp = _transformations.apply_T_to_vectors(
-            airfoilScalingMatrix, airfoilNonScaledMcl_Wcs_lp, has_point=True
+            airfoilScalingMatrix, airfoilNonScaledMcl_Wcs_lp, is_position=True
         )
 
         if not show:
@@ -566,10 +566,10 @@ class WingCrossSection:
         assert _T_pas_Wcs_Lp_to_Wcsp_Lpp is not None
 
         airfoilOutline_Wcsp_lpp = _transformations.apply_T_to_vectors(
-            _T_pas_Wcs_Lp_to_Wcsp_Lpp, airfoilOutline_Wcs_lp, has_point=True
+            _T_pas_Wcs_Lp_to_Wcsp_Lpp, airfoilOutline_Wcs_lp, is_position=True
         )
         airfoilMcl_Wcsp_lpp = _transformations.apply_T_to_vectors(
-            _T_pas_Wcs_Lp_to_Wcsp_Lpp, airfoilMcl_Wcs_lp, has_point=True
+            _T_pas_Wcs_Lp_to_Wcsp_Lpp, airfoilMcl_Wcs_lp, is_position=True
         )
 
         if self.symmetry_type in (2, 3):
@@ -578,10 +578,10 @@ class WingCrossSection:
             )
 
             airfoilOutline_WcspReflectY_lpp = _transformations.apply_T_to_vectors(
-                UserMatrixAxesWcspLpp, airfoilOutline_Wcsp_lpp, has_point=True
+                UserMatrixAxesWcspLpp, airfoilOutline_Wcsp_lpp, is_position=True
             )
             airfoilMcl_WcspReflectY_lpp = _transformations.apply_T_to_vectors(
-                UserMatrixAxesWcspLpp, airfoilMcl_Wcsp_lpp, has_point=True
+                UserMatrixAxesWcspLpp, airfoilMcl_Wcsp_lpp, is_position=True
             )
 
         else:

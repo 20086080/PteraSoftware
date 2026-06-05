@@ -8,6 +8,8 @@ from pathlib import Path
 import numpy as np
 import numpy.testing as npt
 
+from pterasoftware._mujoco_model import MuJoCoModel
+
 # noinspection PyProtectedMember
 from pterasoftware._oscillation import (
     oscillating_lin_at_time,
@@ -32,6 +34,9 @@ from pterasoftware._serialization import (
 from pterasoftware.aeroelastic_unsteady_ring_vortex_lattice_method import (
     AeroelasticUnsteadyRingVortexLatticeMethodSolver,
 )
+from pterasoftware.free_flight_unsteady_ring_vortex_lattice_method import (
+    FreeFlightUnsteadyRingVortexLatticeMethodSolver,
+)
 
 # noinspection PyProtectedMember
 from pterasoftware.geometry.airfoil import Airfoil
@@ -50,6 +55,17 @@ from pterasoftware.movements.aeroelastic_wing_cross_section_movement import (
 )
 from pterasoftware.movements.aeroelastic_wing_movement import AeroelasticWingMovement
 from pterasoftware.movements.airplane_movement import AirplaneMovement
+from pterasoftware.movements.free_flight_airplane_movement import (
+    FreeFlightAirplaneMovement,
+)
+from pterasoftware.movements.free_flight_movement import FreeFlightMovement
+from pterasoftware.movements.free_flight_operating_point_movement import (
+    FreeFlightOperatingPointMovement,
+)
+from pterasoftware.movements.free_flight_wing_cross_section_movement import (
+    FreeFlightWingCrossSectionMovement,
+)
+from pterasoftware.movements.free_flight_wing_movement import FreeFlightWingMovement
 from pterasoftware.movements.movement import Movement
 from pterasoftware.movements.operating_point_movement import OperatingPointMovement
 from pterasoftware.movements.wing_cross_section_movement import (
@@ -59,6 +75,7 @@ from pterasoftware.movements.wing_movement import WingMovement
 from pterasoftware.operating_point import OperatingPoint
 from pterasoftware.problems import (
     AeroelasticUnsteadyProblem,
+    FreeFlightUnsteadyProblem,
     SteadyProblem,
     UnsteadyProblem,
 )
@@ -1953,3 +1970,239 @@ class TestAeroelasticUnsteadySolverRoundTrip(unittest.TestCase):
             result = load(path)
         assert isinstance(result, AeroelasticUnsteadyRingVortexLatticeMethodSolver)
         self.assertTrue(result.ran)
+
+
+class TestMuJoCoModelRoundTrip(unittest.TestCase):
+    """This class contains methods for testing MuJoCoModel serialization round trips."""
+
+    def setUp(self):
+        """Build a shared FreeFlightUnsteadyProblem to source a constructed MuJoCoModel.
+
+        :return: None
+        """
+        self.problem = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+        )
+
+    def test_round_trip(self):
+        """Tests that a MuJoCoModel survives a round trip, preserving its serializable
+        slots.
+
+        :return: None
+        """
+        model = self.problem.mujoco_model
+        result = _deserialize_value(_serialize_value(model))
+        assert isinstance(result, MuJoCoModel)
+        self.assertEqual(result.xml_str, model.xml_str)
+        self.assertEqual(result.body_id, model.body_id)
+        npt.assert_array_equal(result.initial_qpos, model.initial_qpos)
+        npt.assert_array_equal(result.initial_qvel, model.initial_qvel)
+
+    def test_rebuilt_engine_is_functional(self):
+        """Tests that a round-tripped MuJoCoModel can be queried and stepped, confirming
+        its native model and data objects were rebuilt from the XML string.
+
+        :return: None
+        """
+        result = _deserialize_value(_serialize_value(self.problem.mujoco_model))
+        assert isinstance(result, MuJoCoModel)
+        state = result.get_state()
+        self.assertEqual(
+            set(state.keys()),
+            {
+                "position_E_Eo",
+                "R_pas_E_to_BP1",
+                "velocity_E__E",
+                "omegas_BP1__E",
+                "time",
+            },
+        )
+        # Stepping exercises the rebuilt native model and data objects.
+        result.step()
+
+
+class TestFreeFlightMovementClassesRoundTrip(unittest.TestCase):
+    """This class contains methods for testing free flight movement class serialization
+    round trips.
+    """
+
+    def setUp(self):
+        """Build a shared FreeFlightUnsteadyProblem to source the movement graph.
+
+        :return: None
+        """
+        self.problem = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+        )
+
+    def test_free_flight_movement(self):
+        """Tests that a FreeFlightMovement survives a full round trip, including its
+        pregenerated airplanes.
+
+        :return: None
+        """
+        movement = self.problem.movement
+        result = _deserialize_value(_serialize_value(movement))
+        assert isinstance(result, FreeFlightMovement)
+        self.assertEqual(result.num_steps, movement.num_steps)
+        self.assertEqual(len(result.airplanes[0]), len(movement.airplanes[0]))
+
+    def test_free_flight_airplane_movement(self):
+        """Tests that a FreeFlightAirplaneMovement survives a full round trip.
+
+        :return: None
+        """
+        airplane_movement = self.problem.movement.airplane_movements[0]
+        result = _deserialize_value(_serialize_value(airplane_movement))
+        assert isinstance(result, FreeFlightAirplaneMovement)
+        self.assertEqual(
+            result.base_airplane.name, airplane_movement.base_airplane.name
+        )
+
+    def test_free_flight_wing_movement(self):
+        """Tests that a FreeFlightWingMovement survives a full round trip.
+
+        :return: None
+        """
+        wing_movement = self.problem.movement.airplane_movements[0].wing_movements[0]
+        result = _deserialize_value(_serialize_value(wing_movement))
+        assert isinstance(result, FreeFlightWingMovement)
+        self.assertEqual(result.base_wing.name, wing_movement.base_wing.name)
+
+    def test_free_flight_wing_cross_section_movement(self):
+        """Tests that a FreeFlightWingCrossSectionMovement survives a full round trip.
+
+        :return: None
+        """
+        wing_cross_section_movement = (
+            self.problem.movement.airplane_movements[0]
+            .wing_movements[0]
+            .wing_cross_section_movements[0]
+        )
+        result = _deserialize_value(_serialize_value(wing_cross_section_movement))
+        assert isinstance(result, FreeFlightWingCrossSectionMovement)
+
+    def test_free_flight_operating_point_movement(self):
+        """Tests that a FreeFlightOperatingPointMovement survives a full round trip.
+
+        :return: None
+        """
+        operating_point_movement = self.problem.movement.operating_point_movement
+        result = _deserialize_value(_serialize_value(operating_point_movement))
+        assert isinstance(result, FreeFlightOperatingPointMovement)
+        self.assertEqual(
+            len(result.operating_points),
+            len(operating_point_movement.operating_points),
+        )
+
+
+class TestFreeFlightUnsteadyProblemRoundTrip(unittest.TestCase):
+    """This class contains methods for testing FreeFlightUnsteadyProblem serialization
+    round trips.
+    """
+
+    def test_round_trip(self):
+        """Tests that a FreeFlightUnsteadyProblem survives a full round trip, with its
+        MuJoCoModel rebuilt and functional.
+
+        :return: None
+        """
+        problem = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, FreeFlightUnsteadyProblem)
+        self.assertEqual(result.num_steps, problem.num_steps)
+        self.assertEqual(len(result.steady_problems), len(problem.steady_problems))
+        npt.assert_array_equal(result.I_BP1_CgP1, problem.I_BP1_CgP1)
+        self.assertEqual(result.mass, problem.mass)
+        self.assertIsNone(result.external_loads_fn)
+        self.assertIsInstance(result.mujoco_model, MuJoCoModel)
+        # The rebuilt MuJoCoModel is functional.
+        result.mujoco_model.step()
+
+    def test_load_history_round_trip(self):
+        """Tests that recorded load-history arrays survive a round trip.
+
+        :return: None
+        """
+        problem = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+        problem.forces_W.append(np.array([1.0, 2.0, 3.0], dtype=float))
+        problem.forceCoefficients_W.append(np.array([0.1, 0.2, 0.3], dtype=float))
+        problem.moments_W_Cg.append(np.array([4.0, 5.0, 6.0], dtype=float))
+        problem.momentCoefficients_W_Cg.append(np.array([0.4, 0.5, 0.6], dtype=float))
+        result = _deserialize_value(_serialize_value(problem))
+        assert isinstance(result, FreeFlightUnsteadyProblem)
+        npt.assert_array_equal(result.forces_W[0], problem.forces_W[0])
+        npt.assert_array_equal(result.moments_W_Cg[0], problem.moments_W_Cg[0])
+
+    def test_custom_external_loads_fn_is_not_serializable(self):
+        """Tests that a FreeFlightUnsteadyProblem with a custom external_loads_fn raises
+        on serialization, matching the custom-callable disposition used elsewhere.
+
+        :return: None
+        """
+
+        def external_loads_fn(operating_point, airplane):
+            return np.zeros(3, dtype=float), np.zeros(3, dtype=float)
+
+        problem = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture(
+            external_loads_fn=external_loads_fn
+        )
+        with self.assertRaises(ValueError):
+            _serialize_value(problem)
+
+    def test_save_load_round_trip(self):
+        """Tests that a FreeFlightUnsteadyProblem survives a save/load round trip.
+
+        :return: None
+        """
+        problem = problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "free_flight.json"
+            save(path, problem)
+            result = load(path)
+        assert isinstance(result, FreeFlightUnsteadyProblem)
+        self.assertEqual(result.num_steps, problem.num_steps)
+
+
+class TestFreeFlightUnsteadySolverRoundTrip(unittest.TestCase):
+    """This class contains methods for testing
+    FreeFlightUnsteadyRingVortexLatticeMethodSolver serialization round trips.
+    """
+
+    def test_pre_run_round_trip(self):
+        """Tests that a pre run free flight solver survives a round trip.
+
+        :return: None
+        """
+        solver = solver_fixtures.make_free_flight_unsteady_ring_solver_fixture()
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, FreeFlightUnsteadyRingVortexLatticeMethodSolver)
+        self.assertFalse(result.ran)
+        self.assertEqual(result.num_steps, solver.num_steps)
+
+    def test_shared_reference_identity(self):
+        """Tests that the solver's steady problems are the same objects as those
+        reachable through its FreeFlightUnsteadyProblem after a round trip.
+
+        :return: None
+        """
+        solver = solver_fixtures.make_free_flight_unsteady_ring_solver_fixture()
+        result = _deserialize_value(_serialize_value(solver))
+        assert isinstance(result, FreeFlightUnsteadyRingVortexLatticeMethodSolver)
+        for reconstructed, problem_side in zip(
+            result.steady_problems, result.unsteady_problem.steady_problems
+        ):
+            self.assertIs(reconstructed, problem_side)
+
+    def test_save_load_round_trip(self):
+        """Tests that a free flight solver survives a save/load round trip.
+
+        :return: None
+        """
+        solver = solver_fixtures.make_free_flight_unsteady_ring_solver_fixture()
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "free_flight_solver.json"
+            save(path, solver)
+            result = load(path)
+        assert isinstance(result, FreeFlightUnsteadyRingVortexLatticeMethodSolver)
+        self.assertFalse(result.ran)

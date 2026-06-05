@@ -12,6 +12,9 @@ This package contains the following modules:
     test_aeroelastic_unsteady_ring_vortex_lattice_method.py: This module is a testing
     case for the aeroelastic unsteady ring vortex lattice method solver.
 
+    test_free_flight_unsteady_ring_vortex_lattice_method.py: This module is a testing
+    case for the free flight unsteady ring vortex lattice method solver.
+
     test_output.py: This module is a testing case for the output module.
 
     test_serialization_output.py: This module tests that output functions accept
@@ -52,6 +55,7 @@ This package contains the following modules:
 
 import tests.integration.fixtures
 import tests.integration.test_aeroelastic_unsteady_ring_vortex_lattice_method
+import tests.integration.test_free_flight_unsteady_ring_vortex_lattice_method
 import tests.integration.test_output
 import tests.integration.test_serialization_output
 import tests.integration.test_steady_convergence

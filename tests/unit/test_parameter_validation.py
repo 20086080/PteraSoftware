@@ -1024,5 +1024,60 @@ class TestRotationOrderReturnStr(unittest.TestCase):
             pv.rotation_order_return_str(None, "test_param")
 
 
+class TestMByNNumberArrayLikeReturnFloat(unittest.TestCase):
+    """A class with functions to test m_by_n_number_arrayLike_return_float."""
+
+    def test_valid_3x3_array(self):
+        """Test m_by_n_number_arrayLike_return_float with valid 3x3 array."""
+        valid_matrix = np.eye(3, dtype=float)
+        result = pv.m_by_n_number_arrayLike_return_float(
+            valid_matrix, "test_param", 3, 3
+        )
+        npt.assert_array_equal(result, valid_matrix)
+        self.assertEqual(result.dtype, float)
+        self.assertEqual(result.shape, (3, 3))
+
+    def test_valid_nested_list(self):
+        """Test m_by_n_number_arrayLike_return_float with valid nested list."""
+        valid_list = [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]
+        result = pv.m_by_n_number_arrayLike_return_float(valid_list, "test_param", 3, 2)
+        npt.assert_array_equal(result, np.array(valid_list, dtype=float))
+        self.assertEqual(result.shape, (3, 2))
+
+    def test_valid_with_ints(self):
+        """Test m_by_n_number_arrayLike_return_float converts ints to floats."""
+        int_matrix = np.eye(3, dtype=int)
+        result = pv.m_by_n_number_arrayLike_return_float(int_matrix, "test_param", 3, 3)
+        npt.assert_array_equal(result, np.eye(3, dtype=float))
+        self.assertEqual(result.dtype, float)
+
+    def test_invalid_wrong_shape(self):
+        """Test m_by_n_number_arrayLike_return_float raises ValueError with wrong shape."""
+        with self.assertRaises(ValueError) as context:
+            pv.m_by_n_number_arrayLike_return_float(
+                np.zeros((2, 3), dtype=float), "test_param", 3, 3
+            )
+        self.assertIn("test_param", str(context.exception))
+
+    def test_invalid_with_nan(self):
+        """Test m_by_n_number_arrayLike_return_float raises ValueError with NaN."""
+        matrix_with_nan = np.eye(3, dtype=float)
+        matrix_with_nan[0, 0] = np.nan
+        with self.assertRaises(ValueError):
+            pv.m_by_n_number_arrayLike_return_float(matrix_with_nan, "test_param", 3, 3)
+
+    def test_invalid_with_inf(self):
+        """Test m_by_n_number_arrayLike_return_float raises ValueError with inf."""
+        matrix_with_inf = np.eye(3, dtype=float)
+        matrix_with_inf[1, 1] = np.inf
+        with self.assertRaises(ValueError):
+            pv.m_by_n_number_arrayLike_return_float(matrix_with_inf, "test_param", 3, 3)
+
+    def test_invalid_string(self):
+        """Test m_by_n_number_arrayLike_return_float raises TypeError with string."""
+        with self.assertRaises(TypeError):
+            pv.m_by_n_number_arrayLike_return_float("invalid", "test_param", 3, 3)
+
+
 if __name__ == "__main__":
     unittest.main()

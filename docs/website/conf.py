@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.abspath(os.path.join("..", "..")))
 autodoc_mock_imports = [
     "cmocean",
     "matplotlib",
+    "mujoco",
     "numba",
     "numpy",
     "PySide6",
@@ -181,6 +182,7 @@ exclude_patterns = [
     "../AXES_POINTS_AND_FRAMES.md",
     "../CLASSES_AND_IMMUTABILITY.md",
     "../CODE_STYLE.md",
+    "../MUJOCO_CONVENTIONS.md",
     "../TYPE_HINT_AND_DOCSTRING_STYLE.md",
     "../WRITING_STYLE.md",
     # Exclude brand files directory
@@ -345,7 +347,6 @@ autoapi_ignore = [
     "*/ui_resources/*",
     "*/airfoils/*",
     "*/models/*",
-    "*/movements/free_flight_*",
 ]
 autoapi_options = [
     "members",

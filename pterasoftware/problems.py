@@ -1,4 +1,5 @@
-"""Contains the SteadyProblem, UnsteadyProblem, and AeroelasticUnsteadyProblem classes.
+"""Contains the SteadyProblem, UnsteadyProblem, AeroelasticUnsteadyProblem, and
+FreeFlightUnsteadyProblem classes.
 
 **Contains the following classes:**
 
@@ -9,6 +10,9 @@ UnsteadyProblem: A class used to contain unsteady aerodynamics problems.
 AeroelasticUnsteadyProblem: A class used to couple unsteady aerodynamics with wing
 structural dynamics (torsional spring-mass-damper model) for aeroelastic simulations.
 
+FreeFlightUnsteadyProblem: A class used to contain problems with coupled unsteady
+aerodynamics and rigid body dynamics.
+
 **Contains the following functions:**
 
 None
@@ -16,16 +20,25 @@ None
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.integrate import solve_ivp
 
-from . import _core, _parameter_validation, _transformations, geometry, movements
+from . import (
+    _core,
+    _mujoco_model,
+    _parameter_validation,
+    _transformations,
+    geometry,
+    movements,
+)
 from . import operating_point as operating_point_mod
 from .movements import aeroelastic_movement as aeroelastic_movement_mod
 from .movements import aeroelastic_wing_movement as aeroelastic_wing_movement_mod
+from .movements import free_flight_movement
 
 if TYPE_CHECKING:
     from ._coupled_unsteady_ring_vortex_lattice_method import (
@@ -98,16 +111,16 @@ class SteadyProblem:
 
                 for panel in np.ravel(wing.panels):
                     panel.Frpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
-                        T_pas_G_Cg_to_GP1_CgP1, panel.Frpp_G_Cg, has_point=True
+                        T_pas_G_Cg_to_GP1_CgP1, panel.Frpp_G_Cg, is_position=True
                     )
                     panel.Flpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
-                        T_pas_G_Cg_to_GP1_CgP1, panel.Flpp_G_Cg, has_point=True
+                        T_pas_G_Cg_to_GP1_CgP1, panel.Flpp_G_Cg, is_position=True
                     )
                     panel.Blpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
-                        T_pas_G_Cg_to_GP1_CgP1, panel.Blpp_G_Cg, has_point=True
+                        T_pas_G_Cg_to_GP1_CgP1, panel.Blpp_G_Cg, is_position=True
                     )
                     panel.Brpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
-                        T_pas_G_Cg_to_GP1_CgP1, panel.Brpp_G_Cg, has_point=True
+                        T_pas_G_Cg_to_GP1_CgP1, panel.Brpp_G_Cg, is_position=True
                     )
 
     # --- Immutable: read only properties ---
@@ -339,19 +352,507 @@ class _CoupledUnsteadyProblem(_core.CoreUnsteadyProblem):
         return self._steady_problems[step]
 
     def initialize_next_problem(
-        self, solver: CoupledUnsteadyRingVortexLatticeMethodSolver
+        self,
+        solver: CoupledUnsteadyRingVortexLatticeMethodSolver,
+        step: int,
     ) -> None:
-        """Initialize the next time step's SteadyProblem.
+        """Initialize the next time step's SteadyProblem and perform per step work.
 
-        Must be overridden by subclasses to compute the geometry for the next time step
-        based on the solver's results.
+        Subclasses must override this method. It is invoked by the solver on every step,
+        so subclasses are responsible for guarding any work that depends on a next step
+        existing (such as building the next SteadyProblem) with ``step < self.num_steps
+        - 1``. Per step work that should run on every step (such as recording the
+        current step's loads) belongs outside that guard.
 
-        :param solver: The solver instance providing aerodynamic data from the current
-            time step.
+        :param solver: The CoupledUnsteadyRingVortexLatticeMethodSolver instance
+            providing aerodynamic data from the current time step.
+        :param step: The current time step index (zero indexed).
         :return: None
         :raises NotImplementedError: Always. Subclasses must override this method.
         """
         raise NotImplementedError("Subclasses must implement initialize_next_problem.")
+
+
+# The permitted top-level keys for FreeFlightUnsteadyProblem's extra_xml injection-point
+# dict. Each maps to an XML fragment that MuJoCoModel injects into the generated model
+# XML at the matching location.
+_EXTRA_XML_INJECTION_POINTS = frozenset(
+    {"default", "asset", "visual", "worldbody", "body"}
+)
+
+
+class FreeFlightUnsteadyProblem(_CoupledUnsteadyProblem):
+    """A class used to contain problems with coupled unsteady aerodynamics and rigid
+    body dynamics.
+
+    **Contains the following methods:**
+
+    only_final_results: Determines whether the solver will only calculate loads for the
+    final time step or final cycle.
+
+    num_steps: The number of time steps.
+
+    delta_time: The time step size in seconds.
+
+    first_averaging_step: The first time step included in cycle averaging.
+
+    first_results_step: The first time step for which loads are calculated.
+
+    max_wake_rows: The maximum chordwise wake rows per Wing.
+
+    movement: The FreeFlightMovement that defines the motion parameters for this
+    FreeFlightUnsteadyProblem.
+
+    steady_problems: A tuple of SteadyProblems, one for each time step that has been
+    initialized so far.
+
+    get_steady_problem: Gets the SteadyProblem at a specified time step.
+
+    initialize_next_problem: Initializes the next time step's SteadyProblem from rigid
+    body dynamics.
+
+    mass: The mass of the Airplane in kilograms.
+
+    I_BP1_CgP1: The inertia matrix of the Airplane (in the first Airplane's body axes,
+    relative to the first Airplane's CG) in kilogram square meters.
+
+    external_loads_fn: A callable that computes additional forces and moments to apply
+    to the Airplane during the simulation, or None.
+
+    mujoco_model: The MuJoCoModel used for rigid body dynamics integration.
+    """
+
+    __slots__ = (
+        "_I_BP1_CgP1",
+        "_mass",
+        "_external_loads_fn",
+        "_external_loads_validated",
+        "_mujoco_model",
+        "forces_W",
+        "forceCoefficients_W",
+        "moments_W_Cg",
+        "momentCoefficients_W_Cg",
+    )
+
+    def __init__(
+        self,
+        movement: movements.free_flight_movement.FreeFlightMovement,
+        mass: float | int,
+        I_BP1_CgP1: np.ndarray | Sequence[Sequence[float | int]],
+        external_loads_fn: (
+            Callable[
+                [
+                    operating_point_mod.OperatingPoint,
+                    geometry.airplane.Airplane,
+                ],
+                tuple[np.ndarray, np.ndarray],
+            ]
+            | None
+        ) = None,
+        extra_xml: dict[str, str] | None = None,
+        mujoco_assets: dict[str, bytes] | None = None,
+    ) -> None:
+        """The initialization method.
+
+        :param movement: The FreeFlightMovement that defines the prescribed Airplane
+            geometry for this FreeFlightUnsteadyProblem. The initial Airplane and
+            OperatingPoint are derived from the FreeFlightMovement at the first time
+            step. The FreeFlightMovement must contain exactly one
+            FreeFlightAirplaneMovement; multi-airplane free flight is not supported in
+            this release.
+        :param mass: A number (int or float) representing the mass of the Airplane. It
+            must be greater than zero and will be converted internally to a float. The
+            units are in kilograms. It must satisfy weight == mass * |g_E| within
+            floating point tolerance, where weight is the Airplane's weight and g_E is
+            the OperatingPoint's gravitational acceleration, which keeps the Airplane's
+            weight, the supplied mass, and the gravitational field mutually consistent.
+        :param I_BP1_CgP1: An array-like object of numbers (int or float) with shape
+            (3,3) representing the inertia matrix of the Airplane (in the first
+            Airplane's body axes, relative to the first Airplane's CG). It must be
+            symmetric. Can be a tuple, list, or ndarray. Values are converted to floats
+            internally. The units are in kilogram square meters.
+        :param external_loads_fn: A callable that computes additional forces and moments
+            to apply to the Airplane during the simulation. It takes an OperatingPoint
+            and an Airplane and returns a tuple of two (3,) ndarrays of floats: the
+            additional force (in wind axes, in Newtons) and the additional moment (in
+            wind axes, relative to the first Airplane's CG, in Newton meters). The
+            return value is validated on the callable's first invocation; a return that
+            is not a pair of (3,) finite numeric vectors raises a descriptive error. The
+            physical correctness of the forces and moments themselves is not checked.
+            Setting this to None applies no additional loads. The default is None.
+        :param extra_xml: A dict mapping injection point names to XML fragment strings
+            to inject into the MuJoCo model's XML. Supported keys are "default",
+            "asset", "visual", "worldbody", and "body". Setting this to None injects no
+            extra XML. The default is None. The argument is checked to be a dict (or
+            None) whose keys are supported injection points and whose values are
+            strings; the XML fragments themselves are not validated, which is left to
+            MuJoCo, so this is an advanced-user parameter.
+        :param mujoco_assets: A dict mapping virtual filenames to their binary contents
+            for the MuJoCo model. Setting this to None provides no extra assets. The
+            default is None. The argument is checked to be a dict (or None) mapping
+            string filenames to bytes; whether a referenced asset is actually supplied
+            is left to MuJoCo, so this is an advanced-user parameter.
+        :return: None
+        """
+        if not isinstance(movement, free_flight_movement.FreeFlightMovement):
+            raise TypeError("movement must be a FreeFlightMovement.")
+
+        if len(movement.airplane_movements) != 1:
+            raise ValueError(
+                "movement must have exactly one FreeFlightAirplaneMovement. "
+                "Multi-airplane free flight is not supported in this release."
+            )
+
+        # Derive the initial Airplane and OperatingPoint from the FreeFlightMovement's
+        # first time step. SteadyProblem mutates each Panel's GP1_CgP1 attributes once,
+        # so the initial Airplane must be a fresh object; generate_airplane_at_time_step
+        # returns one.
+        initial_airplane_movement = movement.airplane_movements[0]
+        initial_airplane = initial_airplane_movement.generate_airplane_at_time_step(
+            step=0, delta_time=movement.delta_time
+        )
+        initial_operating_point = movement.operating_point_movement.operating_points[0]
+
+        super().__init__(
+            movement=movement,
+            initial_airplanes=[initial_airplane],
+            initial_operating_point=initial_operating_point,
+        )
+
+        I_BP1_CgP1 = _parameter_validation.m_by_n_number_arrayLike_return_float(
+            I_BP1_CgP1, "I_BP1_CgP1", 3, 3
+        )
+        if not np.allclose(I_BP1_CgP1, I_BP1_CgP1.T):
+            raise ValueError("I_BP1_CgP1 must be symmetric.")
+        self._I_BP1_CgP1 = I_BP1_CgP1
+        self._I_BP1_CgP1.flags.writeable = False
+
+        self._mass = _parameter_validation.number_in_range_return_float(
+            mass,
+            "mass",
+            min_val=0.0,
+            min_inclusive=False,
+        )
+
+        # The Airplane's weight, the supplied mass, and the gravitational field must be
+        # mutually consistent: weight == mass * |g_E|. The free-flight dynamics derive
+        # the gravitational force as mass * g_E, while the Airplane's weight is used
+        # elsewhere (for example by the trim functions), so a disagreement would be a
+        # silent modeling error. g_E is constant across the run, so checking the initial
+        # OperatingPoint suffices. A zero g_E (the default, no gravitational field)
+        # consistently requires a zero weight.
+        expected_weight = self._mass * float(
+            np.linalg.norm(initial_operating_point.g_E)
+        )
+        if not np.isclose(initial_airplane.weight, expected_weight):
+            raise ValueError(
+                "The Airplane's weight must equal mass * |g_E| within floating point "
+                f"tolerance: the Airplane's weight is {initial_airplane.weight} N, but "
+                f"mass * |g_E| is {expected_weight} N. Set the Airplane's weight, the "
+                "mass, and the OperatingPoint's g_E so they agree (for a zero-gravity "
+                "simulation, leave both g_E and the weight at zero)."
+            )
+
+        if external_loads_fn is not None and not callable(external_loads_fn):
+            raise TypeError("external_loads_fn must be callable or None.")
+        self._external_loads_fn = external_loads_fn
+
+        # Tracks whether the external_loads_fn's return structure has been validated.
+        # The return contract is static across time steps, so it is checked once, on the
+        # function's first invocation in initialize_next_problem, rather than every step.
+        self._external_loads_validated = False
+
+        # Initialize empty lists to hold the loads and load coefficients experienced by
+        # each time step's Airplane.
+        self.forces_W: list[np.ndarray] = []
+        self.forceCoefficients_W: list[np.ndarray] = []
+        self.moments_W_Cg: list[np.ndarray] = []
+        self.momentCoefficients_W_Cg: list[np.ndarray] = []
+
+        # Validate the extra_xml injection-point dict (it must be a dict, or None, whose
+        # keys are permitted injection points and whose values are XML fragment strings)
+        # and rebuild it from the validated values. Deeper XML correctness is left to
+        # MuJoCo's own parser. These two arguments are the only raw user input forwarded
+        # to the MuJoCoModel, which performs no validation of its own.
+        if extra_xml is not None:
+            if not isinstance(extra_xml, dict):
+                raise TypeError("extra_xml must be a dict or None.")
+            validated_extra_xml: dict[str, str] = {}
+            for key, value in extra_xml.items():
+                if key not in _EXTRA_XML_INJECTION_POINTS:
+                    raise ValueError(
+                        f"extra_xml key '{key}' is not a permitted injection point; "
+                        f"expected one of {sorted(_EXTRA_XML_INJECTION_POINTS)}."
+                    )
+                validated_extra_xml[key] = _parameter_validation.str_return_str(
+                    value, f"extra_xml['{key}']"
+                )
+            extra_xml = validated_extra_xml
+
+        # Validate the mujoco_assets dict (it must be a dict, or None, mapping str
+        # filenames to bytes). Whether a referenced asset is actually supplied is left to
+        # MuJoCo's own parser.
+        if mujoco_assets is not None:
+            if not isinstance(mujoco_assets, dict):
+                raise TypeError("mujoco_assets must be a dict or None.")
+            for filename, contents in mujoco_assets.items():
+                if not isinstance(filename, str):
+                    raise TypeError(
+                        "mujoco_assets keys must be str filenames, not "
+                        f"{type(filename).__name__}."
+                    )
+                if not isinstance(contents, bytes):
+                    raise TypeError(
+                        f"mujoco_assets['{filename}'] must be bytes, not "
+                        f"{type(contents).__name__}."
+                    )
+
+        self._mujoco_model = _mujoco_model.MuJoCoModel(
+            name=initial_airplane.name,
+            mass=self._mass,
+            omegas_BP1__E=initial_operating_point.omegas_BP1__E,
+            T_pas_BP1_CgP1_to_E_CgP1=initial_operating_point.T_pas_BP1_CgP1_to_E_CgP1,
+            vCg_E__E=-1
+            * _transformations.apply_T_to_vectors(
+                initial_operating_point.T_pas_GP1_CgP1_to_E_CgP1,
+                initial_operating_point.vInf_GP1__E,
+                is_position=False,
+            ),
+            I_BP1_CgP1=self._I_BP1_CgP1,
+            delta_time=movement.delta_time,
+            extra_xml=extra_xml,
+            mujoco_assets=mujoco_assets,
+        )
+
+    # --- Immutable: read only properties ---
+    @property
+    def I_BP1_CgP1(self) -> np.ndarray:
+        return self._I_BP1_CgP1
+
+    @property
+    def mass(self) -> float:
+        return self._mass
+
+    @property
+    def external_loads_fn(
+        self,
+    ) -> (
+        Callable[
+            [
+                operating_point_mod.OperatingPoint,
+                geometry.airplane.Airplane,
+            ],
+            tuple[np.ndarray, np.ndarray],
+        ]
+        | None
+    ):
+        return self._external_loads_fn
+
+    @property
+    def mujoco_model(self) -> _mujoco_model.MuJoCoModel:
+        return self._mujoco_model
+
+    @property
+    def _free_flight_movement(self) -> free_flight_movement.FreeFlightMovement:
+        """Type narrowed view of the inherited _movement attribute.
+
+        The parent stores _movement as a CoreMovement (widened to let subclasses pass
+        their own variants). __init__ accepts only a FreeFlightMovement, so the cast
+        here is safe.
+
+        :return: The _movement narrowed to FreeFlightMovement.
+        """
+        return cast(free_flight_movement.FreeFlightMovement, self._movement)
+
+    @staticmethod
+    def _validate_external_loads_return(result: object) -> None:
+        """Validates the structure of a value returned by the external_loads_fn.
+
+        The external_loads_fn must return a (force, moment) pair, where each is a (3,)
+        array-like of finite numbers (the force in wind axes in Newtons, the moment in
+        wind axes relative to the first Airplane's CG in Newton meters). This checks
+        only the shape and finiteness of the return value, not the physical correctness
+        of the forces and moments, which cannot be validated in general. It is called
+        once, on the external_loads_fn's first invocation, because the return contract
+        is static across time steps.
+
+        :param result: The object returned by a call to the external_loads_fn.
+        :return: None
+        """
+        if not isinstance(result, (tuple, list, np.ndarray)):
+            raise TypeError(
+                "external_loads_fn must return a (force, moment) pair as a tuple, "
+                f"list, or ndarray, but got {type(result).__name__}."
+            )
+        if len(result) != 2:
+            raise ValueError(
+                "external_loads_fn must return a (force, moment) pair, but its return "
+                f"value had {len(result)} items."
+            )
+
+        # Each component must be a (3,) vector of finite numbers. Defer the shape,
+        # finiteness, and numeric-type checks to the package's standard validator.
+        _parameter_validation.threeD_number_vectorLike_return_float(
+            result[0], "external_loads_fn's returned force"
+        )
+        _parameter_validation.threeD_number_vectorLike_return_float(
+            result[1], "external_loads_fn's returned moment"
+        )
+
+    def initialize_next_problem(
+        self,
+        solver: CoupledUnsteadyRingVortexLatticeMethodSolver,
+        step: int,
+    ) -> None:
+        """Initializes the next time step's SteadyProblem from rigid body dynamics.
+
+        On every step except the last one, steps the MuJoCo dynamics forward, extracts
+        the new state, and creates the next SteadyProblem with the new OperatingPoint
+        and the prescribed Airplane geometry for the next step. During the free flight
+        phase (once the step index reaches the movement's prescribed_num_steps), it
+        first transforms the aerodynamic loads into Earth axes and applies them, along
+        with weight and any external loads, to the MuJoCo model before stepping. During
+        the prescribed phase, those loads are withheld so the body coasts at its initial
+        trimmed condition while the wake develops. On every step (including the last
+        one), records the current step's loads in the load history lists.
+
+        :param solver: The CoupledUnsteadyRingVortexLatticeMethodSolver instance
+            providing aerodynamic data from the current time step.
+        :param step: The current time step index (zero indexed).
+        :return: None
+        """
+        current_airplane = solver.current_airplanes[0]
+        current_operating_point = solver.current_operating_point
+
+        # The solver populates these load attributes via _calculate_loads before
+        # invoking this method.
+        assert current_airplane.forces_W is not None
+        assert current_airplane.forceCoefficients_W is not None
+        assert current_airplane.moments_W_CgP1 is not None
+        assert current_airplane.momentCoefficients_W_CgP1 is not None
+
+        # 1. Get aerodynamic loads from the current Airplane.
+        aeroForces_W = current_airplane.forces_W
+        aeroMoments_W_CgP1 = current_airplane.moments_W_CgP1
+
+        if step < self.num_steps - 1:
+            in_free_phase = step >= self._free_flight_movement.prescribed_num_steps
+
+            if in_free_phase:
+                # 2. In the free flight phase, assemble the loads to apply. Start from the
+                # aerodynamic loads and add any external loads from the external_loads_fn.
+                if self._external_loads_fn is not None:
+                    external_result = self._external_loads_fn(
+                        current_operating_point, current_airplane
+                    )
+                    # Validate the return structure once, on the first invocation.
+                    if not self._external_loads_validated:
+                        self._validate_external_loads_return(external_result)
+                        self._external_loads_validated = True
+                    externalForces_W, externalMoments_W_CgP1 = external_result
+                    totalForces_W = aeroForces_W + externalForces_W
+                    totalMoments_W_CgP1 = aeroMoments_W_CgP1 + externalMoments_W_CgP1
+                else:
+                    totalForces_W = aeroForces_W
+                    totalMoments_W_CgP1 = aeroMoments_W_CgP1
+
+                # 3. Transform loads from wind axes to Earth axes.
+                T_pas_W_CgP1_to_E_CgP1 = current_operating_point.T_pas_W_CgP1_to_E_CgP1
+                totalForces_E = _transformations.apply_T_to_vectors(
+                    T_pas_W_CgP1_to_E_CgP1, totalForces_W, is_position=False
+                )
+                totalMoments_E_CgP1 = _transformations.apply_T_to_vectors(
+                    T_pas_W_CgP1_to_E_CgP1, totalMoments_W_CgP1, is_position=False
+                )
+
+                # 4. Add the weight force in Earth axes. The gravitational force is
+                # mass * g_E, which is zero when g_E is zero (no gravitational field).
+                totalForces_E = totalForces_E + self._mass * current_operating_point.g_E
+
+                # 5. Apply the loads to MuJoCo.
+                self._mujoco_model.apply_loads(totalForces_E, totalMoments_E_CgP1)
+            elif step == 0 and self._external_loads_fn is not None:
+                # In the prescribed phase the loads are withheld so the body coasts at its
+                # initial trimmed condition (MuJoCo's internal gravity is off and weight
+                # is applied through the loads, so withholding them leaves zero net force
+                # and the body keeps its initial velocity and orientation). This lets the
+                # wake develop at a steady operating condition before the rigid body
+                # dynamics are released for the free flight phase. The external_loads_fn
+                # is still invoked once, on the first step, so its return structure is
+                # validated fail-fast rather than only when the free flight phase begins.
+                if not self._external_loads_validated:
+                    self._validate_external_loads_return(
+                        self._external_loads_fn(
+                            current_operating_point, current_airplane
+                        )
+                    )
+                    self._external_loads_validated = True
+
+            # 6. Step the dynamics forward. During the prescribed phase no loads were
+            # applied, so the body coasts; during the free flight phase the loads applied
+            # above drive the dynamics.
+            self._mujoco_model.step()
+
+            # 7. Extract the new state from MuJoCo.
+            newState = self._mujoco_model.get_state()
+            position_E_Eo = newState["position_E_Eo"]
+            R_pas_E_to_BP1 = newState["R_pas_E_to_BP1"]
+            velocity_E__E = newState["velocity_E__E"]
+            omegas_BP1__E = newState["omegas_BP1__E"]
+
+            # 8. Derive alpha, beta, and Euler angles from the new state.
+            vCg__E = float(np.linalg.norm(velocity_E__E))
+            angles_E_to_BP1_izyx = _transformations.R_to_angles_izyx(R_pas_E_to_BP1)
+            T_pas_E_CgP1_to_BP1_CgP1 = _transformations.generate_rot_T(
+                angles=angles_E_to_BP1_izyx,
+                passive=True,
+                intrinsic=True,
+                order="zyx",
+            )
+            vInf_E__E = -velocity_E__E
+            vInf_BP1__E = _transformations.apply_T_to_vectors(
+                T_pas_E_CgP1_to_BP1_CgP1, vInf_E__E, is_position=False
+            )
+            alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(
+                vInf_BP1__E, vCg__E
+            )
+
+            # 9. Create the next OperatingPoint.
+            next_operating_point = operating_point_mod.OperatingPoint(
+                rho=current_operating_point.rho,
+                vCg__E=vCg__E,
+                alpha=alpha,
+                beta=beta,
+                angles_E_to_BP1_izyx=angles_E_to_BP1_izyx,
+                CgP1_E_Eo=position_E_Eo,
+                surfaceNormal_E=current_operating_point.surfaceNormal_E,
+                surfacePoint_E_Eo=current_operating_point.surfacePoint_E_Eo,
+                externalFX_W=current_operating_point.externalFX_W,
+                nu=current_operating_point.nu,
+                g_E=current_operating_point.g_E,
+                omegas_BP1__E=omegas_BP1__E,
+            )
+            self._free_flight_movement.operating_point_movement.operating_points.append(
+                next_operating_point
+            )
+
+            # 10. Get the next Airplane from the movement's pregenerated airplanes.
+            next_airplane = self._free_flight_movement.airplanes[0][step + 1]
+
+            # 11. Create the next SteadyProblem and append to _steady_problems.
+            next_steady_problem = SteadyProblem(
+                airplanes=[next_airplane],
+                operating_point=next_operating_point,
+            )
+            self._steady_problems.append(next_steady_problem)
+
+        # 12. Store load history.
+        self.forces_W.append(np.copy(aeroForces_W))
+        self.forceCoefficients_W.append(np.copy(current_airplane.forceCoefficients_W))
+        self.moments_W_Cg.append(np.copy(aeroMoments_W_CgP1))
+        self.momentCoefficients_W_Cg.append(
+            np.copy(current_airplane.momentCoefficients_W_CgP1)
+        )
 
 
 class AeroelasticUnsteadyProblem(_CoupledUnsteadyProblem):
@@ -672,27 +1173,34 @@ class AeroelasticUnsteadyProblem(_CoupledUnsteadyProblem):
         return np.repeat(areas[:, :, None], 3, axis=2) * self.wing_density
 
     def initialize_next_problem(
-        self, solver: CoupledUnsteadyRingVortexLatticeMethodSolver
+        self,
+        solver: CoupledUnsteadyRingVortexLatticeMethodSolver,
+        step: int,
     ) -> None:
+        # The solver invokes this on every step. Aeroelasticity only builds the next
+        # step's deformed geometry, so there is nothing to do on the final step.
+        if step >= self.num_steps - 1:
+            return
+
         aeroelastic_solver = cast(
             "AeroelasticUnsteadyRingVortexLatticeMethodSolver", solver
         )
 
-        step = len(self._steady_problems)
+        next_step = len(self._steady_problems)
 
         # calculate_wing_deformation returns a per-wing list: each element is either
         # the deformation ndarray for an aeroelastic wing or None for a standard wing.
         wing_deformation_angles_ixyz = self.calculate_wing_deformation(
-            aeroelastic_solver, step
+            aeroelastic_solver, next_step
         )
 
         # Generate the deformed airplane at this step.
         airplane = self._aeroelastic_movement.generate_airplane_at_time_step(
             airplane_movement_index=0,
-            step=step,
+            step=next_step,
             wing_deformation_angles_ixyz=wing_deformation_angles_ixyz,
         )
-        operating_point = self._aeroelastic_movement.operating_points[step]
+        operating_point = self._aeroelastic_movement.operating_points[next_step]
 
         self._steady_problems.append(
             SteadyProblem(

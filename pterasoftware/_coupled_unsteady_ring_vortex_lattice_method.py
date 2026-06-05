@@ -15,8 +15,6 @@ from __future__ import annotations
 
 from typing import cast
 
-import numpy as np
-
 from . import _logging, problems
 from .unsteady_ring_vortex_lattice_method import UnsteadyRingVortexLatticeMethodSolver
 
@@ -55,7 +53,7 @@ class CoupledUnsteadyRingVortexLatticeMethodSolver(
         super().__init__(unsteady_problem)
 
     @property
-    def _coupled_problem(self) -> problems._CoupledUnsteadyProblem:
+    def _coupled_unsteady_problem(self) -> problems._CoupledUnsteadyProblem:
         """Type narrowed view of the inherited unsteady_problem attribute.
 
         The parent stores unsteady_problem as a CoreUnsteadyProblem (widened to let
@@ -71,33 +69,9 @@ class CoupledUnsteadyRingVortexLatticeMethodSolver(
         self._initialize_panel_vortices_at(step)
 
     def _pre_shed_hook(self, step: int) -> None:
+        self._coupled_unsteady_problem.initialize_next_problem(self, step)
         if step < self.num_steps - 1:
-            self._coupled_problem.initialize_next_problem(self)
             self._initialize_panel_vortices_at(step + 1)
 
     def _get_steady_problem_at(self, step: int) -> problems.SteadyProblem:
-        return self._coupled_problem.get_steady_problem(step)
-
-    def run(
-        self,
-        prescribed_wake: bool | np.bool_ = True,
-        calculate_streamlines: bool | np.bool_ = True,
-        show_progress: bool | np.bool_ = True,
-    ) -> None:
-        """Runs the solver and refreshes the steady_problems snapshot afterward.
-
-        The parent solver caches steady_problems at construction time. For coupled
-        problems the list grows step by step, so the snapshot must be refreshed once the
-        run completes.
-
-        :param prescribed_wake: See UnsteadyRingVortexLatticeMethodSolver.run().
-        :param calculate_streamlines: See UnsteadyRingVortexLatticeMethodSolver.run().
-        :param show_progress: See UnsteadyRingVortexLatticeMethodSolver.run().
-        :return: None
-        """
-        super().run(
-            prescribed_wake=prescribed_wake,
-            calculate_streamlines=calculate_streamlines,
-            show_progress=show_progress,
-        )
-        self.steady_problems = self._coupled_problem.steady_problems
+        return self._coupled_unsteady_problem.get_steady_problem(step)

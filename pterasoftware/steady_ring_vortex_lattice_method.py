@@ -114,6 +114,11 @@ class SteadyRingVortexLatticeMethodSolver:
         self.operating_point: operating_point.OperatingPoint = (
             self._steady_problem.operating_point
         )
+        if np.any(self.operating_point.omegas_BP1__E != 0.0):
+            raise ValueError(
+                "operating_point.omegas_BP1__E must be all zeros for the steady ring "
+                "vortex lattice method solver."
+            )
         self.reynolds_numbers = self._steady_problem.reynolds_numbers
         self.num_airplanes = len(self.airplanes)
         self.num_panels = 0
@@ -435,7 +440,7 @@ class SteadyRingVortexLatticeMethodSolver:
             stackReflectedCpp_GP1_CgP1 = _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 self.stackCpp_GP1_CgP1,
-                has_point=True,
+                is_position=True,
             )
             gridImageRingVIndCpp_GP1__E = (
                 _aerodynamics_functions.expanded_velocities_from_ring_vortices(
@@ -454,7 +459,7 @@ class SteadyRingVortexLatticeMethodSolver:
             gridRingNormVIndCpp_GP1__E += _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 gridImageRingVIndCpp_GP1__E,
-                has_point=False,
+                is_position=False,
             )
             gridImageHorseshoeVIndCpp_GP1__E = (
                 _aerodynamics_functions.expanded_velocities_from_horseshoe_vortices(
@@ -472,7 +477,7 @@ class SteadyRingVortexLatticeMethodSolver:
             gridHorseshoeNormVIndCpp_GP1__E += _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 gridImageHorseshoeVIndCpp_GP1__E,
-                has_point=False,
+                is_position=False,
             )
 
         unexpected_singularity_counts = np.copy(singularity_counts)
@@ -595,7 +600,7 @@ class SteadyRingVortexLatticeMethodSolver:
             stackReflectedP_GP1_CgP1 = _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 stackP_GP1_CgP1,
-                has_point=True,
+                is_position=True,
             )
             stackImageRingVInd_GP1__E = (
                 _aerodynamics_functions.collapsed_velocities_from_ring_vortices(
@@ -614,7 +619,7 @@ class SteadyRingVortexLatticeMethodSolver:
             stackRingVInd_GP1__E += _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 stackImageRingVInd_GP1__E,
-                has_point=False,
+                is_position=False,
             )
             stackImageHorseshoeVInd_GP1__E = (
                 _aerodynamics_functions.collapsed_velocities_from_horseshoe_vortices(
@@ -632,7 +637,7 @@ class SteadyRingVortexLatticeMethodSolver:
             stackHorseshoeVInd_GP1__E += _transformations.apply_T_to_vectors(
                 surfaceReflect_T_act_GP1_CgP1,
                 stackImageHorseshoeVInd_GP1__E,
-                has_point=False,
+                is_position=False,
             )
 
         return cast(
