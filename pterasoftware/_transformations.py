@@ -305,6 +305,15 @@ def generate_reflect_T(
     is correct. However, it retains the `passive` flag for API consistency and as a
     reminder to consider what the final matrix represents.
 
+    **Warning:**
+
+    A reflection is an improper transform. Pseudovectors (axial vectors, such as
+    moments, angular velocities, vorticities, or surface normals) do not reflect the way
+    position, velocity, or force vectors do: under a reflection a pseudovector picks up
+    an extra sign change. Applying this matrix to a pseudovector with
+    apply_T_to_vectors() therefore returns the negative of the correctly reflected
+    vector.
+
     :param plane_point_A_a: A (3,) ndarray of floats representing a point on the
         reflection plane (in "A" axes, relative to the "a" point). The units are in
         meters.
@@ -551,6 +560,13 @@ def apply_T_to_vectors(
 
     This function handles both single vectors and arrays of vectors efficiently using
     einsum operations.
+
+    **Warning:**
+
+    When T is an improper transform (such as a reflection), this correctly reflects
+    position, velocity, and force vectors but returns the negative of the correct result
+    for pseudovectors (axial vectors such as moments, angular velocities, vorticities,
+    or surface normals).
 
     :param T: A (4,4) ndarray of floats representing a homogeneous transform (active or
         passive).

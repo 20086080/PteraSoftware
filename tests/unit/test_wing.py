@@ -166,6 +166,45 @@ class TestWing(unittest.TestCase):
         )
         npt.assert_array_equal(wing.symmetryPoint_G_Cg, np.array([0.5, 0.0, 0.0]))
 
+    def test_symmetric_wing_panel_normals_mirror_across_symmetry_plane(self):
+        """Test that a symmetric Wing's panel normals mirror correctly across its xz
+        symmetry plane.
+
+        Each panel at +y has a partner at -y whose unit normal is the source normal with
+        only its y component negated. This pins the inner-outer corner swap in the
+        mirrored-wing meshing, which keeps the recomputed normals correctly oriented;
+        reflecting the corner points without that swap would negate the normal's x and z
+        components instead.
+        """
+        wing = geometry_fixtures.make_symmetric_dihedral_wing_fixture()
+        wing.generate_mesh(4)
+        panels = wing.panels.flatten()
+
+        centroids = np.array(
+            [
+                (panel.Frpp_G_Cg + panel.Flpp_G_Cg + panel.Brpp_G_Cg + panel.Blpp_G_Cg)
+                / 4.0
+                for panel in panels
+            ]
+        )
+        normals = np.array([panel.unitNormal_G for panel in panels])
+
+        # The dihedral should give the normals a non-trivial spanwise component, so the
+        # y-flip below is a meaningful check rather than an identity.
+        self.assertGreater(np.max(np.abs(normals[:, 1])), 0.1)
+
+        # Reflection across the xz (y = 0) symmetry plane negates only the y component.
+        y_flip = np.array([1.0, -1.0, 1.0])
+        for centroid, normal in zip(centroids, normals):
+            distances = np.linalg.norm(centroids - centroid * y_flip, axis=1)
+            partner = int(np.argmin(distances))
+
+            # A true mirror partner exists across the y = 0 plane.
+            self.assertLess(distances[partner], 1e-9)
+
+            # The mirror partner's normal is this normal with its y component negated.
+            npt.assert_allclose(normals[partner], normal * y_flip, atol=1e-10)
+
     def test_generate_mesh_symmetry_type_1(self):
         """Test generate_mesh method with type 1 symmetry."""
         wing = geometry_fixtures.make_type_1_wing_fixture()

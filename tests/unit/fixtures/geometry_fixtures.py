@@ -423,6 +423,51 @@ def make_type_4_wing_fixture():
     return type_4_wing_fixture
 
 
+def make_symmetric_dihedral_wing_fixture():
+    """This method makes a fixture that is a simple Wing symmetric about its xz plane
+    (the y = 0 plane), with dihedral so that the panel normals carry a non zero spanwise
+    (y) component.
+
+    The Wing is returned unmeshed; call generate_mesh before reading its Panels.
+
+    :return symmetric_dihedral_wing_fixture: Wing
+        This is the symmetric dihedral Wing.
+    """
+    airfoil = make_test_airfoil_fixture()
+
+    root_wing_cross_section = ps.geometry.wing_cross_section.WingCrossSection(
+        airfoil=airfoil,
+        num_spanwise_panels=4,
+        chord=1.0,
+        Lp_Wcsp_Lpp=[0.0, 0.0, 0.0],
+        angles_Wcsp_to_Wcs_ixyz=[0.0, 0.0, 0.0],
+        spanwise_spacing="uniform",
+    )
+    tip_wing_cross_section = ps.geometry.wing_cross_section.WingCrossSection(
+        airfoil=airfoil,
+        num_spanwise_panels=None,
+        chord=1.0,
+        Lp_Wcsp_Lpp=[0.0, 4.0, 1.0],
+        angles_Wcsp_to_Wcs_ixyz=[0.0, 0.0, 0.0],
+        spanwise_spacing=None,
+    )
+
+    symmetric_dihedral_wing_fixture = ps.geometry.wing.Wing(
+        wing_cross_sections=[root_wing_cross_section, tip_wing_cross_section],
+        name="Symmetric Dihedral Test Wing",
+        Ler_Gs_Cgs=[0.0, 0.0, 0.0],
+        angles_Gs_to_Wn_ixyz=[0.0, 0.0, 0.0],
+        symmetric=True,
+        mirror_only=False,
+        symmetryNormal_G=[0.0, 1.0, 0.0],
+        symmetryPoint_G_Cg=[0.0, 0.0, 0.0],
+        num_chordwise_panels=4,
+        chordwise_spacing="uniform",
+    )
+
+    return symmetric_dihedral_wing_fixture
+
+
 def make_type_5_wing_fixture():
     """This method makes a fixture that is a Wing with type 5 symmetry
     (symmetric=True, coincident_symmetry_plane=False).
