@@ -9,7 +9,7 @@ import numpy.testing as npt
 import pterasoftware as ps
 
 # noinspection PyProtectedMember
-from pterasoftware import _core, _panel
+from pterasoftware import _core, _mujoco_model, _panel
 
 # noinspection PyProtectedMember
 from tests.unit.fixtures import (
@@ -23,8 +23,14 @@ from tests.unit.fixtures import (
     core_operating_point_movement_fixtures,
     core_wing_cross_section_movement_fixtures,
     core_wing_movement_fixtures,
+    free_flight_airplane_movement_fixtures,
+    free_flight_movement_fixtures,
+    free_flight_operating_point_movement_fixtures,
+    free_flight_wing_cross_section_movement_fixtures,
+    free_flight_wing_movement_fixtures,
     geometry_fixtures,
     movement_fixtures,
+    mujoco_model_fixtures,
     operating_point_fixtures,
     operating_point_movement_fixtures,
     panel_fixtures,
@@ -145,6 +151,8 @@ class TestOperatingPointSlots(unittest.TestCase):
         self.assertEqual(self.basic_op.T_pas_BP1_CgP1_to_E_CgP1.shape, (4, 4))
         self.assertEqual(self.basic_op.T_pas_E_CgP1_to_GP1_CgP1.shape, (4, 4))
         self.assertEqual(self.basic_op.T_pas_GP1_CgP1_to_E_CgP1.shape, (4, 4))
+        self.assertEqual(self.basic_op.T_pas_W_CgP1_to_E_CgP1.shape, (4, 4))
+        self.assertEqual(self.basic_op.T_pas_E_CgP1_to_W_CgP1.shape, (4, 4))
 
         # Freestream cached properties.
         self.assertEqual(self.basic_op.vInfHat_GP1__E.shape, (3,))
@@ -765,6 +773,54 @@ class TestUnsteadyProblemSlots(unittest.TestCase):
 
         # Verify Movement is independent.
         self.assertIsNot(copied.movement, self.unsteady_problem.movement)
+
+
+class TestFreeFlightUnsteadyProblemSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    FreeFlightUnsteadyProblem. Core-owned properties (only_final_results, num_steps,
+    delta_time, first_averaging_step, first_results_step, and the mutable load
+    lists) are tested at the CoreUnsteadyProblem level. Coupled-owned properties
+    (movement, steady_problems, get_steady_problem) are tested at the
+    _CoupledUnsteadyProblem level. This class tests
+    FreeFlightUnsteadyProblem-specific slots.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for FreeFlightUnsteadyProblem slots tests."""
+        self.problem = (
+            problem_fixtures.make_basic_free_flight_unsteady_problem_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on FreeFlightUnsteadyProblem."""
+        self.assertTrue(hasattr(ps.problems.FreeFlightUnsteadyProblem, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that FreeFlightUnsteadyProblem instances have no __dict__."""
+        self.assertFalse(hasattr(self.problem, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.problem.nonexistent_attribute = 42
+
+    def test_subclass(self):
+        """Test that FreeFlightUnsteadyProblem is a subclass of
+        _CoupledUnsteadyProblem.
+        """
+        self.assertIsInstance(self.problem, ps.problems._CoupledUnsteadyProblem)
+
+    def test_property_access(self):
+        """Test that FreeFlightUnsteadyProblem-specific properties are accessible."""
+        self.assertIsInstance(self.problem.I_BP1_CgP1, np.ndarray)
+        self.assertEqual(self.problem.I_BP1_CgP1.shape, (3, 3))
+        self.assertIsInstance(self.problem.mass, float)
+        self.assertIsNone(self.problem.external_loads_fn)
+        self.assertIsInstance(self.problem.mujoco_model, _mujoco_model.MuJoCoModel)
+        self.assertIsInstance(self.problem.forces_W, list)
+        self.assertIsInstance(self.problem.forceCoefficients_W, list)
+        self.assertIsInstance(self.problem.moments_W_Cg, list)
+        self.assertIsInstance(self.problem.momentCoefficients_W_Cg, list)
 
 
 class TestCoreOperatingPointMovementSlots(unittest.TestCase):
@@ -1437,6 +1493,36 @@ class TestMovementSlots(unittest.TestCase):
         )
 
 
+class TestMuJoCoModelSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on MuJoCoModel."""
+
+    def setUp(self):
+        """Set up test fixtures for MuJoCoModel slots tests."""
+        self.mujoco_model = mujoco_model_fixtures.make_basic_mujoco_model_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on MuJoCoModel."""
+        self.assertTrue(hasattr(_mujoco_model.MuJoCoModel, "__slots__"))
+
+    def test_no_instance_dict(self):
+        """Test that MuJoCoModel instances have no __dict__."""
+        self.assertFalse(hasattr(self.mujoco_model, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.mujoco_model.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that all properties are accessible after adding __slots__."""
+        # Immutable properties.
+        self.assertIsInstance(self.mujoco_model.xml_str, str)
+        self.assertIsInstance(self.mujoco_model.body_id, int)
+        self.assertIsInstance(self.mujoco_model.initial_key_frame_id, int)
+        self.assertEqual(self.mujoco_model.initial_qpos.shape, (7,))
+        self.assertEqual(self.mujoco_model.initial_qvel.shape, (6,))
+
+
 class TestSteadyHorseshoeSolverSlots(unittest.TestCase):
     """This class contains tests to verify __slots__ enforcement on
     SteadyHorseshoeVortexLatticeMethodSolver.
@@ -2038,3 +2124,275 @@ class TestAeroelasticUnsteadyRingSolverSlots(unittest.TestCase):
         npt.assert_array_equal(
             copied.slep_point_indices, self.solver.slep_point_indices
         )
+
+
+class TestFreeFlightOperatingPointMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    FreeFlightOperatingPointMovement. All property and deepcopy behavior is tested at
+    the CoreOperatingPointMovement level. This class verifies that the public subclass
+    preserves __slots__ enforcement.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for FreeFlightOperatingPointMovement slots tests."""
+        self.fopm = (
+            free_flight_operating_point_movement_fixtures.make_basic_free_flight_operating_point_movement_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on FreeFlightOperatingPointMovement."""
+        self.assertTrue(
+            hasattr(
+                ps.movements.free_flight_operating_point_movement.FreeFlightOperatingPointMovement,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that FreeFlightOperatingPointMovement instances have no __dict__."""
+        self.assertFalse(hasattr(self.fopm, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.fopm.nonexistent_attribute = 42
+
+    def test_subclass(self):
+        """Test that FreeFlightOperatingPointMovement is a subclass of
+        CoreOperatingPointMovement.
+        """
+        self.assertIsInstance(self.fopm, _core.CoreOperatingPointMovement)
+
+
+class TestFreeFlightWingCrossSectionMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    FreeFlightWingCrossSectionMovement. All property and deepcopy behavior is tested at
+    the CoreWingCrossSectionMovement level. This class verifies that the public subclass
+    preserves __slots__ enforcement.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for FreeFlightWingCrossSectionMovement slots tests."""
+        self.fwcsm = (
+            free_flight_wing_cross_section_movement_fixtures.make_basic_free_flight_wing_cross_section_movement_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on FreeFlightWingCrossSectionMovement."""
+        self.assertTrue(
+            hasattr(
+                ps.movements.free_flight_wing_cross_section_movement.FreeFlightWingCrossSectionMovement,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that FreeFlightWingCrossSectionMovement instances have no __dict__."""
+        self.assertFalse(hasattr(self.fwcsm, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.fwcsm.nonexistent_attribute = 42
+
+    def test_subclass(self):
+        """Test that FreeFlightWingCrossSectionMovement is a subclass of
+        CoreWingCrossSectionMovement.
+        """
+        self.assertIsInstance(self.fwcsm, _core.CoreWingCrossSectionMovement)
+
+
+class TestFreeFlightWingMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    FreeFlightWingMovement. All property and deepcopy behavior is tested at the
+    CoreWingMovement level. This class verifies that the public subclass preserves
+    __slots__ enforcement.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for FreeFlightWingMovement slots tests."""
+        self.free_flight_wing_movement = (
+            free_flight_wing_movement_fixtures.make_basic_free_flight_wing_movement_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on FreeFlightWingMovement."""
+        self.assertTrue(
+            hasattr(
+                ps.movements.free_flight_wing_movement.FreeFlightWingMovement,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that FreeFlightWingMovement instances have no __dict__."""
+        self.assertFalse(hasattr(self.free_flight_wing_movement, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.free_flight_wing_movement.nonexistent_attribute = 42
+
+    def test_subclass(self):
+        """Test that FreeFlightWingMovement is a subclass of CoreWingMovement."""
+        self.assertIsInstance(self.free_flight_wing_movement, _core.CoreWingMovement)
+
+
+class TestFreeFlightAirplaneMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    FreeFlightAirplaneMovement. All property and deepcopy behavior is tested at the
+    CoreAirplaneMovement level. This class verifies that the public subclass preserves
+    __slots__ enforcement.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for FreeFlightAirplaneMovement slots tests."""
+        self.free_flight_airplane_movement = (
+            free_flight_airplane_movement_fixtures.make_basic_free_flight_airplane_movement_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on FreeFlightAirplaneMovement."""
+        self.assertTrue(
+            hasattr(
+                ps.movements.free_flight_airplane_movement.FreeFlightAirplaneMovement,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that FreeFlightAirplaneMovement instances have no __dict__."""
+        self.assertFalse(hasattr(self.free_flight_airplane_movement, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.free_flight_airplane_movement.nonexistent_attribute = 42
+
+    def test_subclass(self):
+        """Test that FreeFlightAirplaneMovement is a subclass of
+        CoreAirplaneMovement.
+        """
+        self.assertIsInstance(
+            self.free_flight_airplane_movement, _core.CoreAirplaneMovement
+        )
+
+
+class TestFreeFlightMovementSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on FreeFlightMovement.
+    Core-owned properties are tested at the CoreMovement level. This class tests
+    FreeFlightMovement-specific slots and deepcopy.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for FreeFlightMovement slots tests."""
+        self.free_flight_movement = (
+            free_flight_movement_fixtures.make_basic_free_flight_movement_fixture()
+        )
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on FreeFlightMovement."""
+        self.assertTrue(
+            hasattr(ps.movements.free_flight_movement.FreeFlightMovement, "__slots__")
+        )
+
+    def test_no_instance_dict(self):
+        """Test that FreeFlightMovement instances have no __dict__."""
+        self.assertFalse(hasattr(self.free_flight_movement, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.free_flight_movement.nonexistent_attribute = 42
+
+    def test_subclass(self):
+        """Test that FreeFlightMovement is a subclass of CoreMovement."""
+        self.assertIsInstance(self.free_flight_movement, _core.CoreMovement)
+
+    def test_property_access(self):
+        """Test that FreeFlightMovement-specific properties are accessible.
+
+        FreeFlightMovement pre generates Airplanes, so it exposes airplanes along with
+        its prescribed and free step counts.
+        """
+        self.assertIsInstance(self.free_flight_movement.airplanes, tuple)
+        self.assertIsInstance(self.free_flight_movement.prescribed_num_steps, int)
+        self.assertIsInstance(self.free_flight_movement.free_num_steps, int)
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        copied = copy.deepcopy(self.free_flight_movement)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.free_flight_movement)
+
+        # Verify FreeFlightMovement-specific property values match.
+        self.assertEqual(
+            len(copied.airplanes),
+            len(self.free_flight_movement.airplanes),
+        )
+
+        # Verify FreeFlightAirplaneMovements are independent.
+        self.assertIsNot(
+            copied.airplane_movements[0],
+            self.free_flight_movement.airplane_movements[0],
+        )
+
+        # Verify the FreeFlightOperatingPointMovement is independent.
+        self.assertIsNot(
+            copied.operating_point_movement,
+            self.free_flight_movement.operating_point_movement,
+        )
+
+
+class TestFreeFlightUnsteadyRingSolverSlots(unittest.TestCase):
+    """This class contains tests to verify __slots__ enforcement on
+    FreeFlightUnsteadyRingVortexLatticeMethodSolver. The solver adds no stored state of
+    its own (its body-rate contribution is computed through hooks), so this class
+    verifies __slots__ enforcement and that the inherited problem remains accessible.
+    """
+
+    def setUp(self):
+        """Set up test fixtures for FreeFlightUnsteadyRingVortexLatticeMethodSolver
+        slots tests.
+        """
+        self.solver = solver_fixtures.make_free_flight_unsteady_ring_solver_fixture()
+
+    def test_slots_defined(self):
+        """Test that __slots__ is defined on
+        FreeFlightUnsteadyRingVortexLatticeMethodSolver.
+        """
+        self.assertTrue(
+            hasattr(
+                ps.free_flight_unsteady_ring_vortex_lattice_method.FreeFlightUnsteadyRingVortexLatticeMethodSolver,
+                "__slots__",
+            )
+        )
+
+    def test_no_instance_dict(self):
+        """Test that FreeFlightUnsteadyRingVortexLatticeMethodSolver instances have no
+        __dict__.
+        """
+        self.assertFalse(hasattr(self.solver, "__dict__"))
+
+    def test_dynamic_attribute_raises(self):
+        """Test that dynamic attribute assignment raises AttributeError."""
+        with self.assertRaises(AttributeError):
+            self.solver.nonexistent_attribute = 42
+
+    def test_property_access(self):
+        """Test that the inherited unsteady_problem remains accessible."""
+        self.assertIsInstance(
+            self.solver.unsteady_problem,
+            ps.problems.FreeFlightUnsteadyProblem,
+        )
+
+    def test_deepcopy(self):
+        """Test that copy.deepcopy produces a correct independent copy."""
+        copied = copy.deepcopy(self.solver)
+
+        # Verify the copy is a separate instance.
+        self.assertIsNot(copied, self.solver)
+
+        # Verify objects are independent.
+        self.assertIsNot(copied.unsteady_problem, self.solver.unsteady_problem)

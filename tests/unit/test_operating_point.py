@@ -1354,6 +1354,44 @@ class TestOperatingPoint(unittest.TestCase):
 
                 npt.assert_allclose(T_E_to_GP1, T_BP1_to_GP1 @ T_E_to_BP1, atol=1e-14)
 
+    def test_T_pas_W_CgP1_to_E_CgP1_shape_and_type(self):
+        """Test T_pas_W_CgP1_to_E_CgP1 shape and type."""
+        T = self.with_attitude_angles_op.T_pas_W_CgP1_to_E_CgP1
+
+        self.assertEqual(T.shape, (4, 4))
+        self.assertIsInstance(T, np.ndarray)
+        self.assertEqual(T.dtype, float)
+
+    def test_T_pas_W_CgP1_to_E_CgP1_and_inverse_are_inverses(self):
+        """Test that W to E and E to W are inverses."""
+        fixtures = [
+            self.basic_op,
+            self.with_attitude_angles_op,
+        ]
+
+        for op in fixtures:
+            with self.subTest(op=op):
+                T_forward = op.T_pas_W_CgP1_to_E_CgP1
+                T_inverse = op.T_pas_E_CgP1_to_W_CgP1
+
+                npt.assert_allclose(T_forward @ T_inverse, np.eye(4), atol=1e-14)
+                npt.assert_allclose(T_inverse @ T_forward, np.eye(4), atol=1e-14)
+
+    def test_W_to_E_composition_equals_product(self):
+        """Test that W to E equals W to BP1 composed with BP1 to E."""
+        fixtures = [
+            self.basic_op,
+            self.with_attitude_angles_op,
+        ]
+
+        for op in fixtures:
+            with self.subTest(op=op):
+                T_W_to_E = op.T_pas_W_CgP1_to_E_CgP1
+                T_W_to_BP1 = op.T_pas_W_CgP1_to_BP1_CgP1
+                T_BP1_to_E = op.T_pas_BP1_CgP1_to_E_CgP1
+
+                npt.assert_allclose(T_W_to_E, T_BP1_to_E @ T_W_to_BP1, atol=1e-14)
+
     def test_earth_transformations_read_only(self):
         """Test that Earth transformation matrices are read only."""
         op = self.with_attitude_angles_op
@@ -1366,6 +1404,10 @@ class TestOperatingPoint(unittest.TestCase):
             op.T_pas_E_CgP1_to_GP1_CgP1[0, 0] = 999.0
         with self.assertRaises(ValueError):
             op.T_pas_GP1_CgP1_to_E_CgP1[0, 0] = 999.0
+        with self.assertRaises(ValueError):
+            op.T_pas_W_CgP1_to_E_CgP1[0, 0] = 999.0
+        with self.assertRaises(ValueError):
+            op.T_pas_E_CgP1_to_W_CgP1[0, 0] = 999.0
 
     def test_earth_transformations_cached(self):
         """Test that Earth transformation properties return the same objects on
@@ -1377,6 +1419,8 @@ class TestOperatingPoint(unittest.TestCase):
         self.assertIs(op.T_pas_BP1_CgP1_to_E_CgP1, op.T_pas_BP1_CgP1_to_E_CgP1)
         self.assertIs(op.T_pas_E_CgP1_to_GP1_CgP1, op.T_pas_E_CgP1_to_GP1_CgP1)
         self.assertIs(op.T_pas_GP1_CgP1_to_E_CgP1, op.T_pas_GP1_CgP1_to_E_CgP1)
+        self.assertIs(op.T_pas_W_CgP1_to_E_CgP1, op.T_pas_W_CgP1_to_E_CgP1)
+        self.assertIs(op.T_pas_E_CgP1_to_W_CgP1, op.T_pas_E_CgP1_to_W_CgP1)
 
     # --- Tests for derived surface properties ---
 
@@ -1434,7 +1478,7 @@ class TestOperatingPoint(unittest.TestCase):
     def test_surfaceNormal_GP1_translation_does_not_affect_normal(self):
         """Test that changing CgP1_E_Eo does not affect surfaceNormal_GP1.
 
-        The normal is a free vector, so it should be independent of the CG
+        The normal is a non-position vector, so it should be independent of the CG
         position.
         """
         op_no_offset = ps.operating_point.OperatingPoint(
@@ -1569,7 +1613,7 @@ class TestOperatingPoint(unittest.TestCase):
         # A test point in GP1_CgP1.
         point = np.array([1.0, 2.0, 3.0])
 
-        reflected = _transformations.apply_T_to_vectors(T, point, has_point=True)
+        reflected = _transformations.apply_T_to_vectors(T, point, is_position=True)
 
         # The surface point in GP1_CgP1 is at z = -10 (10 meters below CgP1 in
         # GP1 z, corresponding to the ground at z = 0 in Earth). The surface
@@ -1580,9 +1624,9 @@ class TestOperatingPoint(unittest.TestCase):
         npt.assert_allclose(reflected, expected, atol=1e-12)
 
     def test_surfaceReflect_T_act_GP1_CgP1_reflects_velocity(self):
-        """Test that the reflection matrix correctly reflects a free vector.
+        """Test that the reflection matrix correctly reflects a non-position vector.
 
-        Free vector reflection should only negate the component along the
+        Non-position vector reflection should only negate the component along the
         surface normal, with no translational contribution.
         """
         from pterasoftware import _transformations
@@ -1593,7 +1637,7 @@ class TestOperatingPoint(unittest.TestCase):
         # The surface normal in GP1 is (0, 0, 1) for this fixture. Reflecting
         # a velocity vector should negate only the z component.
         velocity = np.array([5.0, -3.0, 7.0])
-        reflected = _transformations.apply_T_to_vectors(T, velocity, has_point=False)
+        reflected = _transformations.apply_T_to_vectors(T, velocity, is_position=False)
 
         expected = np.array([5.0, -3.0, -7.0])
         npt.assert_allclose(reflected, expected, atol=1e-12)
@@ -1606,8 +1650,8 @@ class TestOperatingPoint(unittest.TestCase):
         T = op.surfaceReflect_T_act_GP1_CgP1
 
         point = np.array([1.0, 2.0, 3.0])
-        once = _transformations.apply_T_to_vectors(T, point, has_point=True)
-        twice = _transformations.apply_T_to_vectors(T, once, has_point=True)
+        once = _transformations.apply_T_to_vectors(T, point, is_position=True)
+        twice = _transformations.apply_T_to_vectors(T, once, is_position=True)
 
         npt.assert_allclose(twice, point, atol=1e-12)
 
@@ -1645,9 +1689,94 @@ class TestOperatingPoint(unittest.TestCase):
         # Reflecting it should return the same point.
         surface_point = op.surfacePoint_GP1_CgP1
         reflected = _transformations.apply_T_to_vectors(
-            T, surface_point, has_point=True
+            T, surface_point, is_position=True
         )
         npt.assert_allclose(reflected, surface_point, atol=1e-12)
+
+    def test_g_E_default(self):
+        """Test that g_E defaults to no gravitational field (the zero vector)."""
+        op = ps.operating_point.OperatingPoint()
+        npt.assert_array_equal(op.g_E, [0.0, 0.0, 0.0])
+
+    def test_omegas_BP1__E_default(self):
+        """Test that omegas_BP1__E defaults to the zero vector."""
+        op = ps.operating_point.OperatingPoint()
+        npt.assert_array_equal(op.omegas_BP1__E, [0.0, 0.0, 0.0])
+
+    def test_g_E_accepts_custom_value(self):
+        """Test that a non default g_E is stored as a ndarray of floats."""
+        op = ps.operating_point.OperatingPoint(g_E=(1.0, -2.0, 3.5))
+        self.assertIsInstance(op.g_E, np.ndarray)
+        self.assertEqual(op.g_E.dtype, float)
+        npt.assert_array_equal(op.g_E, [1.0, -2.0, 3.5])
+
+    def test_omegas_BP1__E_accepts_custom_value(self):
+        """Test that a non default omegas_BP1__E is stored as a ndarray of floats."""
+        op = ps.operating_point.OperatingPoint(omegas_BP1__E=(0.1, -0.2, 0.3))
+        self.assertIsInstance(op.omegas_BP1__E, np.ndarray)
+        self.assertEqual(op.omegas_BP1__E.dtype, float)
+        npt.assert_array_equal(op.omegas_BP1__E, [0.1, -0.2, 0.3])
+
+    def test_g_E_accepts_zero(self):
+        """Test that an all zero g_E is valid (for zero gravity simulations)."""
+        op = ps.operating_point.OperatingPoint(g_E=(0.0, 0.0, 0.0))
+        npt.assert_array_equal(op.g_E, [0.0, 0.0, 0.0])
+
+    def test_g_E_and_omegas_BP1__E_accept_various_array_likes(self):
+        """Test that both parameters accept tuples, lists, and ndarrays."""
+        for g, omegas in [
+            ((1.0, 2.0, 3.0), (0.1, 0.2, 0.3)),
+            ([1.0, 2.0, 3.0], [0.1, 0.2, 0.3]),
+            (np.array([1.0, 2.0, 3.0]), np.array([0.1, 0.2, 0.3])),
+        ]:
+            with self.subTest(input_type=type(g).__name__):
+                op = ps.operating_point.OperatingPoint(g_E=g, omegas_BP1__E=omegas)
+                npt.assert_array_equal(op.g_E, [1.0, 2.0, 3.0])
+                npt.assert_array_equal(op.omegas_BP1__E, [0.1, 0.2, 0.3])
+
+    def test_g_E_validation_invalid(self):
+        """Test g_E validation with invalid values."""
+        with self.assertRaises(ValueError):
+            ps.operating_point.OperatingPoint(g_E=(0.0, 0.0))
+        with self.assertRaises(ValueError):
+            ps.operating_point.OperatingPoint(g_E=(0.0, 0.0, float("nan")))
+        with self.assertRaises(TypeError):
+            ps.operating_point.OperatingPoint(g_E="invalid")
+
+    def test_omegas_BP1__E_validation_invalid(self):
+        """Test omegas_BP1__E validation with invalid values."""
+        with self.assertRaises(ValueError):
+            ps.operating_point.OperatingPoint(omegas_BP1__E=(0.0, 0.0))
+        with self.assertRaises(ValueError):
+            ps.operating_point.OperatingPoint(omegas_BP1__E=(0.0, 0.0, float("inf")))
+        with self.assertRaises(TypeError):
+            ps.operating_point.OperatingPoint(omegas_BP1__E="invalid")
+
+    def test_g_E_immutable(self):
+        """Test that g_E is read only at both the property and array level."""
+        op = self.basic_op
+        with self.assertRaises(AttributeError):
+            op.g_E = np.array([1.0, 0.0, 0.0])
+        with self.assertRaises(ValueError):
+            op.g_E[0] = 999.0
+
+    def test_omegas_BP1__E_immutable(self):
+        """Test that omegas_BP1__E is read only at both the property and array level."""
+        op = self.basic_op
+        with self.assertRaises(AttributeError):
+            op.omegas_BP1__E = np.array([1.0, 0.0, 0.0])
+        with self.assertRaises(ValueError):
+            op.omegas_BP1__E[0] = 999.0
+
+    def test_g_E_converts_integers_to_float(self):
+        """Test that integer inputs for g_E are converted to floats."""
+        op = ps.operating_point.OperatingPoint(g_E=(1, -2, 3))
+        self.assertEqual(op.g_E.dtype, float)
+
+    def test_omegas_BP1__E_converts_integers_to_float(self):
+        """Test that integer inputs for omegas_BP1__E are converted to floats."""
+        op = ps.operating_point.OperatingPoint(omegas_BP1__E=(1, -2, 3))
+        self.assertEqual(op.omegas_BP1__E.dtype, float)
 
 
 if __name__ == "__main__":

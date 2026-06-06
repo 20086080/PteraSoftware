@@ -14,17 +14,25 @@ from typing import Any
 import numpy as np
 
 from . import _logging
-from ._oscillation import oscillating_lin_at_time, oscillating_sin_at_time
 
 # This module is inherently coupled to the internals of every class in the package
 # (it reads __slots__, knows class structure, and imports all classes into its
 # registry), so importing from a sibling private module is acceptable here.
+# noinspection PyProtectedMember
+from ._mujoco_model import MuJoCoModel
+from ._oscillation import oscillating_lin_at_time, oscillating_sin_at_time
+
 # noinspection PyProtectedMember
 from ._panel import Panel
 
 # noinspection PyProtectedMember
 from .aeroelastic_unsteady_ring_vortex_lattice_method import (
     AeroelasticUnsteadyRingVortexLatticeMethodSolver,
+)
+
+# noinspection PyProtectedMember
+from .free_flight_unsteady_ring_vortex_lattice_method import (
+    FreeFlightUnsteadyRingVortexLatticeMethodSolver,
 )
 from .geometry.airfoil import Airfoil
 from .geometry.airplane import Airplane
@@ -40,12 +48,26 @@ from .movements.aeroelastic_wing_cross_section_movement import (
 )
 from .movements.aeroelastic_wing_movement import AeroelasticWingMovement
 from .movements.airplane_movement import AirplaneMovement
+from .movements.free_flight_airplane_movement import FreeFlightAirplaneMovement
+from .movements.free_flight_movement import FreeFlightMovement
+from .movements.free_flight_operating_point_movement import (
+    FreeFlightOperatingPointMovement,
+)
+from .movements.free_flight_wing_cross_section_movement import (
+    FreeFlightWingCrossSectionMovement,
+)
+from .movements.free_flight_wing_movement import FreeFlightWingMovement
 from .movements.movement import Movement
 from .movements.operating_point_movement import OperatingPointMovement
 from .movements.wing_cross_section_movement import WingCrossSectionMovement
 from .movements.wing_movement import WingMovement
 from .operating_point import OperatingPoint
-from .problems import AeroelasticUnsteadyProblem, SteadyProblem, UnsteadyProblem
+from .problems import (
+    AeroelasticUnsteadyProblem,
+    FreeFlightUnsteadyProblem,
+    SteadyProblem,
+    UnsteadyProblem,
+)
 from .steady_horseshoe_vortex_lattice_method import (
     SteadyHorseshoeVortexLatticeMethodSolver,
 )
@@ -65,7 +87,7 @@ _CALLABLE_FUNC_TO_NAME = {func: name for name, func in _CALLABLE_NAME_TO_FUNC.it
 
 # Increments only when the serialization structure changes (slots added/removed/
 # renamed, class registry changed, encoding strategy changed).
-_FORMAT_VERSION = 4
+_FORMAT_VERSION = 6
 
 
 def _all_slots(cls: type) -> list[str]:
@@ -115,6 +137,14 @@ _CLASS_REGISTRY: dict[str, type] = {
     "AeroelasticOperatingPointMovement": AeroelasticOperatingPointMovement,
     "AeroelasticUnsteadyProblem": AeroelasticUnsteadyProblem,
     "AeroelasticUnsteadyRingVortexLatticeMethodSolver": AeroelasticUnsteadyRingVortexLatticeMethodSolver,
+    "FreeFlightMovement": FreeFlightMovement,
+    "FreeFlightAirplaneMovement": FreeFlightAirplaneMovement,
+    "FreeFlightWingMovement": FreeFlightWingMovement,
+    "FreeFlightWingCrossSectionMovement": FreeFlightWingCrossSectionMovement,
+    "FreeFlightOperatingPointMovement": FreeFlightOperatingPointMovement,
+    "FreeFlightUnsteadyProblem": FreeFlightUnsteadyProblem,
+    "FreeFlightUnsteadyRingVortexLatticeMethodSolver": FreeFlightUnsteadyRingVortexLatticeMethodSolver,
+    "MuJoCoModel": MuJoCoModel,
 }
 
 # Classes that can be saved and loaded as top level objects via save() and load().
@@ -145,6 +175,13 @@ _PUBLIC_SAVEABLE_CLASSES: frozenset[str] = frozenset(
         "AeroelasticOperatingPointMovement",
         "AeroelasticUnsteadyProblem",
         "AeroelasticUnsteadyRingVortexLatticeMethodSolver",
+        "FreeFlightMovement",
+        "FreeFlightAirplaneMovement",
+        "FreeFlightWingMovement",
+        "FreeFlightWingCrossSectionMovement",
+        "FreeFlightOperatingPointMovement",
+        "FreeFlightUnsteadyProblem",
+        "FreeFlightUnsteadyRingVortexLatticeMethodSolver",
     }
 )
 
@@ -155,13 +192,17 @@ _STEADY_SOLVER_SKIP_SLOTS: frozenset[str] = frozenset(
 
 # Slots on the unsteady solver that are aliases into the UnsteadyProblem graph.
 _UNSTEADY_SOLVER_SKIP_SLOTS: frozenset[str] = frozenset(
-    {"steady_problems", "current_airplanes", "current_operating_point", "panels"}
+    {"current_airplanes", "current_operating_point", "panels"}
 )
 
 # Slots on Movement that are redundant when serialized inside an UnsteadyProblem.
 # The canonical data lives in the SteadyProblem objects; these are reconstructed
 # on deserialization to preserve object identity.
 _MOVEMENT_SKIP_SLOTS: frozenset[str] = frozenset({"_airplanes", "_operating_points"})
+
+# Slots on MuJoCoModel that wrap native MuJoCo state and cannot be serialized. They are
+# rebuilt from the serialized XML string on deserialization via MuJoCoModel._rebuild_engine.
+_MUJOCO_MODEL_SKIP_SLOTS: frozenset[str] = frozenset({"_model", "_data"})
 
 
 def save(path: str | Path, obj: object) -> None:
@@ -390,6 +431,11 @@ def _object_to_dict(
     elif isinstance(obj, UnsteadyRingVortexLatticeMethodSolver):
         _skip_slots = _skip_slots | _UNSTEADY_SOLVER_SKIP_SLOTS
 
+    # The MuJoCoModel's native model and data objects cannot be serialized; they are
+    # rebuilt from the XML string on deserialization.
+    if isinstance(obj, MuJoCoModel):
+        _skip_slots = _skip_slots | _MUJOCO_MODEL_SKIP_SLOTS
+
     result: dict[str, Any] = {"_type": class_name}
     is_unsteady_problem = isinstance(obj, UnsteadyProblem)
     for slot_name in _all_slots(cls):
@@ -442,6 +488,14 @@ def _reconstruct_shared_references(obj: object) -> None:
     :param obj: The deserialized Ptera Software object.
     :return: None
     """
+    if isinstance(obj, MuJoCoModel):
+        # The native model and data objects were skipped during serialization; rebuild
+        # them from the deserialized XML string.
+        # This module is inherently coupled to class internals, so calling a private
+        # method directly is acceptable here.
+        # noinspection PyProtectedMember
+        obj._rebuild_engine()
+
     if isinstance(
         obj,
         (SteadyHorseshoeVortexLatticeMethodSolver, SteadyRingVortexLatticeMethodSolver),
@@ -496,7 +550,6 @@ def _reconstruct_shared_references(obj: object) -> None:
 
     if isinstance(obj, UnsteadyRingVortexLatticeMethodSolver):
         unsteady_problem = obj.unsteady_problem
-        object.__setattr__(obj, "steady_problems", unsteady_problem.steady_problems)
 
         # This module is inherently coupled to class internals (it reads __slots__
         # and writes private backing stores for all classes), so accessing a private

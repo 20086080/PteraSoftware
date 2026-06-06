@@ -125,16 +125,16 @@ def mesh_wing(wing: wing_mod.Wing) -> None:
         # Find the MCS points expressed in geometry axes, relative to the CG.
         assert T_pas_Wn_Ler_to_G_Cg is not None
         Fipp_G_Cg = _transformations.apply_T_to_vectors(
-            T_pas_Wn_Ler_to_G_Cg, Fipp_Wn_Ler, has_point=True
+            T_pas_Wn_Ler_to_G_Cg, Fipp_Wn_Ler, is_position=True
         )
         Fopp_G_Cg = _transformations.apply_T_to_vectors(
-            T_pas_Wn_Ler_to_G_Cg, Fopp_Wn_Ler, has_point=True
+            T_pas_Wn_Ler_to_G_Cg, Fopp_Wn_Ler, is_position=True
         )
         Bipp_G_Cg = _transformations.apply_T_to_vectors(
-            T_pas_Wn_Ler_to_G_Cg, Bipp_Wn_Ler, has_point=True
+            T_pas_Wn_Ler_to_G_Cg, Bipp_Wn_Ler, is_position=True
         )
         Bopp_G_Cg = _transformations.apply_T_to_vectors(
-            T_pas_Wn_Ler_to_G_Cg, Bopp_Wn_Ler, has_point=True
+            T_pas_Wn_Ler_to_G_Cg, Bopp_Wn_Ler, is_position=True
         )
 
         # Compute a matrix that is (M,N), where M and N are the number of chordwise
@@ -286,28 +286,28 @@ def mesh_wing(wing: wing_mod.Wing) -> None:
                 passive=False,
             )
             reflected_Fipp_Wn_Ler = _transformations.apply_T_to_vectors(
-                reflect_T_act, Fipp_Wn_Ler, has_point=True
+                reflect_T_act, Fipp_Wn_Ler, is_position=True
             )
             reflected_Fopp_Wn_Ler = _transformations.apply_T_to_vectors(
-                reflect_T_act, Fopp_Wn_Ler, has_point=True
+                reflect_T_act, Fopp_Wn_Ler, is_position=True
             )
             reflected_Bipp_Wn_Ler = _transformations.apply_T_to_vectors(
-                reflect_T_act, Bipp_Wn_Ler, has_point=True
+                reflect_T_act, Bipp_Wn_Ler, is_position=True
             )
             reflected_Bopp_Wn_Ler = _transformations.apply_T_to_vectors(
-                reflect_T_act, Bopp_Wn_Ler, has_point=True
+                reflect_T_act, Bopp_Wn_Ler, is_position=True
             )
             reflected_Fipp_G_Cg = _transformations.apply_T_to_vectors(
-                T_pas_Wn_Ler_to_G_Cg, reflected_Fipp_Wn_Ler, has_point=True
+                T_pas_Wn_Ler_to_G_Cg, reflected_Fipp_Wn_Ler, is_position=True
             )
             reflected_Fopp_G_Cg = _transformations.apply_T_to_vectors(
-                T_pas_Wn_Ler_to_G_Cg, reflected_Fopp_Wn_Ler, has_point=True
+                T_pas_Wn_Ler_to_G_Cg, reflected_Fopp_Wn_Ler, is_position=True
             )
             reflected_Bipp_G_Cg = _transformations.apply_T_to_vectors(
-                T_pas_Wn_Ler_to_G_Cg, reflected_Bipp_Wn_Ler, has_point=True
+                T_pas_Wn_Ler_to_G_Cg, reflected_Bipp_Wn_Ler, is_position=True
             )
             reflected_Bopp_G_Cg = _transformations.apply_T_to_vectors(
-                T_pas_Wn_Ler_to_G_Cg, reflected_Bopp_Wn_Ler, has_point=True
+                T_pas_Wn_Ler_to_G_Cg, reflected_Bopp_Wn_Ler, is_position=True
             )
 
             # Get the reflected wing section's Panels.
@@ -485,10 +485,10 @@ def _get_mcs_points(
     )
 
     inner_mcl_points_Wn_Ler = _transformations.apply_T_to_vectors(
-        T_pas_Wcsi_Lpi_Wn_Ler, inner_mcl_points_Wcsi_Lpi, has_point=True
+        T_pas_Wcsi_Lpi_Wn_Ler, inner_mcl_points_Wcsi_Lpi, is_position=True
     )
     outer_mcl_points_Wn_Ler = _transformations.apply_T_to_vectors(
-        T_pas_Wcso_Lpo_Wn_Ler, outer_mcl_points_Wcso_Lpo, has_point=True
+        T_pas_Wcso_Lpo_Wn_Ler, outer_mcl_points_Wcso_Lpo, is_position=True
     )
 
     # Find the vertices of the points on this wing section's (MCS) (in wing axes,

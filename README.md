@@ -111,7 +111,11 @@ ps.output.draw(solver=solver, scalar_type="lift", show_streamlines=True)
     * This feature enables co-simulation of structural wing deformation and standard Ptera Software UVLM calculations.
     * Currently the feature offers a simple torsional spring model for each WingCrossSection.
     * Experimental validation and improved deformation models coming soon.
-10. A Basic GUI
+10. Free Flight Module (Beta)
+    * This feature couples Ptera Software's UVLM with six-degree-of-freedom rigid body dynamics, using the MuJoCo physics engine, so an aircraft flies a free trajectory under its own aerodynamic loads, weight, and inertia.
+    * The body's motion updates the aerodynamics at every time step, capturing the two-way coupling between flight dynamics and unsteady aerodynamics.
+    * Currently this feature supports single-airplane free flight.
+11. A Basic GUI
     * This is still in its alpha stage, but we will be adding more functionality soon.
 
 ## Installation
@@ -134,7 +138,7 @@ Once set up, the `examples/` directory contains scripts that demonstrate the ful
 
 ## Example Output
 
-This package currently supports three different solvers, a steady horseshoe VLM, a steady ring VLM, an unsteady ring VLM (UVLM), and an aeroelastic unsteady ring VLM. Here are examples of the output you can expect to receive from each of them.
+This package currently supports five different solvers, a steady horseshoe VLM, a steady ring VLM, an unsteady ring VLM (UVLM), an aeroelastic unsteady ring VLM, and a free flight unsteady ring VLM. Here are examples of the output you can expect to receive from each of them.
 
 ### Steady Horseshoe VLM
 
@@ -150,6 +154,9 @@ This package currently supports three different solvers, a steady horseshoe VLM,
 
 ### Aeroelastic Unsteady Ring VLM
 ![Example Aeroelastic Unsteady Ring VLM Animation Output](https://raw.githubusercontent.com/camUrban/PteraSoftware/main/docs/examples_expected_output/aeroelastic_unsteady_first_order_deformation/Animate.webp)
+
+### Free Flight Unsteady Ring VLM
+![Example Free Flight Unsteady Ring VLM Animation Output](https://raw.githubusercontent.com/camUrban/PteraSoftware/main/docs/examples_expected_output/free_flight_unsteady_ring_vortex_lattice_method_solver_glider/Animate.webp)
 
 ## Validation
 

@@ -113,7 +113,7 @@ class AeroelasticUnsteadyRingVortexLatticeMethodSolver(
         self.stack_leading_edge_points: np.ndarray = np.empty(0, dtype=float)
 
     @property
-    def _aeroelastic_problem(self) -> problems.AeroelasticUnsteadyProblem:
+    def _aeroelastic_unsteady_problem(self) -> problems.AeroelasticUnsteadyProblem:
         """The solver's AeroelasticUnsteadyProblem, narrowed from the inherited
         unsteady_problem.
 

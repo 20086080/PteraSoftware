@@ -12,6 +12,7 @@ geometry <api/pterasoftware/geometry/index>
 movements <api/pterasoftware/movements/index>
 aeroelastic_unsteady_ring_vortex_lattice_method <api/pterasoftware/aeroelastic_unsteady_ring_vortex_lattice_method/index>
 convergence <api/pterasoftware/convergence/index>
+free_flight_unsteady_ring_vortex_lattice_method <api/pterasoftware/free_flight_unsteady_ring_vortex_lattice_method/index>
 operating_point <api/pterasoftware/operating_point/index>
 output <api/pterasoftware/output/index>
 problems <api/pterasoftware/problems/index>

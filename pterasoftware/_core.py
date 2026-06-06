@@ -217,6 +217,8 @@ class CoreOperatingPointMovement:
             CgP1_E_Eo=self._base_operating_point.CgP1_E_Eo,
             surfaceNormal_E=self._base_operating_point.surfaceNormal_E,
             surfacePoint_E_Eo=self._base_operating_point.surfacePoint_E_Eo,
+            g_E=self._base_operating_point.g_E,
+            omegas_BP1__E=self._base_operating_point.omegas_BP1__E,
         )
 
     def generate_operating_points(

@@ -715,7 +715,7 @@ class Wing:
 
         # Cache and return the result.
         self._WnX_G = _transformations.apply_T_to_vectors(
-            _T_pas_Wn_Ler_to_G_Cg, WnX_Wn, has_point=False
+            _T_pas_Wn_Ler_to_G_Cg, WnX_Wn, is_position=False
         )
         self._WnX_G.flags.writeable = False
         return self._WnX_G
@@ -744,7 +744,7 @@ class Wing:
 
         # Cache and return the result.
         self._WnY_G = _transformations.apply_T_to_vectors(
-            _T_pas_Wn_Ler_to_G_Cg, WnY_Wn, has_point=False
+            _T_pas_Wn_Ler_to_G_Cg, WnY_Wn, is_position=False
         )
         self._WnY_G.flags.writeable = False
         return self._WnY_G
@@ -773,7 +773,7 @@ class Wing:
 
         # Cache and return the result.
         self._WnZ_G = _transformations.apply_T_to_vectors(
-            _T_pas_Wn_Ler_to_G_Cg, WnZ_Wn, has_point=False
+            _T_pas_Wn_Ler_to_G_Cg, WnZ_Wn, is_position=False
         )
         self._WnZ_G.flags.writeable = False
         return self._WnZ_G
@@ -1081,7 +1081,7 @@ class Wing:
         tip_T_pas_Wcsp_Lpp_to_Wn_Ler = self.children_T_pas_Wcs_Lp_to_Wn_Ler[-2]
 
         tipLp_Wn_Ler = _transformations.apply_T_to_vectors(
-            tip_T_pas_Wcsp_Lpp_to_Wn_Ler, tipLp_Wcsp_Lpp, has_point=True
+            tip_T_pas_Wcsp_Lpp_to_Wn_Ler, tipLp_Wcsp_Lpp, is_position=True
         )
 
         # Project the tip position onto the wing axes' y direction (spanwise direction)
@@ -1176,7 +1176,7 @@ class Wing:
             ]
 
             Lp_Wn_Ler = _transformations.apply_T_to_vectors(
-                T_pas_Wcs_Lp_to_Wn_Ler, Lp_Wcs_Lp, has_point=True
+                T_pas_Wcs_Lp_to_Wn_Ler, Lp_Wcs_Lp, is_position=True
             )
 
             # Calculate next WingCrossSection's position in wing axes
@@ -1187,7 +1187,7 @@ class Wing:
             ]
 
             nextLp_Wn_Ler = _transformations.apply_T_to_vectors(
-                T_pas_nextWcs_nextLp_to_Wn_Ler, nextLp_nextWcs_nextLp, has_point=True
+                T_pas_nextWcs_nextLp_to_Wn_Ler, nextLp_nextWcs_nextLp, is_position=True
             )
 
             # Find the section vector and project it onto spanwise direction (wing axes y direction)
@@ -1308,10 +1308,10 @@ class Wing:
             ]
 
             airfoilOutline_Wn_ler = _transformations.apply_T_to_vectors(
-                T_pas_Wcs_Lp_to_Wn_Ler, airfoilOutline_Wcs_lp, has_point=True
+                T_pas_Wcs_Lp_to_Wn_Ler, airfoilOutline_Wcs_lp, is_position=True
             )
             airfoilMcl_Wn_ler = _transformations.apply_T_to_vectors(
-                T_pas_Wcs_Lp_to_Wn_Ler, airfoilMcl_Wcs_lp, has_point=True
+                T_pas_Wcs_Lp_to_Wn_Ler, airfoilMcl_Wcs_lp, is_position=True
             )
 
             airfoilOutlines_Wn_ler.append(airfoilOutline_Wn_ler)
@@ -1394,10 +1394,10 @@ class Wing:
             airfoilMcl_Wn_ler = airfoilMcls_Wn_ler[wing_cross_section_id]
 
             airfoilOutline_G_Cg = _transformations.apply_T_to_vectors(
-                _T_pas_Wn_Ler_to_G_Cg, airfoilOutline_Wn_ler, has_point=True
+                _T_pas_Wn_Ler_to_G_Cg, airfoilOutline_Wn_ler, is_position=True
             )
             airfoilMcl_G_Cg = _transformations.apply_T_to_vectors(
-                _T_pas_Wn_Ler_to_G_Cg, airfoilMcl_Wn_ler, has_point=True
+                _T_pas_Wn_Ler_to_G_Cg, airfoilMcl_Wn_ler, is_position=True
             )
 
             airfoilOutline_faces = np.hstack(
