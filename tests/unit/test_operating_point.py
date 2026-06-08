@@ -881,9 +881,15 @@ class TestOperatingPoint(unittest.TestCase):
     # --- Tests for angles_E_to_BP1_izyx ---
 
     def test_angles_E_to_BP1_izyx_default(self):
-        """Test that angles_E_to_BP1_izyx defaults to (0, 0, 0)."""
+        """Test that an unset angles_E_to_BP1_izyx resolves to the level-flight
+        attitude.
+
+        With the default alpha of 5 degrees and no sideslip, the unset attitude
+        resolves to a 5 degree pitch (body izyx (0, 5, 0)) so the body flies level
+        along Earth +x rather than tilting the flight path relative to Earth.
+        """
         op = ps.operating_point.OperatingPoint()
-        npt.assert_array_equal(op.angles_E_to_BP1_izyx, [0.0, 0.0, 0.0])
+        npt.assert_allclose(op.angles_E_to_BP1_izyx, [0.0, 5.0, 0.0], atol=1e-12)
 
     def test_angles_E_to_BP1_izyx_parameter_validation_valid(self):
         """Test angles_E_to_BP1_izyx parameter validation with valid values."""
@@ -933,12 +939,12 @@ class TestOperatingPoint(unittest.TestCase):
 
     def test_angles_E_to_BP1_izyx_parameter_validation_invalid_type(self):
         """Test angles_E_to_BP1_izyx parameter validation with invalid types."""
-        # Test invalid types for angles_E_to_BP1_izyx.
+        # Test invalid types for angles_E_to_BP1_izyx. None is excluded because it is
+        # the valid default that resolves to the level-flight attitude.
         invalid_angles_values = [
             (0.0, 0.0),
             (0.0, 0.0, 0.0, 0.0),
             "invalid",
-            None,
             (1.0, "invalid", 0.0),
         ]
 
@@ -1505,11 +1511,13 @@ class TestOperatingPoint(unittest.TestCase):
         change where the surface point is relative to the CG in GP1 axes.
         """
         op_near = ps.operating_point.OperatingPoint(
+            angles_E_to_BP1_izyx=(0.0, 0.0, 0.0),
             CgP1_E_Eo=(0.0, 0.0, -5.0),
             surfaceNormal_E=(0.0, 0.0, -1.0),
             surfacePoint_E_Eo=(0.0, 0.0, 0.0),
         )
         op_far = ps.operating_point.OperatingPoint(
+            angles_E_to_BP1_izyx=(0.0, 0.0, 0.0),
             CgP1_E_Eo=(0.0, 0.0, -20.0),
             surfaceNormal_E=(0.0, 0.0, -1.0),
             surfacePoint_E_Eo=(0.0, 0.0, 0.0),
