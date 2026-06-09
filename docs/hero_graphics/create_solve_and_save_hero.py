@@ -52,7 +52,7 @@ hero_airplane = ps.geometry.airplane.Airplane(
             ],
             name="Main Wing",
             Ler_Gs_Cgs=(0.0, 0.5, 0.0),
-            angles_Gs_to_Wn_ixyz=(0.0, 30.0, 0.0),
+            angles_Gs_to_Wn_ixyz=(0.0, 0.0, 0.0),
             symmetric=True,
             mirror_only=False,
             symmetryNormal_G=(0.0, 1.0, 0.0),
@@ -174,7 +174,7 @@ del reflected_main_wing_movement
 hero_operating_point = ps.operating_point.OperatingPoint(
     rho=1.225,
     vCg__E=10.0,
-    alpha=0.0,
+    alpha=30.0,
     beta=0.0,
     CgP1_E_Eo=(0.0, 0.0, -6.0),
     surfaceNormal_E=(0.0, 0.0, 1.0),
