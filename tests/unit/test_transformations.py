@@ -5,6 +5,8 @@ import unittest
 import numpy as np
 import numpy.testing as npt
 
+import pterasoftware as ps
+
 # noinspection PyProtectedMember
 from pterasoftware import _transformations
 
@@ -2120,7 +2122,9 @@ class TestAlphaAndBetaFromVInfBP1(unittest.TestCase):
         npt.assert_allclose(beta, 0.0, atol=1e-14)
 
     def test_positive_beta(self):
-        """Tests that freestream with positive right component yields positive beta.
+        """Tests that a freestream with a leftward body-y component (the relative wind
+        coming from the right) yields positive beta, per the wind axes convention in
+        docs/AXES_POINTS_AND_FRAMES.md.
 
         :return: None
         """
@@ -2128,7 +2132,7 @@ class TestAlphaAndBetaFromVInfBP1(unittest.TestCase):
         expected_beta = 8.0
         beta_rad = np.deg2rad(expected_beta)
         vInf_BP1__E = np.array(
-            [-vCg__E * np.cos(beta_rad), vCg__E * np.sin(beta_rad), 0.0]
+            [-vCg__E * np.cos(beta_rad), -vCg__E * np.sin(beta_rad), 0.0]
         )
 
         alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(vInf_BP1__E, vCg__E)
@@ -2137,7 +2141,8 @@ class TestAlphaAndBetaFromVInfBP1(unittest.TestCase):
         npt.assert_allclose(beta, expected_beta, atol=1e-14)
 
     def test_negative_beta(self):
-        """Tests that freestream with positive left component yields negative beta.
+        """Tests that a freestream with a rightward body-y component (the relative wind
+        coming from the left) yields negative beta.
 
         :return: None
         """
@@ -2145,13 +2150,77 @@ class TestAlphaAndBetaFromVInfBP1(unittest.TestCase):
         expected_beta = -3.0
         beta_rad = np.deg2rad(expected_beta)
         vInf_BP1__E = np.array(
-            [-vCg__E * np.cos(beta_rad), vCg__E * np.sin(beta_rad), 0.0]
+            [-vCg__E * np.cos(beta_rad), -vCg__E * np.sin(beta_rad), 0.0]
         )
 
         alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(vInf_BP1__E, vCg__E)
 
         npt.assert_allclose(alpha, 0.0, atol=1e-14)
         npt.assert_allclose(beta, expected_beta, atol=1e-14)
+
+    def test_coupled_alpha_and_beta(self):
+        """Tests recovery when both alpha and beta are nonzero, which the single-angle
+        tests do not exercise and where an incorrect decomposition order would cross-
+        contaminate the two angles.
+
+        The CG velocity in body axes (the negated freestream,
+        vCg_BP1__E = -vInf_BP1__E) for the wind axes convention has components
+        vCg__E * cos(alpha) * cos(beta), vCg__E * cos(alpha) * sin(beta), and
+        vCg__E * sin(alpha). Build the freestream for a known alpha and beta and confirm
+        both are recovered exactly.
+
+        :return: None
+        """
+        vCg__E = 10.0
+        expected_alpha = 6.0
+        expected_beta = -15.0
+        alpha_rad = np.deg2rad(expected_alpha)
+        beta_rad = np.deg2rad(expected_beta)
+        vCg_BP1__E = vCg__E * np.array(
+            [
+                np.cos(alpha_rad) * np.cos(beta_rad),
+                np.cos(alpha_rad) * np.sin(beta_rad),
+                np.sin(alpha_rad),
+            ]
+        )
+        vInf_BP1__E = -vCg_BP1__E
+
+        alpha, beta = _transformations.alpha_and_beta_from_vInf_BP1(vInf_BP1__E, vCg__E)
+
+        npt.assert_allclose(alpha, expected_alpha, atol=1e-13)
+        npt.assert_allclose(beta, expected_beta, atol=1e-13)
+
+    def test_round_trip_consistent_with_operating_point(self):
+        """Tests that this function exactly inverts the OperatingPoint's alpha and beta
+        to freestream mapping, so the two share a single convention.
+
+        The free flight state update derives alpha and beta from the body velocity with
+        this function and stores them on a new OperatingPoint, which rebuilds its
+        freestream from them. If the two conventions disagree, that round trip corrupts
+        the freestream every time step. Build OperatingPoints across a grid of alpha and
+        beta, take each one's freestream in body axes, and confirm this function recovers
+        the original alpha and beta.
+
+        :return: None
+        """
+        vCg__E = 13.0
+        for alpha_in in [-12.0, -5.0, 0.0, 7.0, 14.0]:
+            for beta_in in [-25.0, -8.0, 0.0, 6.0, 20.0]:
+                op = ps.operating_point.OperatingPoint(
+                    rho=1.225, vCg__E=vCg__E, alpha=alpha_in, beta=beta_in
+                )
+                vInf_BP1__E = _transformations.apply_T_to_vectors(
+                    op.T_pas_GP1_CgP1_to_BP1_CgP1,
+                    op.vInf_GP1__E,
+                    is_position=False,
+                )
+
+                alpha_out, beta_out = _transformations.alpha_and_beta_from_vInf_BP1(
+                    vInf_BP1__E, vCg__E
+                )
+
+                npt.assert_allclose(alpha_out, alpha_in, atol=1e-12)
+                npt.assert_allclose(beta_out, beta_in, atol=1e-12)
 
     def test_zero_speed_returns_nan(self):
         """Tests that zero speed yields NaN for both alpha and beta.
