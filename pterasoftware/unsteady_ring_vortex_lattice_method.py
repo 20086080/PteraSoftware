@@ -1744,6 +1744,20 @@ class UnsteadyRingVortexLatticeMethodSolver:
                                 next_wing.gridWrvp_GP1_CgP1.shape
                             )
 
+                        # The wake points are stored in the first Airplane's geometry
+                        # axes, which rotate with the body. Apply the apparent velocity
+                        # from body rotation (omega cross r), just as is done at the
+                        # collocation points and bound line vortex leg centers, so the
+                        # wake convects with the fluid velocity relative to the rotating
+                        # body frame. Without this term, a nonzero body rate would carry
+                        # the wake along with the body instead of leaving it fixed in the
+                        # Earth frame. When the solver does not model body rotation, this
+                        # is a no-op.
+                        vRowWrvp_GP1__E = self._apply_body_rate(
+                            next_wing.gridWrvp_GP1_CgP1,
+                            vRowWrvp_GP1__E,
+                        )
+
                         # Build the second new row by advecting the first row.
                         secondNewRowWrvp_GP1_CgP1 = (
                             next_wing.gridWrvp_GP1_CgP1
@@ -1787,6 +1801,20 @@ class UnsteadyRingVortexLatticeMethodSolver:
                             vGridWrvp_GP1__E = stackVGridWrvp_GP1__E.reshape(
                                 next_wing.gridWrvp_GP1_CgP1.shape
                             )
+
+                        # The wake points are stored in the first Airplane's geometry
+                        # axes, which rotate with the body. Apply the apparent velocity
+                        # from body rotation (omega cross r), just as is done at the
+                        # collocation points and bound line vortex leg centers, so the
+                        # wake convects with the fluid velocity relative to the rotating
+                        # body frame. Without this term, a nonzero body rate would carry
+                        # the wake along with the body instead of leaving it fixed in the
+                        # Earth frame. When the solver does not model body rotation, this
+                        # is a no-op.
+                        vGridWrvp_GP1__E = self._apply_body_rate(
+                            next_wing.gridWrvp_GP1_CgP1,
+                            vGridWrvp_GP1__E,
+                        )
 
                         # Advect the entire aged grid in one vector add.
                         next_wing.gridWrvp_GP1_CgP1 = (
