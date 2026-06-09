@@ -16,6 +16,7 @@ def make_basic_operating_point_fixture():
         vCg__E=10.0,
         alpha=5.0,
         beta=0.0,
+        angles_E_to_BP1_izyx=(0.0, 0.0, 0.0),
         externalFX_W=0.0,
         nu=15.06e-6,
     )
@@ -422,6 +423,7 @@ def make_with_ground_surface_operating_point_fixture():
         vCg__E=10.0,
         alpha=5.0,
         beta=0.0,
+        angles_E_to_BP1_izyx=(0.0, 0.0, 0.0),
         CgP1_E_Eo=(0.0, 0.0, -10.0),
         surfaceNormal_E=(0.0, 0.0, -1.0),
         surfacePoint_E_Eo=(0.0, 0.0, 0.0),

@@ -21,7 +21,10 @@ def make_surface_effect_operating_point():
 
     The ground plane is at the Earth origin with a downward normal (+z is down). The
     first Airplane's CG is at (0, 0, -5), which is 5 meters above the
-    ground plane.
+    ground plane. The body attitude pitches the airplane nose up by the 5 degree angle
+    of attack (with zero sideslip), which places the flight path level along the
+    horizontal Earth x axis, so the airplane flies level in ground effect rather than
+    descending toward the surface.
 
     :return operating_point_fixture: OperatingPoint
         This is an OperatingPoint fixture.
@@ -31,6 +34,7 @@ def make_surface_effect_operating_point():
         vCg__E=10.0,
         alpha=5.0,
         beta=0.0,
+        angles_E_to_BP1_izyx=(0.0, 5.0, 0.0),
         surfaceNormal_E=(0.0, 0.0, 1.0),
         surfacePoint_E_Eo=(0.0, 0.0, 0.0),
         CgP1_E_Eo=(0.0, 0.0, -5.0),

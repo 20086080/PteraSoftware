@@ -89,7 +89,7 @@ class OperatingPoint:
         vCg__E: float | int = 10.0,
         alpha: float | int = 5.0,
         beta: float | int = 0.0,
-        angles_E_to_BP1_izyx: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
+        angles_E_to_BP1_izyx: None | np.ndarray | Sequence[float | int] = None,
         CgP1_E_Eo: np.ndarray | Sequence[float | int] = (0.0, 0.0, 0.0),
         surfaceNormal_E: None | np.ndarray | Sequence[float | int] = None,
         surfacePoint_E_Eo: None | np.ndarray | Sequence[float | int] = None,
@@ -122,13 +122,22 @@ class OperatingPoint:
             in docs/AXES_POINTS_AND_FRAMES.md. It must be a number (int or float) in the
             range (-180.0, 180.0] and will be converted internally to a float. The units
             are in degrees. The default is 0.0.
-        :param angles_E_to_BP1_izyx: An array-like object of 3 numbers representing the
-            angles from Earth axes to the first Airplane's body axes using an intrinsic
-            zy'x" sequence. Can be a tuple, list, or ndarray. Values are converted to
-            floats internally. Note that body axes differ from geometry axes: body axes
-            point forward/right/down while geometry axes point aft/right/up. The units
-            are in degrees. All angles must lie in the range (-180.0, 180.0] degrees.
-            The default is (0.0, 0.0, 0.0).
+        :param angles_E_to_BP1_izyx: None, or an array-like object of 3 numbers
+            representing the angles from Earth axes to the first Airplane's body axes
+            using an intrinsic zy'x" sequence. Can be None, a tuple, list, or ndarray.
+            If not None, values are converted to floats internally and all angles must
+            lie in the range (-180.0, 180.0] degrees. Note that body axes differ from
+            geometry axes: body axes point forward/right/down while geometry axes point
+            aft/right/up. The units are in degrees. The default is None, which resolves
+            at construction to the attitude that places the first Airplane in level
+            flight along Earth +x at the given alpha and beta (equivalently, the
+            attitude that makes wind axes coincide with Earth axes). This is the
+            resolution most users expect: alpha and beta tilt the body relative to a
+            level flight path fixed in the Earth frame rather than tilting the flight
+            path relative to Earth. The distinction only affects results when an effect
+            anchored to the Earth frame is active (an image surface, a gravitational
+            field, or free flight). Pass (0.0, 0.0, 0.0) explicitly to instead align the
+            body axes with the Earth axes regardless of alpha and beta.
         :param CgP1_E_Eo: An array-like object of 3 numbers representing the position of
             the first Airplane's CG (in Earth axes, relative to the Earth origin). Can
             be a tuple, list, or ndarray. Values are converted to floats internally. The
@@ -193,35 +202,56 @@ class OperatingPoint:
         self._beta = _parameter_validation.number_in_range_return_float(
             beta, "beta", -180.0, False, 180.0, True
         )
-        angles_E_to_BP1_izyx = (
-            _parameter_validation.threeD_number_vectorLike_return_float(
-                angles_E_to_BP1_izyx, "angles_E_to_BP1_izyx"
+        if angles_E_to_BP1_izyx is None:
+            # Resolve the default attitude to the one that makes wind axes coincide with
+            # Earth axes, which places the first Airplane in level flight along Earth +x
+            # at the given alpha and beta. The body-to-wind rotation depends only on
+            # alpha and beta, so setting the Earth-to-body rotation equal to the
+            # wind-to-body rotation makes Earth and wind coincide.
+            T_pas_BP1_CgP1_to_W_CgP1 = _transformations.generate_rot_T(
+                angles=np.array([0.0, -self._alpha, self._beta]),
+                passive=True,
+                intrinsic=False,
+                order="xyz",
             )
-        )
-        angles_E_to_BP1_izyx[0] = _parameter_validation.number_in_range_return_float(
-            angles_E_to_BP1_izyx[0],
-            "angles_E_to_BP1_izyx[0]",
-            -180.0,
-            False,
-            180.0,
-            True,
-        )
-        angles_E_to_BP1_izyx[1] = _parameter_validation.number_in_range_return_float(
-            angles_E_to_BP1_izyx[1],
-            "angles_E_to_BP1_izyx[1]",
-            -180.0,
-            False,
-            180.0,
-            True,
-        )
-        angles_E_to_BP1_izyx[2] = _parameter_validation.number_in_range_return_float(
-            angles_E_to_BP1_izyx[2],
-            "angles_E_to_BP1_izyx[2]",
-            -180.0,
-            False,
-            180.0,
-            True,
-        )
+            R_pas_W_to_BP1 = T_pas_BP1_CgP1_to_W_CgP1[:3, :3].T
+            angles_E_to_BP1_izyx = _transformations.R_to_angles_izyx(R_pas_W_to_BP1)
+        else:
+            angles_E_to_BP1_izyx = (
+                _parameter_validation.threeD_number_vectorLike_return_float(
+                    angles_E_to_BP1_izyx, "angles_E_to_BP1_izyx"
+                )
+            )
+            angles_E_to_BP1_izyx[0] = (
+                _parameter_validation.number_in_range_return_float(
+                    angles_E_to_BP1_izyx[0],
+                    "angles_E_to_BP1_izyx[0]",
+                    -180.0,
+                    False,
+                    180.0,
+                    True,
+                )
+            )
+            angles_E_to_BP1_izyx[1] = (
+                _parameter_validation.number_in_range_return_float(
+                    angles_E_to_BP1_izyx[1],
+                    "angles_E_to_BP1_izyx[1]",
+                    -180.0,
+                    False,
+                    180.0,
+                    True,
+                )
+            )
+            angles_E_to_BP1_izyx[2] = (
+                _parameter_validation.number_in_range_return_float(
+                    angles_E_to_BP1_izyx[2],
+                    "angles_E_to_BP1_izyx[2]",
+                    -180.0,
+                    False,
+                    180.0,
+                    True,
+                )
+            )
         self._angles_E_to_BP1_izyx = angles_E_to_BP1_izyx
         self._angles_E_to_BP1_izyx.flags.writeable = False
         self._CgP1_E_Eo = _parameter_validation.threeD_number_vectorLike_return_float(
