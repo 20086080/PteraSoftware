@@ -46,9 +46,15 @@ Requires Python 3.11, but active development is done in 3.13
         - `codespell.yml`
         - `docformatter.yml`
         - `isort.yml`
+        - `label-sync.yml`
         - `mypy.yml`
         - `pre-commit-hooks.yml`
+        - `publish.yml`
         - `tests.yml`
+    - `CODEOWNERS`
+    - `dependabot.yml`
+    - `FUNDING.yml`
+    - `labels.yml`
     - `pull_request_template.md`
 - `.venv/`: Directory for the Python virtual environment, configured for the host machine's OS (not included in version control)
 - `.venv-wsl/`: Directory for the Python virtual environment configured for a WSL OS (not included in version control, may be missing if host machine doesn't use WSL for development)
