@@ -13,12 +13,11 @@ Generate a commit message for the current staged changes, then create the commit
     - `git diff --staged` to see staged changes
     - This sequencer-state check, to detect an in-progress merge, cherry-pick, revert, or rebase:
       ```bash
-      gp() { git rev-parse --git-path "$1"; }
       state=""
-      if [ -f "$(gp MERGE_HEAD)" ]; then state="merge"; fi
-      if [ -f "$(gp CHERRY_PICK_HEAD)" ]; then state="cherry-pick"; fi
-      if [ -f "$(gp REVERT_HEAD)" ]; then state="revert"; fi
-      if [ -d "$(gp rebase-merge)" ] || [ -d "$(gp rebase-apply)" ]; then state="rebase"; fi
+      if [ -f "$(git rev-parse --git-path MERGE_HEAD)" ]; then state="merge"; fi
+      if [ -f "$(git rev-parse --git-path CHERRY_PICK_HEAD)" ]; then state="cherry-pick"; fi
+      if [ -f "$(git rev-parse --git-path REVERT_HEAD)" ]; then state="revert"; fi
+      if [ -d "$(git rev-parse --git-path rebase-merge)" ] || [ -d "$(git rev-parse --git-path rebase-apply)" ]; then state="rebase"; fi
       if [ -n "$state" ]; then echo "IN-PROGRESS: $state"; else echo "CLEAN"; fi
       ```
     - Do not stage additional files.
@@ -48,7 +47,8 @@ Generate a commit message for the current staged changes, then create the commit
    body="Your body text here, one long line per paragraph."
    fold -s -w 72 <<<"$body" | awk -v s="$subject" '
    BEGIN { print s; print "" }
-   { sub(/ +$/, ""); if ($0 ~ /[^ -~]/) bad = 1; if (length($0) > max) max = length($0); print }
+   /[^ -~]/ { bad = 1 }
+   { sub(/ +$/, ""); if (length > max) max = length; print }
    END {
      print ""
      sfail = 0
@@ -61,6 +61,7 @@ Generate a commit message for the current staged changes, then create the commit
    ```
    The output is the full message (subject, blank line, wrapped body) followed by a blank line and one status line per check.
    - Avoid the `!` character anywhere in this call (write `sfail == 0`, not `!sfail`); the harness escapes `!` in Bash commands, which corrupts the awk program.
+   - Do not reference awk fields by their numbered forms (a dollar sign followed by a digit) in this snippet; slash-command argument substitution replaces those tokens with the command's arguments (empty when none are passed) and silently corrupts the program. The body loop instead uses awk's implicit current record: a bare `/regex/` pattern, bare `length`, and bare `print` all operate on the whole record without naming it.
    - If any check prints `FAIL`, fix the message and re-run this step before proceeding.
    - Use the wrapped body lines verbatim as the final body text; the status lines after the final blank line are feedback, not message content. The `awk` stage strips the trailing space that `fold -s` leaves at each break point; every resulting line is 72 characters or fewer. This is a hard limit.
    - `fold` hard-splits any token longer than 72 characters (e.g., a long URL). If the body contains such a token, place it on its own line, exclude that line from wrapping, and let it exceed the limit.
