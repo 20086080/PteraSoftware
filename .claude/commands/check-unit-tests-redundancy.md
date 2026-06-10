@@ -15,14 +15,15 @@ Follow these steps carefully and track your progress:
 - [ ] Identify redundant tests (same behavior tested multiple times)
 - [ ] Identify tests that could be consolidated
 - [ ] Document findings in a redundancy report
+- [ ] Present the report to the user and get confirmation before removing anything
 - [ ] Remove or consolidate redundant tests
 - [ ] Update `__init__.py` files if any files were removed
 
 ## Omissions
 
 Please do NOT:
-- Run or debug any tests you create
-- Reformat any files with black
+- Run or debug any tests
+- Reformat any files; formatting is handled later through pre-commit by the debug command
 
 These steps are both handled by other slash commands.
 
@@ -58,7 +59,8 @@ These steps are both handled by other slash commands.
    - [test_name_1] and [test_name_2] could be parameterized: [reason]
    - ...
    ```
-5. **Remove or consolidate** redundant tests and fixtures:
+5. **Present the report, then remove or consolidate** redundant tests and fixtures:
+    - First show the user the redundancy report and wait for confirmation before deleting or consolidating anything
     - Delete clearly redundant tests
     - Consolidate tests that verify the same thing
     - Keep the most comprehensive version when consolidating

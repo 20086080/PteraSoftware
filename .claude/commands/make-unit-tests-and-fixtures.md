@@ -13,18 +13,19 @@ Follow these steps carefully and track your progress:
 - [ ] Understand the structure of each public class and function
 - [ ] Search the codebase for other relevant files
 - [ ] Read and understand any relevant files found
+- [ ] Read the style docs: `docs/CODE_STYLE.md`, `docs/TYPE_HINT_AND_DOCSTRING_STYLE.md`, and `docs/WRITING_STYLE.md`
 - [ ] Read `tests/unit/test_wing_cross_section_movement.py` for examples of test patterns
 - [ ] Read `tests/unit/fixtures/wing_cross_section_movement_fixtures.py` for examples of fixture patterns
 - [ ] Understand how `movements/wing_cross_section_movement.py` informs design of example tests and fixtures
 - [ ] Create comprehensive tests and fixtures for each public class/function in `$ARGUMENTS`
-- [ ] Review the tests and fixtures to verify they follow style guidelines
+- [ ] Review the tests and fixtures against `docs/CODE_STYLE.md`, `docs/TYPE_HINT_AND_DOCSTRING_STYLE.md`, and `docs/WRITING_STYLE.md`
 - [ ] Update `tests/unit/__init__.py` and `tests/unit/fixtures/__init__.py` with any new files or edited docstrings
 
 ## Omissions
 
 Please do NOT:
 - Run or debug any tests you create
-- Reformat any files with black
+- Reformat any files; formatting is handled later through pre-commit by the debug command
 
 These steps are both handled by other slash commands.
 
@@ -34,7 +35,8 @@ These steps are both handled by other slash commands.
 2. **Understand the structure** of each class and function.
 3. **Search the codebase** for other relevant files.
 4. **If you find any relevant files**, read and understand those as well.
-5. **Study existing test and fixture patterns**:
+5. **Study the project's conventions and existing patterns**:
+    - Read the style docs before writing anything: `docs/CODE_STYLE.md` for code, `docs/TYPE_HINT_AND_DOCSTRING_STYLE.md` for type hints and docstrings, and `docs/WRITING_STYLE.md` for prose in docstrings and comments
     - Read `tests/unit/test_wing_cross_section_movement.py`
     - Read `tests/unit/fixtures/wing_cross_section_movement_fixtures.py`
     - Understand the patterns for creating fixtures and unit tests
@@ -57,8 +59,8 @@ These steps are both handled by other slash commands.
    d. **Create the tests** (but don't run them - we will check redundancy and debug later):
    e. **Review for style compliance**:
       - Re-read the fixtures and tests you just wrote
-      - Check if they match the guidance in your docs on code and writing styles
-      - Verify they match the unit testing patterns
+      - Check them against `docs/CODE_STYLE.md`, `docs/TYPE_HINT_AND_DOCSTRING_STYLE.md`, and `docs/WRITING_STYLE.md`
+      - Verify they match the existing unit testing patterns
       - Polish any style issues found
    f. **Repeat these sub-steps** for all remaining classes and functions within `$ARGUMENTS`
 8. **Read through `tests/unit/__init__.py` and `tests/unit/fixtures/__init__.py`** and update them with any new files or any changes to the docstrings of existing modules. Also add to or update the import list. Make sure both the import lists and the docstrings list modules in alphabetical order!

@@ -124,7 +124,9 @@ Requires Python 3.11, but active development is done in 3.13
     - `trim.py`: Trim analysis functionality
     - `unsteady_ring_vortex_lattice_method.py`: Unsteady ring UVLM solver
 - `scripts/`: Directory with maintenance and tooling scripts
+    - `analyze_webp.py`: Renders WebP frames to PNG files for inspection (backs the `analyze-webp` slash command)
     - `check_ascii_only.py`: Pre-commit hook script that flags non-ASCII characters in text files
+    - `find_unused_fixtures.py`: Finds and optionally deletes unused fixtures and dead `setUp` attributes across the test suite (backs the `delete-unused-fixtures` slash command)
 - `tests/`: Directory with unit and integration tests
     - `integration/`: Integration tests for combined functionality
         - `fixtures/`: Fixtures for integration tests
