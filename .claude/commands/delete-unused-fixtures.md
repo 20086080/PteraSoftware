@@ -1,94 +1,55 @@
 ---
-description: Find and delete unused fixtures from a specified fixture module
+description: Find and delete unused fixtures and dead setUp attributes across the whole test suite with scripts/find_unused_fixtures.py
 ---
 
 # Delete Unused Fixtures
 
-Find and delete unused fixtures for `$ARGUMENTS`.
+Find and remove unused test fixtures and dead `setUp`/`setUpClass` attributes across the entire test suite, driving `scripts/find_unused_fixtures.py`. This command takes no argument: the script scans the whole suite at once (both `tests/unit/` and `tests/integration/`), which is necessary because a fixture defined in one module is routinely used by tests in another.
 
-## Important: Cross-Module Usage
+## What the script detects
 
-Fixtures may be used by tests in ANY module, not just the corresponding test file. For example, `wing_movement.py` has fixtures in `wing_movement_fixtures.py` and tests in `test_wing_movement.py`. However, fixtures from `wing_movement_fixtures.py` might also be used by `test_airplane_movement.py`. You MUST search the entire `tests/` directory for usage.
+The script parses the suite with the `ast` module instead of grepping for names, so it resolves each call to the specific fixture definition it refers to and does not raise false matches on coincidentally shared names. It reports three categories:
 
-## Progress Tracking
+- **Directly unused fixtures**: `make_*` fixture functions never called anywhere under `tests/`.
+- **Transitively unused fixtures**: fixtures called only by other unused fixtures. Removing the directly unused ones can expose these, so the analysis iterates to a fixed point.
+- **Dead `setUp`/`setUpClass` attributes**: attributes assigned in a test class's `setUp` or `setUpClass` that no test method, and no other `setUp` attribute, ever reads.
 
-Follow these steps carefully and track your progress:
-- [ ] Read the fixture file for the module specified in `$ARGUMENTS`
-- [ ] Extract all fixture function names (functions that don't start with `_`)
-- [ ] For each fixture, search the entire `tests/` directory for usage
-- [ ] Identify fixtures with zero usages (excluding their own definition)
-- [ ] Generate an unused fixtures report
-- [ ] Delete unused fixtures from the file
-- [ ] Update imports in `tests/unit/fixtures/__init__.py` if needed
+## Why deletion is safe for `__init__.py`
 
-## Omissions
+Both `tests/unit/fixtures/__init__.py` and `tests/integration/fixtures/__init__.py` import fixture *modules* (`import tests.unit.fixtures.foo_fixtures`), not individual fixture functions. Deleting a fixture function from a module therefore never breaks an `__init__.py` import, and you do not edit any `__init__.py` after deleting fixtures. The only reason to touch an `__init__.py` would be to drop an entire fixture module that has become empty, which this command does not do.
 
-Please do NOT:
-- Run or debug any tests you create
-- Reformat any files with black
+## Environment constraints
 
-These steps are both handled by other slash commands.
+- The script's verification modes run the full test suite under `coverage` (pinned in `requirements_dev.txt`). This takes several minutes. Always invoke the script with `python -u` so its output streams, and never pipe the run through `tail`, `head`, `grep`, or any other filter, per `docs/RUNNING_TESTS_AND_TYPE_CHECKS.md`.
+- The script never modifies a file until you pass `--delete-verified`. The plain run and `--verify` leave every file untouched.
 
-## Detailed Steps
+## Steps
 
-1. **Read the fixture file** for the module specified in `$ARGUMENTS`:
-    - Note all public function names (fixture functions)
-    - Ignore private functions (those starting with `_`)
-2. **For each fixture function**, search for usage:
-   Use the Grep tool to search the entire `tests/` directory:
+1. **Report.** Run the script with no flags to list candidates without changing anything:
+   ```bash
+   python -u scripts/find_unused_fixtures.py
    ```
-   pattern: fixture_function_name
-   path: tests/
-   output_mode: files_with_matches
+   It prints the three categories above with each candidate's file and line, then a summary count. It exits non-zero whenever any candidate is found; that is expected and is not an error.
+2. **Present the candidates** to the user: the directly unused fixtures, the transitively unused fixtures, and the dead `setUp` attributes, each with its location. If the report is empty, report that the suite is clean and stop.
+3. **Optionally preview the verification.** If the user wants to see which candidates survive verification before authorizing any deletion, run the dry-run verification, which deletes each candidate in memory, runs the full suite under coverage, checks that all tests still pass, that the set of discoverable test IDs is unchanged, and that coverage does not drop, then restores every file:
+   ```bash
+   python -u scripts/find_unused_fixtures.py --verify
    ```
-
-   A fixture is USED if it appears in any file OTHER than:
-    - Its own fixture file (the definition)
-    - `__init__.py` files (just imports)
-3. **Classify each fixture**:
-    - **Used**: Found in at least one test file
-    - **Unused**: Only found in its definition and/or `__init__.py` imports
-4. **Generate an unused fixtures report**:
+   Report which candidates it confirmed and which it flagged as false positives (a candidate whose name surfaces in a failing traceback after deletion).
+4. **Delete, on confirmation.** Only after the user confirms, run the deletion pass. It re-runs the same verification, deletes only the candidates that pass, excludes any false positives, and restores files if verification fails outright:
+   ```bash
+   python -u scripts/find_unused_fixtures.py --delete-verified
    ```
-   UNUSED FIXTURES REPORT for [fixture_file]
-
-   UNUSED (will be deleted):
-   - [fixture_name]: no usages found in test files
-
-   USED (keeping):
-   - [fixture_name]: used in [list of test files]
-
-   SUMMARY:
-   - Total fixtures: [N]
-   - Used: [N]
-   - Unused: [N]
+5. **Reformat the touched files** through pre-commit, never a bare formatter, per `docs/RUNNING_TESTS_AND_TYPE_CHECKS.md`. Find the modified files with `git status -sb`, then:
+   ```bash
+   pre-commit run --files <each modified fixture or test file>
    ```
-5. **Delete unused fixtures**:
-    - Remove the function definitions from the fixture file
-    - Remove any imports that were only used by deleted fixtures
-    - Keep the file structure clean (no orphaned blank lines)
-6. **Update `tests/unit/fixtures/__init__.py`**:
-    - Remove imports for deleted fixtures
-    - Update the module docstring if needed
+6. **Re-scan for newly exposed candidates.** Removing a fixture can leave another one unused. The deletion pass reports whether new candidates were exposed; if so, repeat from step 1 until a report comes back clean.
 
-## Efficiency Tips
+## Important Reminders
 
-- Use Grep with `output_mode: files_with_matches` for fast searching
-- Search for multiple fixtures in parallel when possible
-- Don't read test files unless you need to verify ambiguous matches
-
-## Error Handling
-
-- If a fixture name is common (e.g., `valid_wing`), verify the grep matches are actual usages, not coincidental string matches
-- If uncertain whether a fixture is used, keep it and flag for manual review
-- If the fixture file doesn't exist, report the error and stop
-
-## Quality Checklist
-
-Before finalizing:
-- [ ] Searched the ENTIRE `tests/` directory, not just corresponding test file
-- [ ] Verified each "unused" fixture truly has no usages
-- [ ] Generated the unused fixtures report
-- [ ] Removed only unused fixtures
-- [ ] Updated `__init__.py` imports
-- [ ] No useful fixtures were accidentally deleted
+- This command operates on the whole suite and takes no argument; do not try to scope it to a single module.
+- Never edit an `__init__.py` after deleting fixtures: the fixture packages import modules, not individual functions, so a deleted fixture cannot break an import.
+- Always show the user the report, and the verification result if you ran one, before any deletion. The script only mutates files under `--delete-verified`.
+- Run the script with `python -u` and never pipe it through a filter; the verification suite can run for minutes and its output must stay visible.
+- Reformat modified files with `pre-commit run --files`, never a bare formatter.

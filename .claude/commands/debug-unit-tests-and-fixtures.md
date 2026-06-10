@@ -21,7 +21,7 @@ If there's ANY possibility you've found a real bug based on the source code logi
 Follow these steps carefully and track your progress:
 
 - [ ] Identify which test files correspond to `$ARGUMENTS`
-- [ ] Run the relevant tests and capture output
+- [ ] Run the relevant tests with unittest, per `docs/RUNNING_TESTS_AND_TYPE_CHECKS.md`, and read the output
 - [ ] For each failure, analyze the source code logic
 - [ ] Check documentation/docstrings for intended behavior
 - [ ] Determine if failure indicates test error or source bug
@@ -29,16 +29,17 @@ Follow these steps carefully and track your progress:
 - [ ] STOP and alert user if potential source bug found
 - [ ] Verify all tests pass after fixes
 - [ ] Document any assumptions or edge cases discovered
-- [ ] If you've modified any modules, reformat them using black
+- [ ] If you've modified any modules, reformat them through pre-commit (see `docs/RUNNING_TESTS_AND_TYPE_CHECKS.md`)
 
 ## Detailed Steps
 
 1. **Identify test files** for `$ARGUMENTS`:
     - Find corresponding test files in `tests/unit/`
     - Note any fixture dependencies
-2. **Run initial tests**:
-    - Capture and analyze the full output
-    - Note all failures and their error messages
+2. **Run initial tests** following `docs/RUNNING_TESTS_AND_TYPE_CHECKS.md` (Ptera Software uses `unittest`, not pytest):
+    - Run the module's tests with `python -u -m unittest tests.unit.test_module_name -v`, or a single test with `python -u -m unittest tests.unit.test_module_name.TestClass.test_method -v`. The `-u` flag keeps output streaming.
+    - Let the output stream directly into the conversation; never pipe it through `tail`, `head`, `grep`, or any other filter.
+    - Capture and analyze the full output, noting all failures and their error messages.
 3. **For EACH test failure**:
    a. **Read the failing test carefully**:
       - Understand what the test is trying to verify
@@ -87,7 +88,7 @@ Follow these steps carefully and track your progress:
     - Run all tests for the module
     - Confirm all tests pass
 6. **Reformatting**:
-    - If you've modified any files, run black to reformat them
+    - If you've modified any files, reformat them through pre-commit, never a bare formatter: `pre-commit run --files <paths>`. This runs black, isort, and docformatter together with the exact versions CI uses, per `docs/RUNNING_TESTS_AND_TYPE_CHECKS.md`.
 
 ## Analysis Guidelines
 
@@ -131,4 +132,4 @@ Before considering debugging complete:
 - [ ] All potential bugs have been flagged to user
 - [ ] Changes are documented with reasoning
 - [ ] Edge cases discovered are documented
-- [ ] If any modules have been updated, they've also been reformatted using black
+- [ ] If any modules have been updated, they've been reformatted through pre-commit (`pre-commit run --files <paths>`)

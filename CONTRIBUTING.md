@@ -28,7 +28,7 @@ There are three main ways you can contribute:
 3. [**Contribute code**](#contributing-code)
     - Submit changes that add new features, fix bugs, improve performance, or enhance documentation.
     - Code contributions can address your own ideas or work on existing open issues.
-    - If you find an issue labeled `good first issue` that you want to work on, **comment on the issue to claim it** before starting work. This prevents duplicate efforts.
+    - If you find an issue labeled `good_first_issue` that you want to work on, **comment on the issue to claim it** before starting work. This prevents duplicate efforts.
 
 ---
 
@@ -61,7 +61,7 @@ For feature requests:
 Ptera Software now uses GitHub Flow to manage code contributions. If this is new to you, it's a good idea to read through [this guide](https://docs.github.com/en/get-started/using-github/github-flow) first. Once you understand the process, here's how to implement it:
 
 1. **Choose what to work on**
-    - Look for issues labeled `good first issue`.
+    - Look for issues labeled `good_first_issue`.
         - If you want to work on one, check that no one else has already commented claiming it. If unclaimed, comment on the issue to claim it and a maintainer will then "assign" the issue to you.
         - If you want to work on a claimed issue that hasn't been updated in a while, write a comment asking if the user who originally claimed it is still actively working on it.
     - If you have your own idea, search the issues to ensure it hasn't already been proposed.
