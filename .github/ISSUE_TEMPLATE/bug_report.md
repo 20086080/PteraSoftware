@@ -11,31 +11,9 @@ assignees: ''
 
 Please provide a clear and concise description of what the bug is.
 
-## Reproduction
-
-Please provide the steps to reproduce the behavior.
-
-For example:
-
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
-
 ## Expected Behavior
 
 Please provide a clear and concise description of what you expected to happen.
-
-## Screenshots
-
-If applicable, add screenshots to help explain your problem.
-
-## Desktop
-
-Please complete the following information.
-
-- OS: ''
-- Version: ''
 
 ## Additional Context
 

@@ -46,9 +46,15 @@ Requires Python 3.11, but active development is done in 3.13
         - `codespell.yml`
         - `docformatter.yml`
         - `isort.yml`
+        - `label-sync.yml`
         - `mypy.yml`
         - `pre-commit-hooks.yml`
+        - `publish.yml`
         - `tests.yml`
+    - `CODEOWNERS`
+    - `dependabot.yml`
+    - `FUNDING.yml`
+    - `labels.yml`
     - `pull_request_template.md`
 - `.venv/`: Directory for the Python virtual environment, configured for the host machine's OS (not included in version control)
 - `.venv-wsl/`: Directory for the Python virtual environment configured for a WSL OS (not included in version control, may be missing if host machine doesn't use WSL for development)
@@ -118,7 +124,9 @@ Requires Python 3.11, but active development is done in 3.13
     - `trim.py`: Trim analysis functionality
     - `unsteady_ring_vortex_lattice_method.py`: Unsteady ring UVLM solver
 - `scripts/`: Directory with maintenance and tooling scripts
+    - `analyze_webp.py`: Renders WebP frames to PNG files for inspection (backs the `analyze-webp` slash command)
     - `check_ascii_only.py`: Pre-commit hook script that flags non-ASCII characters in text files
+    - `find_unused_fixtures.py`: Finds and optionally deletes unused fixtures and dead `setUp` attributes across the test suite (backs the `delete-unused-fixtures` slash command)
 - `tests/`: Directory with unit and integration tests
     - `integration/`: Integration tests for combined functionality
         - `fixtures/`: Fixtures for integration tests
